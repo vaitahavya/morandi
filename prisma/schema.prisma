@@ -1,0 +1,144 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id            String    @id @default(cuid())
+  email         String    @unique
+  name          String?
+  password      String?
+  image         String?
+  emailVerified DateTime?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  // Relations
+  orders        Order[]
+  wishlist      WishlistItem[]
+  reviews       Review[]
+  notifications EmailNotification[]
+
+  @@map("users")
+}
+
+model Product {
+  id          String   @id @default(cuid())
+  name        String
+  description String?
+  price       Float
+  images      String[]
+  category    String
+  tags        String[]
+  inStock     Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  orderItems  OrderItem[]
+  wishlist    WishlistItem[]
+  reviews     Review[]
+  recommendations ProductRecommendation[]
+
+  @@map("products")
+}
+
+model Order {
+  id        String   @id @default(cuid())
+  userId    String
+  status    String   @default("pending") // pending, processing, shipped, delivered, cancelled
+  total     Float
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  user      User        @relation(fields: [userId], references: [id])
+  items     OrderItem[]
+  notifications EmailNotification[]
+
+  @@map("orders")
+}
+
+model OrderItem {
+  id        String @id @default(cuid())
+  orderId   String
+  productId String
+  quantity  Int
+  price     Float
+
+  // Relations
+  order     Order   @relation(fields: [orderId], references: [id])
+  product   Product @relation(fields: [productId], references: [id])
+
+  @@map("order_items")
+}
+
+model WishlistItem {
+  id        String @id @default(cuid())
+  userId    String
+  productId String
+  createdAt DateTime @default(now())
+
+  // Relations
+  user      User    @relation(fields: [userId], references: [id])
+  product   Product @relation(fields: [productId], references: [id])
+
+  @@unique([userId, productId])
+  @@map("wishlist_items")
+}
+
+model Review {
+  id        String @id @default(cuid())
+  userId    String
+  productId String
+  rating    Int
+  comment   String?
+  createdAt DateTime @default(now())
+
+  // Relations
+  user      User    @relation(fields: [userId], references: [id])
+  product   Product @relation(fields: [productId], references: [id])
+
+  @@map("reviews")
+}
+
+model ProductRecommendation {
+  id           String @id @default(cuid())
+  productId    String
+  recommendedProductId String
+  score        Float
+  reason       String? // "bought_together", "viewed_together", "category_similarity"
+  createdAt    DateTime @default(now())
+
+  // Relations
+  product      Product @relation(fields: [productId], references: [id])
+  recommendedProduct Product @relation("RecommendedProduct", fields: [recommendedProductId], references: [id])
+
+  @@unique([productId, recommendedProductId])
+  @@map("product_recommendations")
+}
+
+model EmailNotification {
+  id        String   @id @default(cuid())
+  userId    String?
+  orderId   String?
+  type      String   // "order_confirmation", "order_shipped", "order_delivered", "abandoned_cart", "product_recommendation"
+  subject   String
+  content   String
+  sent      Boolean  @default(false)
+  sentAt    DateTime?
+  createdAt DateTime @default(now())
+
+  // Relations
+  user      User?    @relation(fields: [userId], references: [id])
+  order     Order?   @relation(fields: [orderId], references: [id])
+
+  @@map("email_notifications")
+} 
