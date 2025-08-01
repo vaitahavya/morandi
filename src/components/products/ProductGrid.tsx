@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import ProductCard from './ProductCard';
-import { Product, getProducts } from '@/lib/wordpress-api';
+import { Product, getProducts } from '@/lib/products-api';
 import { useSearchParams } from 'next/navigation';
 
 export default function ProductGrid() {
@@ -13,15 +13,19 @@ export default function ProductGrid() {
 
   useEffect(() => {
     (async () => {
-      const data = await getProducts();
-      // If a category filter is requested, filter client-side by WP category slug
-      const filtered = categorySlug
-        ? data.filter((p) =>
-            p.categories?.some((cat) => cat.slug === categorySlug)
-          )
-        : data;
-      setProducts(filtered);
-      setLoading(false);
+      try {
+        // Use the new native API with improved filtering
+        const filters = categorySlug ? { category: categorySlug } : {};
+        console.log('Loading products with filters:', filters);
+        const data = await getProducts(filters);
+        console.log('Products loaded:', data);
+        setProducts(data);
+      } catch (error) {
+        console.error('Error loading products:', error);
+        setProducts([]); // Set empty array on error
+      } finally {
+        setLoading(false);
+      }
     })();
   }, [categorySlug]);
 

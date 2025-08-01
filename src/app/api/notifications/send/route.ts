@@ -1,148 +1,178 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { sendEmail, getOrderConfirmationEmail, getOrderShippedEmail, getProductRecommendationEmail } from '@/lib/email';
 import { prisma } from '@/lib/db';
-import { getPersonalizedRecommendations } from '@/lib/recommendations';
 
+// POST /api/notifications/send
 export async function POST(request: NextRequest) {
   try {
-    const { type, userId, orderId, email } = await request.json();
+    const body = await request.json();
+    const { type, recipient, orderId, userId, data } = body;
 
-    if (!type || !email) {
+    if (!type || !recipient) {
       return NextResponse.json(
-        { error: 'Missing required fields' },
+        { success: false, error: 'Type and recipient are required' },
         { status: 400 }
       );
     }
 
-    let emailData;
+    let emailTemplate;
+    let emailData = {
+      to: recipient,
+      userId: userId,
+      orderId: orderId,
+      type: type,
+      subject: '',
+      html: ''
+    };
 
     switch (type) {
       case 'order_confirmation':
         if (!orderId) {
           return NextResponse.json(
-            { error: 'Order ID required for order confirmation' },
+            { success: false, error: 'Order ID is required for order confirmation' },
             { status: 400 }
           );
         }
 
+        // Fetch order details
         const order = await prisma.order.findUnique({
           where: { id: orderId },
           include: {
-            user: true,
-            items: {
+            orderItems: {
               include: {
-                product: true,
-              },
-            },
-          },
+                product: true
+              }
+            }
+          }
         });
 
         if (!order) {
           return NextResponse.json(
-            { error: 'Order not found' },
+            { success: false, error: 'Order not found' },
             { status: 404 }
           );
         }
 
-        const confirmationEmail = getOrderConfirmationEmail(order, order.user);
-        emailData = {
-          to: email,
-          subject: confirmationEmail.subject,
-          html: confirmationEmail.html,
-          type: 'order_confirmation',
-          userId: order.userId,
-          orderId: orderId,
-        };
+        const user = { name: data?.userName, email: recipient };
+        emailTemplate = getOrderConfirmationEmail(order, user);
         break;
 
       case 'order_shipped':
         if (!orderId) {
           return NextResponse.json(
-            { error: 'Order ID required for shipping notification' },
+            { success: false, error: 'Order ID is required for shipping notification' },
             { status: 400 }
           );
         }
 
         const shippedOrder = await prisma.order.findUnique({
-          where: { id: orderId },
-          include: {
-            user: true,
-          },
+          where: { id: orderId }
         });
 
         if (!shippedOrder) {
           return NextResponse.json(
-            { error: 'Order not found' },
+            { success: false, error: 'Order not found' },
             { status: 404 }
           );
         }
 
-        const shippedEmail = getOrderShippedEmail(shippedOrder, shippedOrder.user);
-        emailData = {
-          to: email,
-          subject: shippedEmail.subject,
-          html: shippedEmail.html,
-          type: 'order_shipped',
-          userId: shippedOrder.userId,
-          orderId: orderId,
-        };
+        const shippedUser = { name: data?.userName, email: recipient };
+        emailTemplate = getOrderShippedEmail(shippedOrder, shippedUser);
         break;
 
-      case 'product_recommendation':
-        if (!userId) {
+      case 'product_recommendations':
+        if (!data?.recommendations) {
           return NextResponse.json(
-            { error: 'User ID required for product recommendations' },
+            { success: false, error: 'Recommendations data is required' },
             { status: 400 }
           );
         }
 
-        const user = await prisma.user.findUnique({
-          where: { id: userId },
-        });
+        const recUser = { name: data?.userName, email: recipient };
+        emailTemplate = getProductRecommendationEmail(recUser, data.recommendations);
+        break;
 
-        if (!user) {
+      case 'custom':
+        if (!data?.subject || !data?.html) {
           return NextResponse.json(
-            { error: 'User not found' },
-            { status: 404 }
+            { success: false, error: 'Subject and HTML content are required for custom emails' },
+            { status: 400 }
           );
         }
 
-        const recommendations = await getPersonalizedRecommendations(userId, 5);
-        const recommendationEmail = getProductRecommendationEmail(user, recommendations);
-        emailData = {
-          to: email,
-          subject: recommendationEmail.subject,
-          html: recommendationEmail.html,
-          type: 'product_recommendation',
-          userId: userId,
+        emailTemplate = {
+          subject: data.subject,
+          html: data.html
         };
         break;
 
       default:
         return NextResponse.json(
-          { error: 'Invalid notification type' },
+          { success: false, error: 'Invalid email type' },
           { status: 400 }
         );
     }
 
+    // Update emailData with template content
+    emailData.subject = emailTemplate.subject;
+    emailData.html = emailTemplate.html;
+
+    // Send the email
     const result = await sendEmail(emailData);
 
     if (result.success) {
-      return NextResponse.json(
-        { message: 'Email sent successfully' },
-        { status: 200 }
-      );
+      return NextResponse.json({
+        success: true,
+        messageId: result.messageId,
+        message: 'Email sent successfully'
+      });
     } else {
       return NextResponse.json(
-        { error: 'Failed to send email' },
+        { success: false, error: 'Failed to send email' },
         { status: 500 }
       );
     }
+
   } catch (error) {
-    console.error('Email notification error:', error);
+    console.error('Email API error:', error);
     return NextResponse.json(
-      { error: 'Internal server error' },
+      { success: false, error: 'Internal server error' },
       { status: 500 }
     );
   }
-} 
+}
+
+// GET /api/notifications/send - Get email notification history
+export async function GET(request: NextRequest) {
+  try {
+    const { searchParams } = new URL(request.url);
+    const userId = searchParams.get('userId');
+    const orderId = searchParams.get('orderId');
+    const type = searchParams.get('type');
+    const limit = parseInt(searchParams.get('limit') || '50');
+
+    const where: any = {};
+    if (userId) where.userId = userId;
+    if (orderId) where.orderId = orderId;
+    if (type) where.type = type;
+
+    const notifications = await prisma.emailNotification.findMany({
+      where,
+      orderBy: { createdAt: 'desc' },
+      take: limit,
+    });
+
+    return NextResponse.json({
+      success: true,
+      data: notifications,
+      count: notifications.length
+    });
+
+  } catch (error) {
+    console.error('Error fetching notifications:', error);
+    return NextResponse.json(
+      { success: false, error: 'Internal server error' },
+      { status: 500 }
+    );
+  }
+}

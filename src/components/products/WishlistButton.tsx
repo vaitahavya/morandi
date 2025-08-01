@@ -2,7 +2,7 @@
 
 import { Heart } from 'lucide-react';
 import { useWishlistStore, WishlistItem } from '@/store/wishlist-store';
-import { Product } from '@/lib/wordpress-api';
+import { Product } from '@/lib/products-api';
 
 interface WishlistButtonProps {
   product: Product;

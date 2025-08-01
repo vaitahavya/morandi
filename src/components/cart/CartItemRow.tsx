@@ -34,7 +34,7 @@ export default function CartItemRow({ item }: Props) {
       />
       <div className="flex-1">
         <h3 className="font-medium text-gray-900 line-clamp-2">{item.name}</h3>
-        <p className="text-sm text-gray-600">${item.price.toFixed(2)}</p>
+        <p className="text-sm text-gray-600">₹{item.price.toFixed(2)}</p>
       </div>
       <div className="flex items-center gap-2">
         <button

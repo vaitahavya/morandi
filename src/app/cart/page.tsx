@@ -34,7 +34,7 @@ export default function CartPage() {
       </div>
       <div className="mt-10 flex items-center justify-between border-t pt-6">
         <span className="text-lg font-medium">Subtotal:</span>
-        <span className="text-xl font-bold">${getTotal().toFixed(2)}</span>
+        <span className="text-xl font-bold">₹{getTotal().toFixed(2)}</span>
       </div>
       <div className="mt-6 text-right">
         <Link

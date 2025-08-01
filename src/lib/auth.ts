@@ -1,7 +1,7 @@
 import { NextAuthOptions } from 'next-auth';
 import CredentialsProvider from 'next-auth/providers/credentials';
 import GoogleProvider from 'next-auth/providers/google';
-import { supabase } from './supabase';
+import { prisma } from './db';
 import bcrypt from 'bcryptjs';
 
 export const authOptions: NextAuthOptions = {
@@ -21,13 +21,11 @@ export const authOptions: NextAuthOptions = {
           return null;
         }
 
-        const { data: user, error } = await supabase
-          .from('users')
-          .select('*')
-          .eq('email', credentials.email)
-          .single();
+        const user = await prisma.user.findUnique({
+          where: { email: credentials.email }
+        });
 
-        if (error || !user || !user.password) {
+        if (!user || !user.password) {
           return null;
         }
 
@@ -56,26 +54,22 @@ export const authOptions: NextAuthOptions = {
     async signIn({ user, account, profile }) {
       if (account?.provider === 'google') {
         // Check if user exists in database
-        const { data: existingUser } = await supabase
-          .from('users')
-          .select('*')
-          .eq('email', user.email!)
-          .single();
+        const existingUser = await prisma.user.findUnique({
+          where: { email: user.email! }
+        });
 
         if (!existingUser) {
           // Create new user from Google profile
-          const { data: newUser, error } = await supabase
-            .from('users')
-            .insert({
-              email: user.email!,
-              name: user.name,
-              image: user.image,
-              email_verified: new Date().toISOString(),
-            })
-            .select()
-            .single();
-
-          if (error) {
+          try {
+            await prisma.user.create({
+              data: {
+                email: user.email!,
+                name: user.name,
+                image: user.image,
+                emailVerified: new Date(),
+              }
+            });
+          } catch (error) {
             console.error('Error creating user:', error);
             return false;
           }

@@ -30,38 +30,139 @@ model User {
 }
 
 model Product {
-  id          String   @id @default(cuid())
-  name        String
-  description String?
-  price       Float
-  images      String[]
-  category    String
-  tags        String[]
-  inStock     Boolean  @default(true)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id                 String   @id @default(cuid())
+  name               String
+  slug               String   @unique
+  description        String?
+  shortDescription   String?
+  sku                String?  @unique
+  
+  // Pricing
+  price              Float
+  regularPrice       Float?
+  salePrice          Float?
+  
+  // Images and media
+  images             String[]
+  featuredImage      String?
+  
+  // Inventory
+  stockQuantity      Int      @default(0)
+  stockStatus        String   @default("instock") // instock, outofstock, onbackorder
+  manageStock        Boolean  @default(true)
+  lowStockThreshold  Int?     @default(5)
+  
+  // Physical properties  
+  weight             Float?
+  dimensions         Json?    // {length, width, height, unit}
+  
+  // Status and visibility
+  status             String   @default("published") // draft, published, private
+  featured           Boolean  @default(false)
+  
+  // SEO
+  metaTitle          String?
+  metaDescription    String?
+  
+  // WooCommerce migration
+  woocommerceId      String?  @unique
+  
+  // Legacy field (will be replaced by proper categories)
+  category           String?
+  tags               String[]
+  inStock            Boolean  @default(true)
+  
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
 
   // Relations
-  orderItems  OrderItem[]
-  wishlist    WishlistItem[]
-  reviews     Review[]
-  recommendations ProductRecommendation[]
+  orderItems         OrderItem[]
+  wishlist           WishlistItem[]
+  reviews            Review[]
+  recommendations    ProductRecommendation[] @relation("ProductRecommendations")
+  recommendedBy      ProductRecommendation[] @relation("RecommendedProduct")
+  variants           ProductVariant[]
+  categories         ProductCategory[]
+  attributes         ProductAttribute[]
+  inventoryTransactions InventoryTransaction[]
 
   @@map("products")
 }
 
 model Order {
   id        String   @id @default(cuid())
-  userId    String
-  status    String   @default("pending") // pending, processing, shipped, delivered, cancelled
-  total     Float
+  userId    String?  // Allow guest orders
+  orderNumber String @unique // Human-readable order number
+  
+  // Order status and workflow
+  status    String   @default("pending") // pending, confirmed, processing, shipped, delivered, cancelled, refunded
+  paymentStatus String @default("pending") // pending, paid, failed, refunded, partially_refunded
+  
+  // Customer information
+  customerEmail String
+  customerPhone String?
+  
+  // Billing address
+  billingFirstName String
+  billingLastName  String
+  billingCompany   String?
+  billingAddress1  String
+  billingAddress2  String?
+  billingCity      String
+  billingState     String?
+  billingPostcode  String
+  billingCountry   String
+  
+  // Shipping address
+  shippingFirstName String?
+  shippingLastName  String?
+  shippingCompany   String?
+  shippingAddress1  String?
+  shippingAddress2  String?
+  shippingCity      String?
+  shippingState     String?
+  shippingPostcode  String?
+  shippingCountry   String?
+  
+  // Financial details
+  subtotal      Float
+  taxAmount     Float   @default(0)
+  shippingCost  Float   @default(0)
+  discountAmount Float  @default(0)
+  total         Float
+  currency      String  @default("INR")
+  
+  // Payment information
+  paymentMethod       String? // "razorpay", "cod", etc.
+  paymentMethodTitle  String?
+  transactionId       String? // Payment gateway transaction ID
+  razorpayOrderId     String? // Razorpay specific
+  razorpayPaymentId   String? // Razorpay specific
+  razorpaySignature   String? // Razorpay specific
+  
+  // Shipping information
+  shippingMethod      String?
+  shippingMethodTitle String?
+  trackingNumber      String?
+  shippingCarrier     String?
+  estimatedDelivery   DateTime?
+  shippedAt           DateTime?
+  deliveredAt         DateTime?
+  
+  // Order metadata
+  customerNotes String?
+  adminNotes    String?
+  sourceChannel String? @default("website") // website, admin, api
+  
+  // Timestamps
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   // Relations
-  user      User        @relation(fields: [userId], references: [id])
+  user      User?       @relation(fields: [userId], references: [id])
   items     OrderItem[]
   notifications EmailNotification[]
+  statusHistory OrderStatusHistory[]
 
   @@map("orders")
 }
@@ -70,11 +171,26 @@ model OrderItem {
   id        String @id @default(cuid())
   orderId   String
   productId String
-  quantity  Int
-  price     Float
+  variantId String? // Product variant if applicable
+  
+  // Product details at time of order (snapshot)
+  productName    String
+  productSku     String?
+  variantName    String?
+  
+  // Pricing details
+  quantity       Int
+  unitPrice      Float    // Price per unit at time of order
+  totalPrice     Float    // quantity * unitPrice
+  
+  // Product attributes at time of order (size, color, etc.)
+  attributes     Json?    // Store variant attributes as JSON
+  
+  // Product image at time of order
+  productImage   String?
 
   // Relations
-  order     Order   @relation(fields: [orderId], references: [id])
+  order     Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
   product   Product @relation(fields: [productId], references: [id])
 
   @@map("order_items")
@@ -118,7 +234,7 @@ model ProductRecommendation {
   createdAt    DateTime @default(now())
 
   // Relations
-  product      Product @relation(fields: [productId], references: [id])
+  product      Product @relation("ProductRecommendations", fields: [productId], references: [id])
   recommendedProduct Product @relation("RecommendedProduct", fields: [recommendedProductId], references: [id])
 
   @@unique([productId, recommendedProductId])
@@ -141,4 +257,182 @@ model EmailNotification {
   order     Order?   @relation(fields: [orderId], references: [id])
 
   @@map("email_notifications")
+}
+
+// New models for enhanced e-commerce functionality
+
+model Category {
+  id          String   @id @default(cuid())
+  name        String
+  slug        String   @unique
+  description String?
+  image       String?
+  parentId    String?
+  
+  // SEO fields
+  metaTitle       String?
+  metaDescription String?
+  
+  // Display options
+  displayOrder    Int?     @default(0)
+  isVisible       Boolean  @default(true)
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  parent      Category?         @relation("CategoryHierarchy", fields: [parentId], references: [id])
+  children    Category[]        @relation("CategoryHierarchy")
+  products    ProductCategory[]
+
+  @@map("categories")
+}
+
+model ProductCategory {
+  productId  String
+  categoryId String
+  
+  // Relations
+  product    Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  category   Category @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+
+  @@id([productId, categoryId])
+  @@map("product_categories")
+}
+
+model ProductVariant {
+  id              String  @id @default(cuid())
+  productId       String
+  name            String
+  sku             String? @unique
+  
+  // Pricing
+  price           Float
+  regularPrice    Float?
+  salePrice       Float?
+  
+  // Inventory
+  stockQuantity   Int     @default(0)
+  stockStatus     String  @default("instock")
+  
+  // Attributes (color, size, etc.)
+  attributes      Json    // {color: "red", size: "large"}
+  
+  // Images specific to this variant
+  images          String[]
+  
+  // Physical properties
+  weight          Float?
+  dimensions      Json?
+  
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  // Relations
+  product         Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@map("product_variants")
+}
+
+model ProductAttribute {
+  id          String @id @default(cuid())
+  productId   String
+  name        String // "Color", "Size", "Material"
+  value       String // "Red", "Large", "Cotton"
+  
+  // Relations
+  product     Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@unique([productId, name, value])
+  @@map("product_attributes")
+}
+
+model InventoryTransaction {
+  id          String   @id @default(cuid())
+  productId   String
+  type        String   // "sale", "restock", "adjustment", "return"
+  quantity    Int      // positive for stock increase, negative for decrease
+  reason      String?  // "Order #123", "Manual adjustment", "Supplier restock"
+  reference   String?  // Order ID, Purchase Order ID, etc.
+  
+  // Snapshot of stock after this transaction
+  stockAfter  Int
+  
+  // Metadata
+  notes       String?
+  createdBy   String?  // User ID who made the change
+  
+  createdAt   DateTime @default(now())
+
+  // Relations  
+  product     Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@map("inventory_transactions")
+}
+
+// Order Status History - Track status changes
+model OrderStatusHistory {
+  id        String   @id @default(cuid())
+  orderId   String
+  status    String   // The new status
+  notes     String?  // Optional notes about the status change
+  changedBy String?  // User ID who changed the status
+  createdAt DateTime @default(now())
+
+  // Relations
+  order     Order @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  @@map("order_status_history")
+}
+
+// Coupon/Discount system
+model Coupon {
+  id          String   @id @default(cuid())
+  code        String   @unique
+  type        String   // "percentage", "fixed_amount"
+  value       Float    // Discount value (percentage or amount)
+  
+  // Usage restrictions
+  minimumAmount Float?  // Minimum order amount
+  usageLimit    Int?    // Total usage limit
+  usageCount    Int     @default(0)
+  userLimit     Int?    // Per-user usage limit
+  
+  // Validity
+  validFrom   DateTime
+  validUntil  DateTime?
+  isActive    Boolean  @default(true)
+  
+  // Metadata
+  description String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("coupons")
+}
+
+// Shipping Methods
+model ShippingMethod {
+  id          String  @id @default(cuid())
+  name        String
+  description String?
+  cost        Float
+  
+  // Delivery estimates
+  minDays     Int?    // Minimum delivery days
+  maxDays     Int?    // Maximum delivery days
+  
+  // Availability
+  isActive    Boolean @default(true)
+  countries   String[] // List of country codes where available
+  
+  // Restrictions
+  minWeight   Float?
+  maxWeight   Float?
+  minAmount   Float?  // Minimum order amount for this method
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("shipping_methods")
 } 

@@ -3,7 +3,7 @@
 import Image from 'next/image';
 import Link from 'next/link';
 import { useState } from 'react';
-import { Product } from '@/lib/wordpress-api';
+import { Product } from '@/lib/products-api';
 import { useCartStore } from '@/store/cart-store';
 import { ShoppingCart } from 'lucide-react';
 import WishlistButton from './WishlistButton';
@@ -23,9 +23,9 @@ export default function ProductCard({ product }: ProductCardProps) {
     addItem({
       id: product.id,
       name: product.name,
-      price: parseFloat(product.price),
+      price: typeof product.price === 'number' ? product.price : parseFloat(product.price),
       quantity: 1,
-      image: product.images[0]?.src || '',
+      image: product.images?.[0]?.src || product.featuredImage || '',
     });
     toast.success(`${product.name} added to cart!`);
   };
@@ -44,7 +44,7 @@ export default function ProductCard({ product }: ProductCardProps) {
   // Add a subtle zoom effect on hover
   const [isHovered, setIsHovered] = useState(false);
 
-  const currentImage = product.images?.[hoveredImageIndex] || product.images?.[0];
+  const currentImage = product.images?.[hoveredImageIndex]?.src || product.images?.[0]?.src || product.featuredImage;
 
   return (
     <Link
@@ -62,8 +62,8 @@ export default function ProductCard({ product }: ProductCardProps) {
       {/* Image wrapper */}
       <div className="aspect-square w-full overflow-hidden relative">
         <Image
-          src={currentImage?.src || '/placeholder.png'}
-          alt={product.name}
+          src={currentImage || '/placeholder.png'}
+          alt={product.images?.[hoveredImageIndex]?.alt || product.images?.[0]?.alt || product.name}
           width={300}
           height={300}
           className={`h-full w-full object-cover transition-all duration-300 ${
@@ -98,7 +98,12 @@ export default function ProductCard({ product }: ProductCardProps) {
         <h3 className="line-clamp-2 text-base font-medium text-gray-900">
           {product.name}
         </h3>
-        <p className="text-lg font-semibold text-primary-700">₹{product.price}</p>
+        <div className="flex items-center gap-2">
+          <p className="text-lg font-semibold text-primary-700">₹{product.price}</p>
+          {product.salePrice && product.regularPrice && product.salePrice < product.regularPrice && (
+            <p className="text-sm text-gray-500 line-through">₹{product.regularPrice}</p>
+          )}
+        </div>
       </div>
     </Link>
   );

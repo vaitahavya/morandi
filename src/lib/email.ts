@@ -1,5 +1,5 @@
 import nodemailer from 'nodemailer';
-import { supabase } from './supabase';
+import { prisma } from './db';
 
 // Email transporter configuration
 const transporter = nodemailer.createTransport({
@@ -30,19 +30,19 @@ export async function sendEmail(emailData: EmailData) {
     });
 
     // Save notification to database
-    const { error } = await supabase
-      .from('email_notifications')
-      .insert({
-        user_id: emailData.userId,
-        order_id: emailData.orderId,
-        type: emailData.type,
-        subject: emailData.subject,
-        content: emailData.html,
-        sent: true,
-        sent_at: new Date().toISOString(),
+    try {
+      await prisma.emailNotification.create({
+        data: {
+          userId: emailData.userId,
+          orderId: emailData.orderId,
+          type: emailData.type,
+          subject: emailData.subject,
+          content: emailData.html,
+          sent: true,
+          sentAt: new Date(),
+        },
       });
-
-    if (error) {
+    } catch (error) {
       console.error('Error saving notification to database:', error);
     }
 
@@ -52,18 +52,18 @@ export async function sendEmail(emailData: EmailData) {
     console.error('Email sending failed:', error);
     
     // Save failed notification to database
-    const { error: dbError } = await supabase
-      .from('email_notifications')
-      .insert({
-        user_id: emailData.userId,
-        order_id: emailData.orderId,
-        type: emailData.type,
-        subject: emailData.subject,
-        content: emailData.html,
-        sent: false,
+    try {
+      await prisma.emailNotification.create({
+        data: {
+          userId: emailData.userId,
+          orderId: emailData.orderId,
+          type: emailData.type,
+          subject: emailData.subject,
+          content: emailData.html,
+          sent: false,
+        },
       });
-
-    if (dbError) {
+    } catch (dbError) {
       console.error('Error saving failed notification to database:', dbError);
     }
 
@@ -83,7 +83,7 @@ export function getOrderConfirmationEmail(order: any, user: any) {
         
         <div style="background: #f5f5f5; padding: 20px; margin: 20px 0;">
           <h3>Order #${order.id}</h3>
-          <p><strong>Total:</strong> $${order.total}</p>
+          <p><strong>Total:</strong> ₹${order.total}</p>
           <p><strong>Status:</strong> ${order.status}</p>
           <p><strong>Date:</strong> ${new Date(order.created_at).toLocaleDateString()}</p>
         </div>
@@ -130,7 +130,7 @@ export function getProductRecommendationEmail(user: any, recommendations: any[])
           ${recommendations.map(product => `
             <div style="border: 1px solid #ddd; padding: 15px; margin: 10px 0;">
               <h3>${product.name}</h3>
-              <p><strong>Price:</strong> $${product.price}</p>
+              <p><strong>Price:</strong> ₹${product.price}</p>
               <p>${product.description || ''}</p>
             </div>
           `).join('')}

@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useMemo } from 'react';
 import { Star, Share2, Truck, RotateCcw, Shield } from 'lucide-react';
-import { getProductBySlug, getProductVariations, ProductVariant } from '@/lib/wordpress-api';
+import { getProductBySlug, getProductVariations, ProductVariant } from '@/lib/products-api';
 import { useCartStore } from '@/store/cart-store';
 import { useWishlistStore } from '@/store/wishlist-store';
 import WishlistButton from '@/components/products/WishlistButton';

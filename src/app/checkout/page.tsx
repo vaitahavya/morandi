@@ -2,9 +2,11 @@
 
 import { useForm } from 'react-hook-form';
 import { useCartStore } from '@/store/cart-store';
-import { createPendingOrder, getWordPressCheckoutUrl, CreateOrderInput, OrderLineItem } from '@/lib/wordpress-api';
+import { createOrder, CreateOrderData } from '@/lib/orders-api';
+import { processPayment, loadRazorpayScript } from '@/lib/payment-api';
 import { useRouter } from 'next/navigation';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useSession } from 'next-auth/react';
 import toast from 'react-hot-toast';
 
 interface CheckoutFormValues {
@@ -13,110 +15,176 @@ interface CheckoutFormValues {
   email: string;
   phone: string;
   address1: string;
+  address2?: string;
   city: string;
+  state?: string;
   country: string;
   postcode: string;
+  // Shipping address (optional - will copy from billing if not provided)
+  shippingFirstName?: string;
+  shippingLastName?: string;
+  shippingAddress1?: string;
+  shippingAddress2?: string;
+  shippingCity?: string;
+  shippingState?: string;
+  shippingCountry?: string;
+  shippingPostcode?: string;
+  // Payment and additional info
   paymentMethod: string;
+  customerNotes?: string;
+  sameAsShipping: boolean;
 }
 
 export default function CheckoutPage() {
   const router = useRouter();
+  const { data: session } = useSession();
   const { items, clearCart } = useCartStore((state) => ({
     items: state.items,
     clearCart: state.clearCart,
   }));
   const [loading, setLoading] = useState(false);
+  const [razorpayLoaded, setRazorpayLoaded] = useState(false);
+  
   const {
     register,
     handleSubmit,
     watch,
+    setValue,
     formState: { errors },
-  } = useForm<CheckoutFormValues>();
+  } = useForm<CheckoutFormValues>({
+    defaultValues: {
+      paymentMethod: 'razorpay',
+      country: 'IN',
+      sameAsShipping: true,
+      email: session?.user?.email || '',
+      firstName: session?.user?.name?.split(' ')[0] || '',
+      lastName: session?.user?.name?.split(' ').slice(1).join(' ') || ''
+    }
+  });
 
-  const watchedPaymentMethod = watch('paymentMethod');
+
+  const watchedSameAsShipping = watch('sameAsShipping');
+
+  // Load Razorpay script on component mount
+  useEffect(() => {
+    const loadScript = async () => {
+      const loaded = await loadRazorpayScript();
+      setRazorpayLoaded(loaded);
+      if (!loaded) {
+        toast.error('Failed to load payment system. Please refresh and try again.');
+      }
+    };
+    loadScript();
+  }, []);
+
+  // Pre-fill user information if logged in
+  useEffect(() => {
+    if (session?.user) {
+      setValue('email', session.user.email || '');
+      const nameParts = (session.user.name || '').split(' ');
+      setValue('firstName', nameParts[0] || '');
+      setValue('lastName', nameParts.slice(1).join(' ') || '');
+    }
+  }, [session, setValue]);
 
   const onSubmit = async (data: CheckoutFormValues) => {
-    if (!items.length) return;
+    if (!items.length) {
+      toast.error('Your cart is empty');
+      return;
+    }
+
+    if (!razorpayLoaded) {
+      toast.error('Payment system not ready. Please refresh and try again.');
+      return;
+    }
+
     setLoading(true);
 
     try {
-      // Create line items for the order
-      const line_items: OrderLineItem[] = items.map((item) => ({
-        product_id: item.id,
-        quantity: item.quantity,
-        variation_id: item.variation_id,
-      }));
+      // Calculate order totals
+      const subtotal = items.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+      const shippingCost = subtotal >= 500 ? 0 : 50; // Free shipping over ₹500
+      const taxAmount = Math.round(subtotal * 0.18 * 100) / 100; // 18% GST
+      const total = subtotal + shippingCost + taxAmount;
 
-      // Determine payment method details
-      let paymentMethod = 'bacs';
-      let paymentMethodTitle = 'Direct Bank Transfer';
-      
-      if (data.paymentMethod === 'paypal') {
-        paymentMethod = 'paypal';
-        paymentMethodTitle = 'PayPal';
-      } else if (data.paymentMethod === 'cod') {
-        paymentMethod = 'cod';
-        paymentMethodTitle = 'Cash on Delivery';
-      } else if (data.paymentMethod === 'razorpay') {
-        paymentMethod = 'razorpay';
-        paymentMethodTitle = 'Pay Online (Razorpay)';
-      }
-
-      const order: CreateOrderInput = {
-        payment_method: paymentMethod,
-        payment_method_title: paymentMethodTitle,
-        set_paid: false, // Will be set to true after payment
-        billing: {
-          first_name: data.firstName,
-          last_name: data.lastName,
-          email: data.email,
-          phone: data.phone,
-          address_1: data.address1,
-          city: data.city,
-          country: data.country,
-          postcode: data.postcode,
-        } as any,
-        shipping: {
-          first_name: data.firstName,
-          last_name: data.lastName,
-          phone: data.phone,
-          address_1: data.address1,
-          city: data.city,
-          country: data.country,
-          postcode: data.postcode,
-        } as any,
-        line_items,
+      // Prepare order data
+      const orderData: CreateOrderData = {
+        items: items.map(item => ({
+          productId: item.id,
+          quantity: item.quantity,
+          variantId: item.variation_id
+        })),
+        customerEmail: data.email,
+        customerPhone: data.phone,
+        
+        // Billing address
+        billingFirstName: data.firstName,
+        billingLastName: data.lastName,
+        billingAddress1: data.address1,
+        billingAddress2: data.address2,
+        billingCity: data.city,
+        billingState: data.state,
+        billingPostcode: data.postcode,
+        billingCountry: data.country,
+        
+        // Shipping address (copy from billing if same)
+        shippingFirstName: data.sameAsShipping ? data.firstName : data.shippingFirstName,
+        shippingLastName: data.sameAsShipping ? data.lastName : data.shippingLastName,
+        shippingAddress1: data.sameAsShipping ? data.address1 : data.shippingAddress1,
+        shippingAddress2: data.sameAsShipping ? data.address2 : data.shippingAddress2,
+        shippingCity: data.sameAsShipping ? data.city : data.shippingCity,
+        shippingState: data.sameAsShipping ? data.state : data.shippingState,
+        shippingPostcode: data.sameAsShipping ? data.postcode : data.shippingPostcode,
+        shippingCountry: data.sameAsShipping ? data.country : data.shippingCountry,
+        
+        // Payment and shipping details
+        paymentMethod: 'razorpay',
+        paymentMethodTitle: 'Razorpay',
+        shippingCost,
+        taxAmount,
+        customerNotes: data.customerNotes,
+        currency: 'INR'
       };
 
-      // Create pending order in WordPress
-      const created = await createPendingOrder(order);
-      setLoading(false);
+      // Create the order
+      const createdOrder = await createOrder(orderData);
 
-      if (created && created.id) {
-        // For Razorpay, redirect to WordPress checkout
-        if (data.paymentMethod === 'razorpay') {
-          const checkoutUrl = getWordPressCheckoutUrl(created.id);
-          toast.success('Redirecting to secure payment gateway...');
-          // Clear cart before redirecting
-          clearCart();
-          // Redirect to WordPress checkout
-          window.location.href = checkoutUrl;
-        } else {
-          // For other payment methods, create the order directly
-          toast.success('Order created successfully!');
-          clearCart();
-          router.push(`/order-success?orderId=${created.id}`);
-        }
-      } else {
-        toast.error('Failed to create order. Please try again.');
+      if (!createdOrder) {
+        throw new Error('Failed to create order');
       }
-    } catch (error) {
+
+      toast.success('Order created successfully!');
+
+      // Process payment using Razorpay
+      await processPayment(
+        createdOrder.id,
+        total,
+        // Success callback
+        (order) => {
+          clearCart();
+          toast.success('Payment successful! Order confirmed.');
+          router.push(`/order-success?order=${order.id}`);
+        },
+        // Error callback
+        (error) => {
+          toast.error(`Payment failed: ${error}`);
+          // Redirect to order page where they can retry payment
+          router.push(`/orders/${createdOrder.id}?payment=failed`);
+        }
+      );
+    } catch (error: any) {
+      console.error('Checkout error:', error);
+      toast.error(error.message || 'Failed to process checkout. Please try again.');
+    } finally {
       setLoading(false);
-      toast.error('Something went wrong. Please try again.');
     }
   };
 
-  const total = items.reduce((sum, item) => sum + item.price * item.quantity, 0);
+  // Calculate order totals for display
+  const subtotal = items.reduce((sum, item) => sum + item.price * item.quantity, 0);
+  const shippingCost = subtotal >= 500 ? 0 : 50; // Free shipping over ₹500
+  const taxAmount = Math.round(subtotal * 0.18 * 100) / 100; // 18% GST
+  const total = subtotal + shippingCost + taxAmount;
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-10 md:px-6 lg:px-8">
@@ -235,48 +303,23 @@ export default function CheckoutPage() {
                 </div>
               </div>
 
-              {/* Payment Method Selection */}
-              <div>
-                <label className="mb-1 block text-sm font-medium">Payment Method</label>
-                <div className="space-y-3">
-                  <label className="flex items-center space-x-3">
-                    <input
-                      type="radio"
-                      value="cod"
-                      {...register('paymentMethod', { required: true })}
-                      className="text-primary-600"
-                    />
-                    <span>Cash on Delivery</span>
-                  </label>
-                  <label className="flex items-center space-x-3">
-                    <input
-                      type="radio"
-                      value="bacs"
-                      {...register('paymentMethod', { required: true })}
-                      className="text-primary-600"
-                    />
-                    <span>Direct Bank Transfer</span>
-                  </label>
-                  <label className="flex items-center space-x-3">
-                    <input
-                      type="radio"
-                      value="razorpay"
-                      {...register('paymentMethod', { required: true })}
-                      className="text-primary-600"
-                    />
-                    <span>Pay Online (Razorpay)</span>
-                  </label>
-                  <label className="flex items-center space-x-3">
-                    <input
-                      type="radio"
-                      value="paypal"
-                      {...register('paymentMethod', { required: true })}
-                      className="text-primary-600"
-                    />
-                    <span>PayPal</span>
-                  </label>
+              {/* Payment Method - Razorpay Only */}
+              <div className="rounded-md border border-gray-200 bg-gray-50 p-4">
+                <div className="flex items-center space-x-3">
+                  <div className="flex h-5 w-5 items-center justify-center rounded-full bg-primary-600">
+                    <div className="h-2 w-2 rounded-full bg-white"></div>
+                  </div>
+                  <div>
+                    <span className="font-medium text-gray-900">Pay Online with Razorpay</span>
+                    <p className="text-sm text-gray-600">Secure payment via UPI, Cards, Net Banking & Wallets</p>
+                  </div>
                 </div>
-                {errors.paymentMethod && <span className="text-sm text-red-600">Please select a payment method</span>}
+                {/* Hidden input for payment method */}
+                <input
+                  type="hidden"
+                  value="razorpay"
+                  {...register('paymentMethod')}
+                />
               </div>
 
               {/* Payment Button */}
@@ -285,10 +328,7 @@ export default function CheckoutPage() {
                 disabled={loading}
                 className="w-full rounded-md bg-primary-600 px-8 py-3 text-white hover:bg-primary-700 disabled:opacity-50"
               >
-                {loading ? 'Processing...' : 
-                  watchedPaymentMethod === 'razorpay' ? `Proceed to Payment - ₹${total}` : 
-                  `Place Order - ₹${total}`
-                }
+                {loading ? 'Processing...' : `Proceed to Payment - ₹${total}`}
               </button>
             </form>
           </div>

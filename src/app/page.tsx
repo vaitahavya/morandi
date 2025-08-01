@@ -4,7 +4,7 @@ import ProductGrid from '@/components/products/ProductGrid';
 import InstagramFeed from '@/components/landing/InstagramFeed';
 import MarketingSection from '@/components/landing/MarketingSection';
 import NewsletterSignup from '@/components/layout/NewsletterSignup';
-import MockDataNotice from '@/components/ui/MockDataNotice';
+
 import SecondHero from '@/components/landing/SecondHero';
 
 export default function HomePage() {
@@ -14,7 +14,7 @@ export default function HomePage() {
       <CollectionTiles />
 
       <section className="mx-auto max-w-7xl px-4 py-12">
-        <MockDataNotice />
+  
         <h2 className="mb-6 text-2xl font-bold">Featured Products</h2>
         <ProductGrid />
       </section>

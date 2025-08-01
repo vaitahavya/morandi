@@ -10,7 +10,7 @@ export default function CartDrawer() {
   const [isOpen, setIsOpen] = useState(false);
   const { items, removeItem, updateQuantity, getTotal, clearCart } = useCartStore();
 
-  const handleQuantityChange = (productId: number, newQuantity: number) => {
+  const handleQuantityChange = (productId: string, newQuantity: number) => {
     if (newQuantity <= 0) {
       removeItem(productId);
     } else {

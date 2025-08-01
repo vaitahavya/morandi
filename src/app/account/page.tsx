@@ -37,10 +37,13 @@ export default function AccountPage() {
       const response = await fetch('/api/orders');
       if (response.ok) {
         const data = await response.json();
-        setOrders(data.orders);
+        setOrders(data.orders || []);
+      } else {
+        setOrders([]);
       }
     } catch (error) {
       console.error('Error fetching orders:', error);
+      setOrders([]);
     } finally {
       setLoading(false);
     }
@@ -126,7 +129,7 @@ export default function AccountPage() {
                   <div key={i} className="animate-pulse bg-gray-100 h-32 rounded-lg"></div>
                 ))}
               </div>
-            ) : orders.length === 0 ? (
+            ) : !orders || orders.length === 0 ? (
               <div className="text-center py-12">
                 <p className="text-gray-500 mb-4">No orders yet</p>
                 <Link
@@ -138,7 +141,7 @@ export default function AccountPage() {
               </div>
             ) : (
               <div className="space-y-6">
-                {orders.map((order) => (
+                {(orders || []).map((order) => (
                   <div key={order.id} className="border rounded-lg p-6">
                     <div className="flex justify-between items-start mb-4">
                       <div>
@@ -148,7 +151,7 @@ export default function AccountPage() {
                         </p>
                       </div>
                       <div className="text-right">
-                        <p className="font-semibold">${order.total.toFixed(2)}</p>
+                        <p className="font-semibold">₹{order.total.toFixed(2)}</p>
                         <span className={`inline-block px-2 py-1 text-xs rounded-full ${
                           order.status === 'delivered' ? 'bg-green-100 text-green-800' :
                           order.status === 'shipped' ? 'bg-blue-100 text-blue-800' :
@@ -176,7 +179,7 @@ export default function AccountPage() {
                           <div className="flex-1">
                             <p className="font-medium">{item.product.name}</p>
                             <p className="text-sm text-gray-500">
-                              Qty: {item.quantity} × ${item.price.toFixed(2)}
+                              Qty: {item.quantity} × ₹{item.price.toFixed(2)}
                             </p>
                           </div>
                         </div>

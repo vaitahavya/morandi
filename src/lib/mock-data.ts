@@ -1,17 +1,19 @@
-import { Product } from './wordpress-api';
+import { Product } from './products-api';
 
 export const mockProducts: Product[] = [
   {
-    id: 1,
+    id: "1",
     name: "Premium Cotton T-Shirt",
     slug: "premium-cotton-tshirt",
-    price: "29.99",
-    regular_price: "39.99",
-    sale_price: "29.99",
+    price: 29.99,
+    regularPrice: 39.99,
+    salePrice: 29.99,
     description: "High-quality cotton t-shirt with a comfortable fit. Perfect for everyday wear.",
-    short_description: "Comfortable cotton t-shirt",
-    stock_status: "instock",
-    in_stock: true,
+    shortDescription: "Comfortable cotton t-shirt",
+    stockStatus: "instock",
+    inStock: true,
+    stockQuantity: 100,
+    featured: false,
     images: [
       {
         id: 1,
@@ -26,38 +28,38 @@ export const mockProducts: Product[] = [
     ],
     categories: [
       {
-        id: 1,
+        id: "1",
         name: "Clothing",
         slug: "clothing"
       },
       {
-        id: 2,
+        id: "2",
         name: "T-Shirts",
         slug: "t-shirts"
       }
     ],
-    attributes: [
-      {
-        name: "Size",
-        options: ["S", "M", "L", "XL"]
-      },
-      {
-        name: "Color",
-        options: ["White", "Black", "Navy", "Gray"]
-      }
-    ]
+    attributes: {
+      "Size": ["S", "M", "L", "XL"],
+      "Color": ["White", "Black", "Navy", "Gray"]
+    },
+    tags: ["cotton", "t-shirt", "casual"],
+    category: "clothing",
+    createdAt: "2024-01-01T00:00:00Z",
+    updatedAt: "2024-01-01T00:00:00Z"
   },
   {
-    id: 2,
+    id: "2",
     name: "Denim Jeans",
     slug: "denim-jeans",
-    price: "89.99",
-    regular_price: "89.99",
-    sale_price: "",
+    price: 89.99,
+    regularPrice: 89.99,
+    salePrice: undefined,
     description: "Classic denim jeans with a modern fit. Durable and stylish for any occasion.",
-    short_description: "Classic denim jeans",
-    stock_status: "instock",
-    in_stock: true,
+    shortDescription: "Classic denim jeans",
+    stockStatus: "instock",
+    inStock: true,
+    stockQuantity: 50,
+    featured: false,
     images: [
       {
         id: 2,
@@ -72,38 +74,38 @@ export const mockProducts: Product[] = [
     ],
     categories: [
       {
-        id: 1,
+        id: "1",
         name: "Clothing",
         slug: "clothing"
       },
       {
-        id: 3,
+        id: "3",
         name: "Jeans",
         slug: "jeans"
       }
     ],
-    attributes: [
-      {
-        name: "Size",
-        options: ["30", "32", "34", "36", "38"]
-      },
-      {
-        name: "Color",
-        options: ["Blue", "Black", "Gray"]
-      }
-    ]
+    attributes: {
+      "Size": ["30", "32", "34", "36", "38"],
+      "Color": ["Blue", "Black", "Gray"]
+    },
+    tags: ["denim", "jeans", "casual"],
+    category: "clothing",
+    createdAt: "2024-01-01T00:00:00Z",
+    updatedAt: "2024-01-01T00:00:00Z"
   },
   {
-    id: 3,
+    id: "3",
     name: "Leather Sneakers",
     slug: "leather-sneakers",
-    price: "129.99",
-    regular_price: "149.99",
-    sale_price: "129.99",
+    price: 129.99,
+    regularPrice: 149.99,
+    salePrice: 129.99,
     description: "Premium leather sneakers with comfortable cushioning. Perfect for both casual and formal wear.",
-    short_description: "Premium leather sneakers",
-    stock_status: "instock",
-    in_stock: true,
+    shortDescription: "Premium leather sneakers",
+    stockStatus: "instock",
+    inStock: true,
+    stockQuantity: 75,
+    featured: true,
     images: [
       {
         id: 3,
@@ -118,38 +120,38 @@ export const mockProducts: Product[] = [
     ],
     categories: [
       {
-        id: 4,
+        id: "4",
         name: "Footwear",
         slug: "footwear"
       },
       {
-        id: 5,
+        id: "5",
         name: "Sneakers",
         slug: "sneakers"
       }
     ],
-    attributes: [
-      {
-        name: "Size",
-        options: ["7", "8", "9", "10", "11", "12"]
-      },
-      {
-        name: "Color",
-        options: ["White", "Black", "Brown"]
-      }
-    ]
+    attributes: {
+      "Size": ["7", "8", "9", "10", "11", "12"],
+      "Color": ["White", "Black", "Brown"]
+    },
+    tags: ["leather", "sneakers", "footwear"],
+    category: "footwear",
+    createdAt: "2024-01-01T00:00:00Z",
+    updatedAt: "2024-01-01T00:00:00Z"
   },
   {
-    id: 4,
+    id: "4",
     name: "Wool Sweater",
     slug: "wool-sweater",
-    price: "79.99",
-    regular_price: "79.99",
-    sale_price: "",
+    price: 79.99,
+    regularPrice: 79.99,
+    salePrice: undefined,
     description: "Warm and cozy wool sweater perfect for cold weather. Available in multiple colors.",
-    short_description: "Warm wool sweater",
-    stock_status: "instock",
-    in_stock: true,
+    shortDescription: "Warm wool sweater",
+    stockStatus: "instock",
+    inStock: true,
+    stockQuantity: 60,
+    featured: false,
     images: [
       {
         id: 4,
@@ -164,38 +166,38 @@ export const mockProducts: Product[] = [
     ],
     categories: [
       {
-        id: 1,
+        id: "1",
         name: "Clothing",
         slug: "clothing"
       },
       {
-        id: 6,
+        id: "6",
         name: "Sweaters",
         slug: "sweaters"
       }
     ],
-    attributes: [
-      {
-        name: "Size",
-        options: ["S", "M", "L", "XL"]
-      },
-      {
-        name: "Color",
-        options: ["Navy", "Gray", "Burgundy", "Cream"]
-      }
-    ]
+    attributes: {
+      "Size": ["S", "M", "L", "XL"],
+      "Color": ["Navy", "Gray", "Burgundy", "Cream"]
+    },
+    tags: ["wool", "sweater", "warm"],
+    category: "clothing",
+    createdAt: "2024-01-01T00:00:00Z",
+    updatedAt: "2024-01-01T00:00:00Z"
   },
   {
-    id: 5,
+    id: "5",
     name: "Canvas Backpack",
     slug: "canvas-backpack",
-    price: "59.99",
-    regular_price: "69.99",
-    sale_price: "59.99",
+    price: 59.99,
+    regularPrice: 69.99,
+    salePrice: 59.99,
     description: "Durable canvas backpack with multiple compartments. Perfect for everyday use.",
-    short_description: "Durable canvas backpack",
-    stock_status: "instock",
-    in_stock: true,
+    shortDescription: "Durable canvas backpack",
+    stockStatus: "instock",
+    inStock: true,
+    stockQuantity: 40,
+    featured: false,
     images: [
       {
         id: 5,
@@ -210,34 +212,37 @@ export const mockProducts: Product[] = [
     ],
     categories: [
       {
-        id: 7,
+        id: "7",
         name: "Accessories",
         slug: "accessories"
       },
       {
-        id: 8,
+        id: "8",
         name: "Bags",
         slug: "bags"
       }
     ],
-    attributes: [
-      {
-        name: "Color",
-        options: ["Khaki", "Olive", "Navy", "Black"]
-      }
-    ]
+    attributes: {
+      "Color": ["Khaki", "Olive", "Navy", "Black"]
+    },
+    tags: ["canvas", "backpack", "accessories"],
+    category: "accessories",
+    createdAt: "2024-01-01T00:00:00Z",
+    updatedAt: "2024-01-01T00:00:00Z"
   },
   {
-    id: 6,
+    id: "6",
     name: "Silk Scarf",
     slug: "silk-scarf",
-    price: "39.99",
-    regular_price: "39.99",
-    sale_price: "",
+    price: 39.99,
+    regularPrice: 39.99,
+    salePrice: undefined,
     description: "Elegant silk scarf with beautiful patterns. Perfect accessory for any outfit.",
-    short_description: "Elegant silk scarf",
-    stock_status: "instock",
-    in_stock: true,
+    shortDescription: "Elegant silk scarf",
+    stockStatus: "instock",
+    inStock: true,
+    stockQuantity: 80,
+    featured: false,
     images: [
       {
         id: 6,
@@ -252,21 +257,22 @@ export const mockProducts: Product[] = [
     ],
     categories: [
       {
-        id: 7,
+        id: "7",
         name: "Accessories",
         slug: "accessories"
       },
       {
-        id: 9,
+        id: "9",
         name: "Scarves",
         slug: "scarves"
       }
     ],
-    attributes: [
-      {
-        name: "Color",
-        options: ["Red", "Blue", "Green", "Purple", "Orange"]
-      }
-    ]
+    attributes: {
+      "Color": ["Red", "Blue", "Green", "Purple", "Orange"]
+    },
+    tags: ["silk", "scarf", "accessories"],
+    category: "accessories",
+    createdAt: "2024-01-01T00:00:00Z",
+    updatedAt: "2024-01-01T00:00:00Z"
   }
 ]; 
