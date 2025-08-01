@@ -21,26 +21,7 @@ export async function GET(
         children: {
           where: { isVisible: true },
           orderBy: { displayOrder: 'asc' }
-        },
-        products: includeProducts ? {
-          include: {
-            product: {
-              where: { status: 'published' },
-              select: {
-                id: true,
-                name: true,
-                slug: true,
-                price: true,
-                salePrice: true,
-                images: true,
-                featuredImage: true,
-                stockStatus: true,
-                featured: true,
-                shortDescription: true
-              }
-            }
-          }
-        } : false
+        }
       }
     });
 
@@ -49,6 +30,38 @@ export async function GET(
         success: false,
         error: 'Category not found'
       }, { status: 404 });
+    }
+
+    // Get products for this category if requested
+    let products = undefined;
+    let productCount = 0;
+    
+    if (includeProducts) {
+      const categoryProducts = await prisma.product.findMany({
+        where: {
+          categories: {
+            some: {
+              categoryId: category.id
+            }
+          },
+          status: 'published'
+        },
+        select: {
+          id: true,
+          name: true,
+          slug: true,
+          price: true,
+          salePrice: true,
+          images: true,
+          featuredImage: true,
+          stockStatus: true,
+          featured: true,
+          shortDescription: true
+        }
+      });
+      
+      products = categoryProducts;
+      productCount = categoryProducts.length;
     }
 
     // Transform data
@@ -65,8 +78,8 @@ export async function GET(
       displayOrder: category.displayOrder,
       isVisible: category.isVisible,
       children: category.children,
-      products: includeProducts ? category.products?.map(pc => pc.product) : undefined,
-      productCount: category.products?.length || 0,
+      products: products,
+      productCount: productCount,
       createdAt: category.createdAt,
       updatedAt: category.updatedAt
     };
@@ -176,8 +189,8 @@ export async function PUT(
     console.error('Error updating category:', error);
     
     // Handle unique constraint violations
-    if (error.code === 'P2002') {
-      const field = error.meta?.target?.[0];
+    if (error && typeof error === 'object' && 'code' in error && error.code === 'P2002') {
+      const field = (error as any).meta?.target?.[0];
       return NextResponse.json({
         success: false,
         error: `${field} must be unique`
