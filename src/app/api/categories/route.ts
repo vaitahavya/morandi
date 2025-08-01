@@ -32,13 +32,6 @@ export async function GET(request: NextRequest) {
         } : {
           orderBy: { displayOrder: 'asc' }
         },
-        products: includeProductCount ? {
-          include: {
-            product: {
-              select: { id: true, status: true }
-            }
-          }
-        } : false,
         parent: true
       },
       orderBy: [
@@ -46,6 +39,39 @@ export async function GET(request: NextRequest) {
         { name: 'asc' }
       ]
     });
+
+    // Get product counts if requested
+    let productCounts: Record<string, number> = {};
+    if (includeProductCount) {
+      const categoryIds = categories.map(cat => cat.id);
+      const productCountResults = await prisma.product.count({
+        where: {
+          categories: {
+            some: {
+              categoryId: {
+                in: categoryIds
+              }
+            }
+          },
+          status: 'published'
+        }
+      });
+      
+      // For now, we'll get the count per category in a separate query
+      for (const category of categories) {
+        const count = await prisma.product.count({
+          where: {
+            categories: {
+              some: {
+                categoryId: category.id
+              }
+            },
+            status: 'published'
+          }
+        });
+        productCounts[category.id] = count;
+      }
+    }
 
     // Transform data
     const transformedCategories = categories.map(category => ({
@@ -70,7 +96,7 @@ export async function GET(request: NextRequest) {
         isVisible: child.isVisible
       })),
       productCount: includeProductCount 
-        ? category.products?.filter(pc => pc.product.status === 'published').length || 0
+        ? productCounts[category.id] || 0
         : undefined,
       createdAt: category.createdAt,
       updatedAt: category.updatedAt
