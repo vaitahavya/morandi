@@ -354,7 +354,7 @@ export const getOrderStatusColor = (status: string): string => {
     refunded: 'gray',
     failed: 'red'
   };
-  return statusColors[status] || 'gray';
+  return (statusColors as any)[status] || 'gray';
 };
 
 export const getPaymentStatusColor = (status: string): string => {
@@ -365,7 +365,7 @@ export const getPaymentStatusColor = (status: string): string => {
     refunded: 'gray',
     partially_refunded: 'orange'
   };
-  return statusColors[status] || 'gray';
+  return (statusColors as any)[status] || 'gray';
 };
 
 export const getOrderStatusLabel = (status: string): string => {
@@ -379,7 +379,7 @@ export const getOrderStatusLabel = (status: string): string => {
     refunded: 'Refunded',
     failed: 'Failed'
   };
-  return statusLabels[status] || status;
+  return (statusLabels as any)[status] || status;
 };
 
 export const getPaymentStatusLabel = (status: string): string => {
@@ -390,7 +390,7 @@ export const getPaymentStatusLabel = (status: string): string => {
     refunded: 'Refunded',
     partially_refunded: 'Partially Refunded'
   };
-  return statusLabels[status] || status;
+  return (statusLabels as any)[status] || status;
 };
 
 // Legacy compatibility functions (for WordPress migration)

@@ -43,8 +43,11 @@ export interface Product {
   categories: ProductCategory[];
   stockStatus: string;
   stockQuantity: number;
+  manageStock: boolean;
+  lowStockThreshold?: number;
   inStock: boolean;
   featured: boolean;
+  status: string;
   variants?: ProductVariant[];
   attributes?: Record<string, string[]>;
   avgRating?: number;

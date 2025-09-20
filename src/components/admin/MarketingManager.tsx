@@ -20,10 +20,11 @@ import {
   Edit,
   Trash2
 } from 'lucide-react';
-import { BannerManager } from './BannerManager';
-import { CouponManager } from './CouponManager';
-import { CampaignManager } from './CampaignManager';
-import { FeaturedProductManager } from './FeaturedProductManager';
+// TODO: Create these components when needed
+// import { BannerManager } from './BannerManager';
+// import { CouponManager } from './CouponManager';
+// import { CampaignManager } from './CampaignManager';
+// import { FeaturedProductManager } from './FeaturedProductManager';
 
 interface MarketingStats {
   totalBanners: number;
@@ -424,10 +425,11 @@ export default function MarketingManager() {
         </div>
       )}
 
-      {activeTab === 'banners' && <BannerManager />}
-      {activeTab === 'coupons' && <CouponManager />}
-      {activeTab === 'campaigns' && <CampaignManager />}
-      {activeTab === 'featured' && <FeaturedProductManager />}
+      {/* TODO: Implement these components when needed */}
+      {/* {activeTab === 'banners' && <BannerManager />} */}
+      {/* {activeTab === 'coupons' && <CouponManager />} */}
+      {/* {activeTab === 'campaigns' && <CampaignManager />} */}
+      {/* {activeTab === 'featured' && <FeaturedProductManager />} */}
     </div>
   );
 } 

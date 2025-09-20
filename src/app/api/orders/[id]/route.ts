@@ -99,7 +99,7 @@ export async function PUT(
 
     // Check permissions
     const isOwner = existingOrder.userId === session?.user?.id;
-    const isAdmin = session?.user?.role === 'admin'; // Assuming you have role-based auth
+    const isAdmin = false; // Role-based auth not implemented yet
     
     if (!isOwner && !isAdmin) {
       return NextResponse.json({
@@ -130,14 +130,14 @@ export async function PUT(
     // Handle special status updates
     if (updateData.status && updateData.status !== existingOrder.status) {
       // Validate status transitions
-      const validTransitions = {
-        'pending': ['confirmed', 'cancelled'],
-        'confirmed': ['processing', 'cancelled'],
-        'processing': ['shipped', 'cancelled'],
-        'shipped': ['delivered', 'cancelled'],
-        'delivered': ['refunded'],
-        'cancelled': ['refunded'],
-        'refunded': []
+      const validTransitions: Record<string, string[]> = {
+        pending: ['confirmed', 'cancelled'],
+        confirmed: ['processing', 'cancelled'],
+        processing: ['shipped', 'cancelled'],
+        shipped: ['delivered', 'cancelled'],
+        delivered: [],
+        cancelled: [],
+        refunded: []
       };
 
       const allowedNextStatuses = validTransitions[existingOrder.status] || [];
@@ -305,7 +305,7 @@ export async function DELETE(
 
     // Check permissions
     const isOwner = existingOrder.userId === session?.user?.id;
-    const isAdmin = session?.user?.role === 'admin';
+    const isAdmin = false; // Role-based auth not implemented yet
     
     if (!isOwner && !isAdmin) {
       return NextResponse.json({

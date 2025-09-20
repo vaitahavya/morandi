@@ -1,12 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@/lib/supabase';
+import { supabase } from '@/lib/supabase';
 
 export async function GET(
   request: NextRequest,
   { params }: { params: { id: string } }
 ) {
   try {
-    const supabase = createClient();
     const returnId = params.id;
 
     // Fetch return details with related data
@@ -62,7 +61,7 @@ export async function GET(
 
     // Sort status history by date
     if (returnData.return_status_history) {
-      returnData.return_status_history.sort((a, b) => 
+      returnData.return_status_history.sort((a: any, b: any) => 
         new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
       );
     }
@@ -86,7 +85,6 @@ export async function PUT(
   { params }: { params: { id: string } }
 ) {
   try {
-    const supabase = createClient();
     const returnId = params.id;
     const body = await request.json();
     
@@ -246,7 +244,6 @@ export async function DELETE(
   { params }: { params: { id: string } }
 ) {
   try {
-    const supabase = createClient();
     const returnId = params.id;
 
     // Check if return exists and can be deleted

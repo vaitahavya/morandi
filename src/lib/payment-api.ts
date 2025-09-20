@@ -319,7 +319,7 @@ export const processPayment = async (
         } catch (error) {
           console.error('Error confirming payment:', error);
           if (onError) {
-            onError(error.message || 'Payment confirmation failed');
+            onError((error as Error).message || 'Payment confirmation failed');
           }
         }
       },
@@ -333,7 +333,7 @@ export const processPayment = async (
   } catch (error) {
     console.error('Error processing payment:', error);
     if (onError) {
-      onError(error.message || 'Payment processing failed');
+      onError((error as Error).message || 'Payment processing failed');
     }
   }
 };

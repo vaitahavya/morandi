@@ -110,7 +110,7 @@ export async function POST(request: NextRequest) {
       }, { status: 400 });
     }
 
-    const paidAmount = paymentDetails.amount / 100; // Convert from paise to rupees
+    const paidAmount = Number(paymentDetails.amount) / 100; // Convert from paise to rupees
     if (Math.abs(paidAmount - order.total) > 0.01) {
       return NextResponse.json({
         success: false,
@@ -297,7 +297,7 @@ export async function GET(request: NextRequest) {
         const payment = await razorpay.payments.fetch(order.razorpayPaymentId);
         paymentDetails = {
           id: payment.id,
-          amount: payment.amount / 100, // Convert to rupees
+          amount: Number(payment.amount) / 100, // Convert to rupees
           currency: payment.currency,
           method: payment.method,
           status: payment.status,

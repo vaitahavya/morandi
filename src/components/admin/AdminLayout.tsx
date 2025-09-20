@@ -88,13 +88,13 @@ export default function AdminLayout({ children, activeSection, onSectionChange }
   ];
 
   const quickActions = [
-    { label: 'Add Product', action: () => {/* TODO */} },
+    { label: 'Add Product', action: () => onSectionChange('products') },
     { label: 'View Orders', action: () => onSectionChange('orders') },
     { label: 'Check Analytics', action: () => onSectionChange('analytics') }
   ];
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50 flex flex-row">
       {/* Mobile sidebar backdrop */}
       {sidebarOpen && (
         <div 
@@ -185,7 +185,7 @@ export default function AdminLayout({ children, activeSection, onSectionChange }
       </div>
 
       {/* Main content */}
-      <div className="lg:pl-64">
+      <div className="flex-1">
         {/* Top Header */}
         <header className="bg-white shadow-sm border-b">
           <div className="flex items-center justify-between h-16 px-4 sm:px-6">

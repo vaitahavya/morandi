@@ -167,7 +167,7 @@ export default function ReturnManager({ initialReturns = [] }: ReturnManagerProp
     };
 
     return (
-      <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium border ${variants[status] || variants.pending}`}>
+      <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium border ${(variants as any)[status] || variants.pending}`}>
         {status.charAt(0).toUpperCase() + status.slice(1)}
       </span>
     );
@@ -214,8 +214,8 @@ export default function ReturnManager({ initialReturns = [] }: ReturnManagerProp
     };
 
     return (
-      <span className={`inline-flex items-center px-2 py-1 rounded text-xs font-medium ${variants[reason] || variants.other}`}>
-        {labels[reason] || reason}
+      <span className={`inline-flex items-center px-2 py-1 rounded text-xs font-medium ${(variants as any)[reason] || variants.other}`}>
+        {(labels as any)[reason] || reason}
       </span>
     );
   };

@@ -1,9 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@/lib/supabase';
+import { supabase } from '@/lib/supabase';
 
 export async function GET(request: NextRequest) {
   try {
-    const supabase = createClient();
     const { searchParams } = new URL(request.url);
     
     // Parse query parameters
@@ -29,7 +28,8 @@ export async function GET(request: NextRequest) {
         created_at,
         total,
         status,
-        user_id
+        user_id,
+        order_id
       `)
       .not('customer_email', 'is', null);
 
@@ -72,7 +72,7 @@ export async function GET(request: NextRequest) {
 
       const customer = customerMap.get(email);
       customer.orders.push({
-        id: order.id,
+        id: order.order_id,
         date: order.created_at,
         total: order.total,
         status: order.status

@@ -60,22 +60,22 @@ export function ProductStats() {
         
         // Calculate stats
         const totalProducts = products.length;
-        const publishedProducts = products.filter(p => p.status === 'published').length;
-        const draftProducts = products.filter(p => p.status === 'draft').length;
-        const featuredProducts = products.filter(p => p.featured).length;
-        const outOfStockProducts = products.filter(p => p.stockStatus === 'outofstock').length;
-        const lowStockProducts = products.filter(p => 
+        const publishedProducts = products.filter((p: any) => p.status === 'published').length;
+        const draftProducts = products.filter((p: any) => p.status === 'draft').length;
+        const featuredProducts = products.filter((p: any) => p.featured).length;
+        const outOfStockProducts = products.filter((p: any) => p.stockStatus === 'outofstock').length;
+        const lowStockProducts = products.filter((p: any) => 
           p.stockQuantity <= (p.lowStockThreshold || 5) && p.stockStatus !== 'outofstock'
         ).length;
         
-        const totalValue = products.reduce((sum, p) => sum + (p.price * p.stockQuantity), 0);
-        const averagePrice = totalProducts > 0 ? products.reduce((sum, p) => sum + p.price, 0) / totalProducts : 0;
+        const totalValue = products.reduce((sum: number, p: any) => sum + (p.price * p.stockQuantity), 0);
+        const averagePrice = totalProducts > 0 ? products.reduce((sum: number, p: any) => sum + p.price, 0) / totalProducts : 0;
         
         // Calculate top categories
-        const categoryCount = {};
-        products.forEach(product => {
+        const categoryCount: Record<string, number> = {};
+        products.forEach((product: any) => {
           if (product.categories && product.categories.length > 0) {
-            product.categories.forEach(cat => {
+            product.categories.forEach((cat: any) => {
               categoryCount[cat.name] = (categoryCount[cat.name] || 0) + 1;
             });
           } else if (product.category) {
@@ -94,9 +94,9 @@ export function ProductStats() {
 
         // Mock recent activity (in real app, this would come from an activity log)
         const recentActivity = products
-          .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime())
+          .sort((a: any, b: any) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime())
           .slice(0, 5)
-          .map(product => ({
+          .map((product: any) => ({
             type: 'updated' as const,
             productName: product.name,
             timestamp: product.updatedAt,

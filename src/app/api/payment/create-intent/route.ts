@@ -144,10 +144,10 @@ export async function POST(request: NextRequest) {
     console.error('Error creating payment intent:', error);
     
     // Check for specific Razorpay errors
-    if (error.error) {
+    if (error && typeof error === 'object' && 'error' in error && error.error) {
       return NextResponse.json({
         success: false,
-        error: error.error.description || 'Payment service error'
+        error: (error as any).error.description || 'Payment service error'
       }, { status: 400 });
     }
 

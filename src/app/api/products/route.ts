@@ -264,8 +264,8 @@ export async function POST(request: NextRequest) {
     console.error('Error creating product:', error);
     
     // Handle unique constraint violations
-    if (error.code === 'P2002') {
-      const field = error.meta?.target?.[0];
+    if (error && typeof error === 'object' && 'code' in error && error.code === 'P2002') {
+      const field = (error as any).meta?.target?.[0];
       return NextResponse.json({
         success: false,
         error: `${field} must be unique`

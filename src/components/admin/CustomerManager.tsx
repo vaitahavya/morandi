@@ -160,7 +160,7 @@ export default function CustomerManager({ initialCustomers = [] }: CustomerManag
     };
 
     return (
-      <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium border ${variants[segment] || variants.New}`}>
+      <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium border ${(variants as any)[segment] || variants.New}`}>
         {segment}
       </span>
     );

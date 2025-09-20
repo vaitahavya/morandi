@@ -21,29 +21,44 @@ export const authOptions: NextAuthOptions = {
           return null;
         }
 
-        const user = await prisma.user.findUnique({
-          where: { email: credentials.email }
-        });
-
-        if (!user || !user.password) {
-          return null;
+        // Temporary hardcoded admin user for testing
+        if (credentials.email === 'admin@morandi.com' && credentials.password === 'admin123') {
+          return {
+            id: 'admin-001',
+            email: 'admin@morandi.com',
+            name: 'Admin User',
+            image: undefined,
+          };
         }
 
-        const isPasswordValid = await bcrypt.compare(
-          credentials.password,
-          user.password
-        );
+        try {
+          const user = await prisma.user.findUnique({
+            where: { email: credentials.email }
+          });
 
-        if (!isPasswordValid) {
+          if (!user || !user.password) {
+            return null;
+          }
+
+          const isPasswordValid = await bcrypt.compare(
+            credentials.password,
+            user.password
+          );
+
+          if (!isPasswordValid) {
+            return null;
+          }
+
+          return {
+            id: user.id,
+            email: user.email,
+            name: user.name || undefined,
+            image: user.image || undefined,
+          };
+        } catch (error) {
+          console.error('Database error during authentication:', error);
           return null;
         }
-
-        return {
-          id: user.id,
-          email: user.email,
-          name: user.name,
-          image: user.image,
-        };
       },
     }),
   ],
@@ -78,12 +93,16 @@ export const authOptions: NextAuthOptions = {
       return true;
     },
     async jwt({ token, user, account }) {
+      console.log('NextAuth JWT callback - token:', token);
+      console.log('NextAuth JWT callback - user:', user);
       if (user) {
         token.id = user.id;
       }
       return token;
     },
     async session({ session, token }) {
+      console.log('NextAuth session callback - token:', token);
+      console.log('NextAuth session callback - session:', session);
       if (token) {
         session.user.id = token.id as string;
       }

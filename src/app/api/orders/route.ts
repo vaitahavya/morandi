@@ -312,22 +312,22 @@ export async function POST(request: NextRequest) {
         
         // Order items
         items: {
-          create: validatedItems
+          create: validatedItems.map(item => ({
+            productId: item.productId,
+            variantId: item.variantId,
+            productName: item.productName,
+            productSku: item.productSku,
+            variantName: item.variantName,
+            quantity: item.quantity,
+            unitPrice: item.unitPrice,
+            totalPrice: item.totalPrice,
+            attributes: item.attributes,
+            productImage: item.productImage
+          })) as any
         }
       },
       include: {
-        items: {
-          include: {
-            product: {
-              select: {
-                id: true,
-                name: true,
-                slug: true,
-                images: true
-              }
-            }
-          }
-        },
+        items: true,
         user: {
           select: {
             id: true,

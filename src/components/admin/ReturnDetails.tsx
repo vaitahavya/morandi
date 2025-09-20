@@ -250,7 +250,7 @@ export function ReturnDetails({ returnItem, onClose, onUpdate }: ReturnDetailsPr
     };
 
     return (
-      <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium border ${variants[status] || variants.pending}`}>
+      <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium border ${(variants as any)[status] || variants.pending}`}>
         {status.charAt(0).toUpperCase() + status.slice(1)}
       </span>
     );
@@ -404,7 +404,7 @@ export function ReturnDetails({ returnItem, onClose, onUpdate }: ReturnDetailsPr
                       </Card>
 
                       {/* Media Attachments */}
-                      {(returnData.images?.length > 0 || returnData.videos?.length > 0) && (
+                      {((returnData.images?.length || 0) > 0 || (returnData.videos?.length || 0) > 0) && (
                         <Card>
                           <CardHeader>
                             <CardTitle className="flex items-center gap-2">

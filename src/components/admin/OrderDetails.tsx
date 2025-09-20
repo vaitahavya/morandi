@@ -83,7 +83,7 @@ export function OrderDetails({ order, onClose, onUpdate }: OrderDetailsProps) {
     };
 
     return (
-      <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium border ${variants[color] || variants.gray}`}>
+      <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium border ${(variants as any)[color] || variants.gray}`}>
         {label}
       </span>
     );
@@ -367,7 +367,7 @@ export function OrderDetails({ order, onClose, onUpdate }: OrderDetailsProps) {
                           <div className="mt-2 flex flex-wrap gap-1">
                             {Object.entries(item.attributes).map(([key, value]) => (
                               <Badge key={key} variant="outline" className="text-xs">
-                                {key}: {value}
+                                {key}: {String(value)}
                               </Badge>
                             ))}
                           </div>

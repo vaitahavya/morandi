@@ -9,6 +9,15 @@ import CartDrawer from '@/components/cart/CartDrawer';
 import { useWishlistStore } from '@/store/wishlist-store';
 import Logo from '@/components/ui/Logo';
 
+// Admin user emails mapping (should match AdminAuthGuard)
+const ADMIN_USERS: Record<string, string> = {
+  'admin@morandi.com': 'super_admin',
+  'admin@example.com': 'super_admin',
+  'manager@morandi.com': 'admin',
+  'staff@morandi.com': 'manager',
+  'viewer@morandi.com': 'viewer'
+};
+
 export default function Header() {
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
@@ -96,6 +105,13 @@ export default function Header() {
                         onClick={() => setIsUserMenuOpen(false)}
                       >
                         My Account
+                      </Link>
+                      <Link
+                        href="/admin"
+                        className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                        onClick={() => setIsUserMenuOpen(false)}
+                      >
+                        Admin Dashboard
                       </Link>
                       <button
                         onClick={handleSignOut}

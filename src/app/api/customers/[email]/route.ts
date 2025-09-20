@@ -1,12 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@/lib/supabase';
+import { supabase } from '@/lib/supabase';
 
 export async function GET(
   request: NextRequest,
   { params }: { params: { email: string } }
 ) {
   try {
-    const supabase = createClient();
     const customerEmail = decodeURIComponent(params.email);
 
     // Fetch customer orders
@@ -80,8 +79,8 @@ export async function GET(
 
     // Top purchased products
     const productCounts = new Map();
-    orders.forEach(order => {
-      order.order_items?.forEach(item => {
+    orders.forEach((order: any) => {
+      order.order_items?.forEach((item: any) => {
         const productKey = item.product_name || `Product ${item.product_id}`;
         const existing = productCounts.get(productKey) || { name: productKey, quantity: 0, revenue: 0 };
         existing.quantity += item.quantity;

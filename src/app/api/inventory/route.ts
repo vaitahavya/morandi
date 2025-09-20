@@ -21,8 +21,8 @@ export async function GET(request: NextRequest) {
 
     if (lowStockOnly) {
       whereConditions.OR = [
-        { stockQuantity: { lte: prisma.raw('low_stock_threshold') } },
-        { stockStatus: 'lowstock' }
+        { stockStatus: 'lowstock' },
+        { stockStatus: 'outofstock' }
       ];
     }
 

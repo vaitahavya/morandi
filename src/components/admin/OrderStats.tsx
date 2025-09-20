@@ -436,7 +436,7 @@ export function OrderStats() {
                       <span className="text-sm font-medium text-gray-600">#{index + 1}</span>
                       <div>
                         <p className="text-sm font-medium truncate max-w-[150px]">
-                          {customer.customerName || 'Unknown'}
+                          {customer.customerEmail.split('@')[0] || 'Unknown'}
                         </p>
                         <p className="text-xs text-gray-500 truncate max-w-[150px]">
                           {customer.customerEmail}

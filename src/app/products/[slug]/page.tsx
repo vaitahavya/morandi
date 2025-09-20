@@ -25,7 +25,7 @@ export default function ProductDetailPage({ params }: ProductDetailPageProps) {
   const [selectedSize, setSelectedSize] = useState('');
   const [quantity, setQuantity] = useState(1);
   const [showReviewForm, setShowReviewForm] = useState(false);
-  const [currentPrice, setCurrentPrice] = useState('');
+  const [currentPrice, setCurrentPrice] = useState<string>('');
   const [selectedVariant, setSelectedVariant] = useState<ProductVariant | null>(null);
   
   const addItem = useCartStore((state) => state.addItem);
@@ -63,7 +63,7 @@ export default function ProductDetailPage({ params }: ProductDetailPageProps) {
           setVariations(vars);
           
           // Set initial price
-          setCurrentPrice(data.price);
+          setCurrentPrice(data.price.toString());
         }
       } catch (error) {
         console.error('Error fetching product:', error);
@@ -82,14 +82,14 @@ export default function ProductDetailPage({ params }: ProductDetailPageProps) {
     const colors = new Map<string, { name: string; available: boolean; price?: string }>();
     
     variations.forEach(variant => {
-      const colorAttr = variant.attributes.find(attr => 
+      const colorAttr = variant.attributes.find((attr: any) => 
         attr.name.toLowerCase().includes('color') || attr.name.toLowerCase().includes('colour')
       );
       
       if (colorAttr) {
         const colorName = colorAttr.value;
-        const isAvailable = variant.stock_status === 'instock';
-        const price = variant.price !== product?.price ? variant.price : undefined;
+        const isAvailable = variant.stockStatus === 'instock';
+        const price = variant.price !== product?.price ? variant.price.toString() : undefined;
         
         if (!colors.has(colorName)) {
           colors.set(colorName, { name: colorName, available: isAvailable, price });
@@ -116,14 +116,14 @@ export default function ProductDetailPage({ params }: ProductDetailPageProps) {
     const sizes = new Map<string, { name: string; available: boolean; price?: string }>();
     
     variations.forEach(variant => {
-      const sizeAttr = variant.attributes.find(attr => 
+      const sizeAttr = variant.attributes.find((attr: any) => 
         attr.name.toLowerCase().includes('size')
       );
       
       if (sizeAttr) {
         const sizeName = sizeAttr.value;
-        const isAvailable = variant.stock_status === 'instock';
-        const price = variant.price !== product?.price ? variant.price : undefined;
+        const isAvailable = variant.stockStatus === 'instock';
+        const price = variant.price !== product?.price ? variant.price.toString() : undefined;
         
         if (!sizes.has(sizeName)) {
           sizes.set(sizeName, { name: sizeName, available: isAvailable, price });
@@ -148,10 +148,10 @@ export default function ProductDetailPage({ params }: ProductDetailPageProps) {
     if (!variations.length || (!selectedColor && !selectedSize)) return;
     
     const matchingVariant = variations.find(variant => {
-      const colorAttr = variant.attributes.find(attr => 
+      const colorAttr = variant.attributes.find((attr: any) => 
         attr.name.toLowerCase().includes('color') || attr.name.toLowerCase().includes('colour')
       );
-      const sizeAttr = variant.attributes.find(attr => 
+      const sizeAttr = variant.attributes.find((attr: any) => 
         attr.name.toLowerCase().includes('size')
       );
       
@@ -163,10 +163,10 @@ export default function ProductDetailPage({ params }: ProductDetailPageProps) {
     
     if (matchingVariant) {
       setSelectedVariant(matchingVariant);
-      setCurrentPrice(matchingVariant.price);
+      setCurrentPrice(matchingVariant.price.toString());
     } else {
       setSelectedVariant(null);
-      setCurrentPrice(product?.price || '');
+      setCurrentPrice(product?.price?.toString() || '');
     }
   }, [selectedColor, selectedSize, variations, product?.price]);
 
@@ -281,7 +281,7 @@ export default function ProductDetailPage({ params }: ProductDetailPageProps) {
           {/* Stock Status */}
           {selectedVariant && (
             <div className="text-sm">
-              {selectedVariant.stock_status === 'instock' ? (
+              {selectedVariant.stockStatus === 'instock' ? (
                 <span className="text-green-600">✓ In Stock</span>
               ) : (
                 <span className="text-red-600">✗ Out of Stock</span>
@@ -313,10 +313,10 @@ export default function ProductDetailPage({ params }: ProductDetailPageProps) {
           <div className="space-y-3">
             <button
               onClick={handleAddToCart}
-              disabled={(sizeOptions.length > 0 && !selectedSize) || (selectedVariant && selectedVariant.stock_status !== 'instock') || false}
+              disabled={(sizeOptions.length > 0 && !selectedSize) || (selectedVariant && selectedVariant.stockStatus !== 'instock') || false}
               className="w-full bg-primary-600 text-white py-3 px-6 rounded-md font-medium hover:bg-primary-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {selectedVariant && selectedVariant.stock_status !== 'instock' 
+              {selectedVariant && selectedVariant.stockStatus !== 'instock' 
                 ? 'Out of Stock' 
                 : 'Add to Cart'
               }

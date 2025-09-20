@@ -55,9 +55,11 @@ export default function ProductsPage() {
       };
 
       // Remove undefined values
-      Object.keys(filters).forEach(key => 
-        filters[key] === undefined && delete filters[key]
-      );
+      Object.keys(filters).forEach(key => {
+        if ((filters as any)[key] === undefined) {
+          delete (filters as any)[key];
+        }
+      });
 
       const response = await getProductsWithPagination(filters);
       setProducts(response.data);

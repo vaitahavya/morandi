@@ -109,7 +109,7 @@ export function OrderStatusUpdate({ order, onClose, onUpdate }: OrderStatusUpdat
     };
 
     return (
-      <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium border ${variants[color] || variants.gray}`}>
+      <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium border ${(variants as any)[color] || variants.gray}`}>
         {label}
       </span>
     );
@@ -145,7 +145,7 @@ export function OrderStatusUpdate({ order, onClose, onUpdate }: OrderStatusUpdat
       'refunded': []
     };
     
-    return statusFlow[currentStatus] || [];
+    return (statusFlow as any)[currentStatus] || [];
   };
 
   const formatCurrency = (amount: number, currency: string = 'INR') => {
@@ -226,7 +226,7 @@ export function OrderStatusUpdate({ order, onClose, onUpdate }: OrderStatusUpdat
                     onChange={(e) => setFormData(prev => ({ ...prev, status: e.target.value }))}
                   >
                     <option value={order.status}>{getOrderStatusLabel(order.status)} (Current)</option>
-                    {getAvailableStatuses(order.status).map(status => (
+                    {getAvailableStatuses(order.status).map((status: string) => (
                       <option key={status} value={status}>
                         {getOrderStatusLabel(status)}
                       </option>

@@ -11,7 +11,7 @@ import {
   Image as ImageIcon, 
   Trash2, 
   Plus,
-  DragHandleDots2Icon,
+
   Star,
   Package
 } from 'lucide-react';
@@ -99,15 +99,15 @@ export function ProductForm({ product, onSuccess, onCancel }: ProductFormProps) 
         ...formData,
         price: parseFloat(formData.price.toString()),
         regularPrice: parseFloat(formData.regularPrice.toString()),
-        salePrice: formData.salePrice ? parseFloat(formData.salePrice.toString()) : null,
+        salePrice: formData.salePrice ? parseFloat(formData.salePrice.toString()) : undefined,
         stockQuantity: parseInt(formData.stockQuantity.toString()),
         lowStockThreshold: parseInt(formData.lowStockThreshold.toString()),
-        weight: formData.weight ? parseFloat(formData.weight.toString()) : null,
+        weight: formData.weight ? parseFloat(formData.weight.toString()) : undefined,
         dimensions: formData.dimensions.length || formData.dimensions.width || formData.dimensions.height 
           ? formData.dimensions 
           : null,
         tags: Array.isArray(formData.tags) ? formData.tags : 
-              typeof formData.tags === 'string' ? formData.tags.split(',').map(t => t.trim()).filter(Boolean) : []
+              typeof formData.tags === 'string' ? (formData.tags as string).split(',').map(t => t.trim()).filter(Boolean) : []
       };
 
       if (product) {
@@ -130,12 +130,16 @@ export function ProductForm({ product, onSuccess, onCancel }: ProductFormProps) 
 
     // In a real app, you'd upload to your storage service
     // For now, we'll just add placeholder URLs
-    const newImages = Array.from(files).map(file => URL.createObjectURL(file));
+    const newImages = Array.from(files).map(file => ({
+      id: Date.now() + Math.random(),
+      src: URL.createObjectURL(file),
+      alt: file.name
+    }));
     
     setFormData(prev => ({
       ...prev,
       images: [...prev.images, ...newImages],
-      featuredImage: prev.featuredImage || newImages[0]
+      featuredImage: prev.featuredImage || newImages[0]?.src || ''
     }));
   };
 
@@ -145,8 +149,8 @@ export function ProductForm({ product, onSuccess, onCancel }: ProductFormProps) 
       return {
         ...prev,
         images: newImages,
-        featuredImage: prev.featuredImage === prev.images[index] 
-          ? (newImages[0] || '') 
+        featuredImage: prev.featuredImage === (typeof prev.images[index] === 'string' ? prev.images[index] : prev.images[index]?.src)
+          ? (newImages[0]?.src || '') 
           : prev.featuredImage
       };
     });
@@ -469,19 +473,19 @@ export function ProductForm({ product, onSuccess, onCancel }: ProductFormProps) 
                         onDrop={(e) => handleDrop(e, index)}
                       >
                         <img
-                          src={image}
-                          alt={`Product ${index + 1}`}
+                          src={typeof image === 'string' ? image : image.src}
+                          alt={typeof image === 'string' ? `Product ${index + 1}` : image.alt}
                           className="w-full h-24 object-cover rounded-lg border"
                         />
                         <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-50 rounded-lg transition-all duration-200 flex items-center justify-center">
                           <div className="opacity-0 group-hover:opacity-100 flex items-center gap-2">
                             <button
                               type="button"
-                              onClick={() => setFeaturedImage(image)}
+                              onClick={() => setFeaturedImage(typeof image === 'string' ? image : image.src)}
                               className="p-1 bg-white rounded text-yellow-600 hover:text-yellow-700"
                               title="Set as featured"
                             >
-                              <Star className={`h-4 w-4 ${formData.featuredImage === image ? 'fill-current' : ''}`} />
+                              <Star className={`h-4 w-4 ${formData.featuredImage === (typeof image === 'string' ? image : image.src) ? 'fill-current' : ''}`} />
                             </button>
                             <button
                               type="button"
@@ -493,7 +497,7 @@ export function ProductForm({ product, onSuccess, onCancel }: ProductFormProps) 
                             </button>
                           </div>
                         </div>
-                        {formData.featuredImage === image && (
+                        {formData.featuredImage === (typeof image === 'string' ? image : image.src) && (
                           <Badge className="absolute top-1 left-1 text-xs">Featured</Badge>
                         )}
                       </div>
@@ -548,7 +552,7 @@ export function ProductForm({ product, onSuccess, onCancel }: ProductFormProps) 
                     type="text"
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                     value={Array.isArray(formData.tags) ? formData.tags.join(', ') : formData.tags}
-                    onChange={(e) => setFormData(prev => ({ ...prev, tags: e.target.value }))}
+                    onChange={(e) => setFormData(prev => ({ ...prev, tags: e.target.value.split(',').map(t => t.trim()).filter(Boolean) }))}
                     placeholder="fashion, clothing, summer"
                   />
                 </div>

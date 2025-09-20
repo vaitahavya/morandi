@@ -13,6 +13,8 @@ export const mockProducts: Product[] = [
     stockStatus: "instock",
     inStock: true,
     stockQuantity: 100,
+    manageStock: true,
+    status: "published",
     featured: false,
     images: [
       {
@@ -59,6 +61,8 @@ export const mockProducts: Product[] = [
     stockStatus: "instock",
     inStock: true,
     stockQuantity: 50,
+    manageStock: true,
+    status: "published",
     featured: false,
     images: [
       {
@@ -105,6 +109,8 @@ export const mockProducts: Product[] = [
     stockStatus: "instock",
     inStock: true,
     stockQuantity: 75,
+    manageStock: true,
+    status: "published",
     featured: true,
     images: [
       {
@@ -151,6 +157,8 @@ export const mockProducts: Product[] = [
     stockStatus: "instock",
     inStock: true,
     stockQuantity: 60,
+    manageStock: true,
+    status: "published",
     featured: false,
     images: [
       {
@@ -197,6 +205,8 @@ export const mockProducts: Product[] = [
     stockStatus: "instock",
     inStock: true,
     stockQuantity: 40,
+    manageStock: true,
+    status: "published",
     featured: false,
     images: [
       {
@@ -242,6 +252,8 @@ export const mockProducts: Product[] = [
     stockStatus: "instock",
     inStock: true,
     stockQuantity: 80,
+    manageStock: true,
+    status: "published",
     featured: false,
     images: [
       {

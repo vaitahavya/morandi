@@ -173,7 +173,7 @@ export default function OrderManager({ initialOrders = [] }: OrderManagerProps) 
     };
 
     return (
-      <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium border ${variants[color] || variants.gray}`}>
+      <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium border ${(variants as any)[color] || variants.gray}`}>
         {label}
       </span>
     );

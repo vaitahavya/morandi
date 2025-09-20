@@ -32,6 +32,7 @@ interface AdminAuthState {
 // Admin user emails mapping (in a real app, this would come from an API)
 const ADMIN_USERS: Record<string, AdminRole> = {
   'admin@morandi.com': 'super_admin',
+  'admin@example.com': 'super_admin',
   'manager@morandi.com': 'admin',
   'staff@morandi.com': 'manager',
   'viewer@morandi.com': 'viewer'
@@ -87,6 +88,9 @@ export default function AdminAuthGuard({
   });
 
   useEffect(() => {
+    console.log('AdminAuthGuard - Status:', status);
+    console.log('AdminAuthGuard - Session:', session);
+    
     if (status === 'loading') {
       setAuthState(prev => ({ ...prev, isLoading: true }));
       return;
@@ -104,6 +108,8 @@ export default function AdminAuthGuard({
 
     if (session?.user?.email) {
       const userRole = ADMIN_USERS[session.user.email];
+      console.log('AdminAuthGuard - User email:', session.user.email);
+      console.log('AdminAuthGuard - User role:', userRole);
       
       if (!userRole) {
         setAuthState({

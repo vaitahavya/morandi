@@ -47,15 +47,15 @@ export async function PUT(
     }
 
     // Validate status transitions
-    const validTransitions = {
-      'pending': ['confirmed', 'cancelled', 'failed'],
-      'confirmed': ['processing', 'cancelled'],
-      'processing': ['shipped', 'cancelled'],
-      'shipped': ['delivered', 'cancelled'],
-      'delivered': ['refunded'],
-      'cancelled': ['refunded'],
-      'failed': ['pending', 'cancelled'],
-      'refunded': []
+    const validTransitions: Record<string, string[]> = {
+      pending: ['confirmed', 'cancelled'],
+      confirmed: ['processing', 'cancelled'],
+      processing: ['shipped', 'cancelled'],
+      shipped: ['delivered', 'cancelled'],
+      delivered: [],
+      cancelled: [],
+      failed: [],
+      refunded: []
     };
 
     const allowedNextStatuses = validTransitions[existingOrder.status] || [];
@@ -72,12 +72,13 @@ export async function PUT(
       // Prepare update data
       const updateData: any = { status };
 
-      // Set appropriate timestamps
+      // Update status-specific fields
       switch (status) {
         case 'confirmed':
-          if (!existingOrder.confirmedAt) {
-            updateData.confirmedAt = new Date();
-          }
+          // No specific timestamp field in schema
+          break;
+        case 'processing':
+          // No specific timestamp field in schema
           break;
         case 'shipped':
           if (!existingOrder.shippedAt) {
@@ -88,6 +89,12 @@ export async function PUT(
           if (!existingOrder.deliveredAt) {
             updateData.deliveredAt = new Date();
           }
+          break;
+        case 'cancelled':
+          // No specific timestamp field in schema
+          break;
+        case 'refunded':
+          // No specific timestamp field in schema
           break;
       }
 

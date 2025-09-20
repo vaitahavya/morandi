@@ -20,7 +20,7 @@ export default function WishlistButton({ product, className = '' }: WishlistButt
       const wishlistItem: WishlistItem = {
         id: product.id,
         name: product.name,
-        price: parseFloat(product.price),
+        price: product.price,
         image: product.images[0]?.src || '',
         slug: product.slug,
       };

@@ -1,142 +1,79 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@/lib/supabase';
+import { supabase } from '@/lib/supabase';
 
 export async function GET(request: NextRequest) {
   try {
-    const supabase = createClient();
     const { searchParams } = new URL(request.url);
     
     // Parse query parameters
     const page = parseInt(searchParams.get('page') || '1');
-    const limit = parseInt(searchParams.get('limit') || '20');
-    const search = searchParams.get('search') || '';
-    const status = searchParams.get('status') || '';
-    const sortBy = searchParams.get('sortBy') || 'requested_at';
+    const limit = Math.min(parseInt(searchParams.get('limit') || '20'), 100);
+    const status = searchParams.get('status');
+    const orderId = searchParams.get('orderId');
+    const customerEmail = searchParams.get('customerEmail');
+    const sortBy = searchParams.get('sortBy') || 'createdAt';
     const sortOrder = searchParams.get('sortOrder') || 'desc';
-    const fromDate = searchParams.get('fromDate') || '';
-    const toDate = searchParams.get('toDate') || '';
-    
+
+    // Build where conditions
+    const whereConditions: any = {};
+    if (status) whereConditions.status = status;
+    if (orderId) whereConditions.order_id = orderId;
+    if (customerEmail) whereConditions.customer_email = customerEmail;
+
+    // Calculate offset
     const offset = (page - 1) * limit;
 
-    // Build the query
-    let query = supabase
-      .from('returns')
-      .select(`
-        *,
-        return_items (
-          id,
-          product_name,
-          quantity_returned,
-          unit_price,
-          total_refund_amount,
-          condition_received,
-          restockable
-        ),
-        orders (
-          order_number,
-          total,
-          created_at as order_date
-        )
-      `)
-      .order(sortBy, { ascending: sortOrder === 'asc' })
-      .range(offset, offset + limit - 1);
+    // Execute queries in parallel
+    const [returns, totalCount] = await Promise.all([
+      supabase
+        .from('returns')
+        .select('*')
+        .match(whereConditions)
+        .order(sortBy, { ascending: sortOrder === 'asc' })
+        .range(offset, offset + limit - 1),
+      supabase
+        .from('returns')
+        .select('*', { count: 'exact', head: true })
+        .match(whereConditions)
+    ]);
 
-    // Apply filters
-    if (search) {
-      query = query.or(`return_number.ilike.%${search}%,customer_email.ilike.%${search}%`);
+    if (returns.error) {
+      console.error('Error fetching returns:', returns.error);
+      return NextResponse.json({
+        success: false,
+        error: 'Failed to fetch returns'
+      }, { status: 500 });
     }
 
-    if (status) {
-      query = query.eq('status', status);
-    }
-
-    if (fromDate) {
-      query = query.gte('requested_at', fromDate);
-    }
-
-    if (toDate) {
-      query = query.lte('requested_at', toDate + 'T23:59:59');
-    }
-
-    const { data: returns, error: returnsError } = await query;
-    
-    if (returnsError) {
-      console.error('Error fetching returns:', returnsError);
-      return NextResponse.json({ success: false, error: 'Failed to fetch returns' }, { status: 500 });
-    }
-
-    // Get total count for pagination
-    let countQuery = supabase
-      .from('returns')
-      .select('id', { count: 'exact', head: true });
-
-    if (search) {
-      countQuery = countQuery.or(`return_number.ilike.%${search}%,customer_email.ilike.%${search}%`);
-    }
-    if (status) {
-      countQuery = countQuery.eq('status', status);
-    }
-    if (fromDate) {
-      countQuery = countQuery.gte('requested_at', fromDate);
-    }
-    if (toDate) {
-      countQuery = countQuery.lte('requested_at', toDate + 'T23:59:59');
-    }
-
-    const { count, error: countError } = await countQuery;
-    
-    if (countError) {
-      console.error('Error getting returns count:', countError);
-    }
-
-    const total = count || 0;
-    const totalPages = Math.ceil(total / limit);
-
-    // Calculate summary stats
-    const statsQuery = supabase
-      .from('returns')
-      .select('status, refund_amount');
-
-    const { data: statsData } = await statsQuery;
-
-    const stats = {
-      totalReturns: total,
-      pendingReturns: statsData?.filter(r => r.status === 'pending').length || 0,
-      approvedReturns: statsData?.filter(r => r.status === 'approved').length || 0,
-      processedReturns: statsData?.filter(r => r.status === 'processed').length || 0,
-      refundedReturns: statsData?.filter(r => r.status === 'refunded').length || 0,
-      totalRefundAmount: statsData?.reduce((sum, r) => sum + (r.refund_amount || 0), 0) || 0,
-      avgRefundAmount: statsData && statsData.length > 0 
-        ? statsData.reduce((sum, r) => sum + (r.refund_amount || 0), 0) / statsData.length 
-        : 0
-    };
+    // Calculate pagination info
+    const totalPages = Math.ceil((totalCount.count || 0) / limit);
+    const hasNextPage = page < totalPages;
+    const hasPrevPage = page > 1;
 
     return NextResponse.json({
       success: true,
-      data: returns,
+      data: returns.data || [],
       pagination: {
         page,
         limit,
-        total,
+        totalCount: totalCount.count || 0,
         totalPages,
-        hasNextPage: page < totalPages,
-        hasPrevPage: page > 1
-      },
-      stats
+        hasNextPage,
+        hasPrevPage
+      }
     });
 
   } catch (error) {
     console.error('Error in returns API:', error);
-    return NextResponse.json({ 
-      success: false, 
-      error: 'Internal server error' 
+    return NextResponse.json({
+      success: false,
+      error: 'Internal server error'
     }, { status: 500 });
   }
 }
 
 export async function POST(request: NextRequest) {
   try {
-    const supabase = createClient();
     const body = await request.json();
     
     const {
@@ -208,7 +145,7 @@ export async function POST(request: NextRequest) {
     const validItems = [];
 
     for (const item of items) {
-      const orderItem = order.order_items.find(oi => oi.id === item.orderItemId);
+      const orderItem = order.order_items.find((oi: any) => oi.id === item.orderItemId);
       if (!orderItem) {
         return NextResponse.json({ 
           success: false, 

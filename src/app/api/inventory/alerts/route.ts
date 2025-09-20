@@ -16,8 +16,9 @@ export async function GET(request: NextRequest) {
           { stockStatus: 'outofstock' },
           {
             AND: [
-              { stockQuantity: { lte: prisma.raw('COALESCE(low_stock_threshold, 5)') } },
-              { manageStock: true }
+              { stockQuantity: { lte: 5 } }, // Default threshold for products without custom threshold
+              { manageStock: true },
+              { lowStockThreshold: null }
             ]
           }
         ]
@@ -39,8 +40,44 @@ export async function GET(request: NextRequest) {
       ]
     });
 
+    // Also get products with custom low stock thresholds
+    const customThresholdProducts = await prisma.product.findMany({
+      where: {
+        status: 'published',
+        manageStock: true,
+        lowStockThreshold: { not: null },
+        stockQuantity: { lte: 50 } // Reasonable upper bound for filtering
+      },
+      select: {
+        id: true,
+        name: true,
+        sku: true,
+        slug: true,
+        stockQuantity: true,
+        stockStatus: true,
+        lowStockThreshold: true,
+        featuredImage: true,
+        price: true
+      },
+      orderBy: [
+        { stockQuantity: 'asc' },
+        { name: 'asc' }
+      ]
+    });
+
+    // Filter custom threshold products that are actually low stock
+    const filteredCustomProducts = customThresholdProducts.filter(product => 
+      product.stockQuantity <= (product.lowStockThreshold || 5)
+    );
+
+    // Combine and deduplicate products
+    const allLowStockProducts = [...lowStockProducts, ...filteredCustomProducts];
+    const uniqueProducts = allLowStockProducts.filter((product, index, self) => 
+      index === self.findIndex(p => p.id === product.id)
+    );
+
     // Categorize alerts by severity
-    const alerts = lowStockProducts.map(product => {
+    const alerts = uniqueProducts.map(product => {
       const threshold = product.lowStockThreshold || 5;
       let severity: 'critical' | 'warning' = 'warning';
       let message = '';
@@ -84,7 +121,7 @@ export async function GET(request: NextRequest) {
     // Get recent stock movements for context
     const recentTransactions = await prisma.inventoryTransaction.findMany({
       where: {
-        productId: { in: lowStockProducts.map(p => p.id) },
+        productId: { in: uniqueProducts.map(p => p.id) },
         createdAt: {
           gte: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000) // Last 7 days
         }
