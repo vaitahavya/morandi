@@ -111,7 +111,7 @@ export async function POST(request: NextRequest) {
     }
 
     const paidAmount = Number(paymentDetails.amount) / 100; // Convert from paise to rupees
-    if (Math.abs(paidAmount - order.total) > 0.01) {
+    if (Math.abs(paidAmount - Number(order.total)) > 0.01) {
       return NextResponse.json({
         success: false,
         error: 'Payment amount mismatch'
