@@ -83,7 +83,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Check if payment is already processed
-    if (order.paymentStatus === 'paid') {
+    if (order.payment_status === 'paid') {
       return NextResponse.json({
         success: false,
         error: 'Payment already processed'
@@ -174,7 +174,7 @@ export async function POST(request: NextRequest) {
             productId: item.productId,
             type: 'sale',
             quantity: -item.quantity,
-            reason: `Order confirmed: ${order.orderNumber}`,
+            reason: `Order confirmed: ${order.order_number}`,
             reference: order.id,
             stockAfter: newStock
           }
@@ -194,11 +194,11 @@ export async function POST(request: NextRequest) {
       // Create email notification for order confirmation
       await tx.emailNotification.create({
         data: {
-          userId: order.userId,
+          userId: order.user_id,
           orderId: order.id,
           type: 'order_confirmation',
-          subject: `Order Confirmed - ${order.orderNumber}`,
-          content: `Your order ${order.orderNumber} has been confirmed and payment received.`,
+          subject: `Order Confirmed - ${order.order_number}`,
+          content: `Your order ${order.order_number} has been confirmed and payment received.`,
           sent: false
         }
       });
@@ -292,9 +292,9 @@ export async function GET(request: NextRequest) {
 
     // Get payment details from Razorpay if payment ID exists
     let paymentDetails = null;
-    if (order.razorpayPaymentId) {
+    if (order.razorpay_payment_id) {
       try {
-        const payment = await razorpay.payments.fetch(order.razorpayPaymentId);
+        const payment = await razorpay.payments.fetch(order.razorpay_payment_id);
         paymentDetails = {
           id: payment.id,
           amount: Number(payment.amount) / 100, // Convert to rupees
