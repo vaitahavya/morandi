@@ -328,7 +328,7 @@ export async function POST(request: NextRequest) {
       },
       include: {
         order_items: true,
-        user: {
+        users: {
           select: {
             id: true,
             name: true,
