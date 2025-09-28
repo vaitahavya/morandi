@@ -156,10 +156,10 @@ export async function POST(request: NextRequest) {
       // Create order status history
       await tx.orderStatusHistory.create({
         data: {
-          orderId: order.id,
+          order_id: order.id,
           status: 'confirmed',
           notes: `Payment confirmed - Razorpay Payment ID: ${razorpay_payment_id}`,
-          changedBy: session?.user?.id
+          changed_by: session?.user?.id
         }
       });
 
