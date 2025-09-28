@@ -75,7 +75,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Verify user has permission
-    if (order.userId && order.userId !== session?.user?.id) {
+    if (order.user_id && order.user_id !== session?.user?.id) {
       return NextResponse.json({
         success: false,
         error: 'Access denied'
