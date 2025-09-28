@@ -53,9 +53,9 @@ export async function POST(request: NextRequest) {
     const order = await prisma.order.findFirst({
       where: whereClause,
       include: {
-        items: {
+        order_items: {
           include: {
-            product: {
+            products: {
               select: {
                 id: true,
                 name: true,
@@ -164,8 +164,8 @@ export async function POST(request: NextRequest) {
       });
 
       // Update inventory for confirmed order
-      for (const item of order.items) {
-        const currentStock = item.product.stockQuantity;
+      for (const item of order.order_items) {
+        const currentStock = item.products?.stockQuantity || 0;
         const newStock = Math.max(0, currentStock - item.quantity);
 
         // Create inventory transaction
