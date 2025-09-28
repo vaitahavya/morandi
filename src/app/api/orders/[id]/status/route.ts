@@ -25,13 +25,13 @@ export async function PUT(
     const existingOrder = await prisma.order.findUnique({
       where: { id },
       include: {
-        items: {
+        order_items: {
           include: {
-            product: {
+            products: {
               select: {
                 id: true,
                 name: true,
-                stockQuantity: true
+                stock_quantity: true
               }
             }
           }
@@ -58,7 +58,7 @@ export async function PUT(
       refunded: []
     };
 
-    const allowedNextStatuses = validTransitions[existingOrder.status] || [];
+    const allowedNextStatuses = validTransitions[existingOrder.status || 'pending'] || [];
     if (!allowedNextStatuses.includes(status)) {
       return NextResponse.json({
         success: false,
@@ -81,13 +81,13 @@ export async function PUT(
           // No specific timestamp field in schema
           break;
         case 'shipped':
-          if (!existingOrder.shippedAt) {
-            updateData.shippedAt = new Date();
+          if (!existingOrder.shipped_at) {
+            updateData.shipped_at = new Date();
           }
           break;
         case 'delivered':
-          if (!existingOrder.deliveredAt) {
-            updateData.deliveredAt = new Date();
+          if (!existingOrder.delivered_at) {
+            updateData.delivered_at = new Date();
           }
           break;
         case 'cancelled':
@@ -103,9 +103,9 @@ export async function PUT(
         where: { id },
         data: updateData,
         include: {
-          items: {
+          order_items: {
             include: {
-              product: {
+              products: {
                 select: {
                   id: true,
                   name: true,
@@ -115,7 +115,7 @@ export async function PUT(
               }
             }
           },
-          user: {
+          users: {
             select: {
               id: true,
               name: true,
@@ -128,10 +128,10 @@ export async function PUT(
       // Create status history entry
       await tx.orderStatusHistory.create({
         data: {
-          orderId: id,
+          order_id: id,
           status,
           notes: notes || `Status changed to ${status}`,
-          changedBy: session?.user?.id
+          changed_by: session?.user?.id
         }
       });
 
@@ -140,15 +140,15 @@ export async function PUT(
 
       // Handle automatic payment status updates
       if (status === 'cancelled' || status === 'failed') {
-        if (existingOrder.paymentStatus === 'paid') {
+        if (existingOrder.payment_status === 'paid') {
           await tx.order.update({
             where: { id },
-            data: { paymentStatus: 'refunded' }
+            data: { payment_status: 'refunded' }
           });
-        } else if (existingOrder.paymentStatus === 'pending') {
+        } else if (existingOrder.payment_status === 'pending') {
           await tx.order.update({
             where: { id },
-            data: { paymentStatus: 'failed' }
+            data: { payment_status: 'failed' }
           });
         }
       }
@@ -178,14 +178,14 @@ export async function PUT(
 
 // Helper function to handle inventory changes
 async function handleInventoryChanges(tx: any, order: any, newStatus: string) {
-  const orderNumber = order.orderNumber;
+  const order_number = order.order_number;
 
   switch (newStatus) {
     case 'confirmed':
       // Reduce inventory when order is confirmed
       if (order.status !== 'confirmed') {
         for (const item of order.items) {
-          const currentStock = item.product.stockQuantity;
+          const currentStock = item.product.stock_quantity;
           const newStock = Math.max(0, currentStock - item.quantity);
 
           // Create inventory transaction
@@ -194,7 +194,7 @@ async function handleInventoryChanges(tx: any, order: any, newStatus: string) {
               productId: item.productId,
               type: 'sale',
               quantity: -item.quantity,
-              reason: `Order confirmed: ${orderNumber}`,
+              reason: `Order confirmed: ${order_number}`,
               reference: order.id,
               stockAfter: newStock
             }
@@ -204,7 +204,7 @@ async function handleInventoryChanges(tx: any, order: any, newStatus: string) {
           await tx.product.update({
             where: { id: item.productId },
             data: {
-              stockQuantity: newStock,
+              stock_quantity: newStock,
               stockStatus: newStock <= 0 ? 'outofstock' : 
                           newStock <= (item.product.lowStockThreshold || 5) ? 'lowstock' : 'instock'
             }
@@ -217,7 +217,7 @@ async function handleInventoryChanges(tx: any, order: any, newStatus: string) {
       // Restore inventory if order was previously confirmed
       if (order.status === 'confirmed' || order.status === 'processing') {
         for (const item of order.items) {
-          const currentStock = item.product.stockQuantity;
+          const currentStock = item.product.stock_quantity;
           const newStock = currentStock + item.quantity;
 
           // Create inventory transaction
@@ -226,7 +226,7 @@ async function handleInventoryChanges(tx: any, order: any, newStatus: string) {
               productId: item.productId,
               type: 'return',
               quantity: item.quantity,
-              reason: `Order cancelled: ${orderNumber}`,
+              reason: `Order cancelled: ${order_number}`,
               reference: order.id,
               stockAfter: newStock
             }
@@ -236,7 +236,7 @@ async function handleInventoryChanges(tx: any, order: any, newStatus: string) {
           await tx.product.update({
             where: { id: item.productId },
             data: {
-              stockQuantity: newStock,
+              stock_quantity: newStock,
               stockStatus: 'instock'
             }
           });
@@ -248,7 +248,7 @@ async function handleInventoryChanges(tx: any, order: any, newStatus: string) {
       // Handle refund inventory restoration if needed
       if (order.status === 'delivered') {
         for (const item of order.items) {
-          const currentStock = item.product.stockQuantity;
+          const currentStock = item.product.stock_quantity;
           const newStock = currentStock + item.quantity;
 
           await tx.inventoryTransaction.create({
@@ -256,7 +256,7 @@ async function handleInventoryChanges(tx: any, order: any, newStatus: string) {
               productId: item.productId,
               type: 'return',
               quantity: item.quantity,
-              reason: `Order refunded: ${orderNumber}`,
+              reason: `Order refunded: ${order_number}`,
               reference: order.id,
               stockAfter: newStock
             }
@@ -265,7 +265,7 @@ async function handleInventoryChanges(tx: any, order: any, newStatus: string) {
           await tx.product.update({
             where: { id: item.productId },
             data: {
-              stockQuantity: newStock,
+              stock_quantity: newStock,
               stockStatus: 'instock'
             }
           });
@@ -286,13 +286,13 @@ async function sendOrderStatusNotification(order: any, status: string) {
       const customerEmail = order.user?.email || order.customerEmail;
       
       if (!customerEmail) {
-        console.warn(`No email found for order ${order.orderNumber}`);
+        console.warn(`No email found for order ${order.order_number}`);
         return;
       }
 
       // Determine email type based on status
       let emailType = 'custom';
-      let emailSubject = `Order ${order.orderNumber} - Status Update`;
+      let emailSubject = `Order ${order.order_number} - Status Update`;
       let emailContent = '';
 
       if (status === 'shipped') {
@@ -306,7 +306,7 @@ async function sendOrderStatusNotification(order: any, status: string) {
             <p>Your order status has been updated.</p>
             
             <div style="background: #f5f5f5; padding: 20px; margin: 20px 0;">
-              <h3>Order #${order.orderNumber}</h3>
+              <h3>Order #${order.order_number}</h3>
               <p><strong>Status:</strong> ${status.charAt(0).toUpperCase() + status.slice(1)}</p>
               <p><strong>Total:</strong> ₹${order.total}</p>
               <p><strong>Updated:</strong> ${new Date().toLocaleDateString()}</p>
@@ -323,8 +323,8 @@ async function sendOrderStatusNotification(order: any, status: string) {
         ? {
             type: emailType,
             recipient: customerEmail,
-            orderId: order.id,
-            userId: order.userId,
+            order_id: order.id,
+            user_id: order.user_id,
             data: {
               userName: order.user?.name
             }
@@ -332,8 +332,8 @@ async function sendOrderStatusNotification(order: any, status: string) {
         : {
             type: 'custom',
             recipient: customerEmail,
-            orderId: order.id,
-            userId: order.userId,
+            order_id: order.id,
+            user_id: order.user_id,
             data: {
               subject: emailSubject,
               html: emailContent
@@ -351,7 +351,7 @@ async function sendOrderStatusNotification(order: any, status: string) {
       if (!emailResponse.ok) {
         console.error(`Failed to send ${status} notification email:`, await emailResponse.text());
       } else {
-        console.log(`${status.charAt(0).toUpperCase() + status.slice(1)} notification email sent for order ${order.orderNumber}`);
+        console.log(`${status.charAt(0).toUpperCase() + status.slice(1)} notification email sent for order ${order.order_number}`);
       }
     }
   } catch (error) {
@@ -371,7 +371,7 @@ export async function GET(
     // Verify order exists and user has permission
     const order = await prisma.order.findUnique({
       where: { id },
-      select: { userId: true, status: true, paymentStatus: true }
+      select: { user_id: true, status: true, payment_status: true }
     });
 
     if (!order) {
@@ -381,7 +381,7 @@ export async function GET(
       }, { status: 404 });
     }
 
-    if (order.userId && order.userId !== session?.user?.id) {
+    if (order.user_id && order.user_id !== session?.user?.id) {
       return NextResponse.json({
         success: false,
         error: 'Access denied'
@@ -390,14 +390,14 @@ export async function GET(
 
     // Get status history
     const statusHistory = await prisma.orderStatusHistory.findMany({
-      where: { orderId: id },
-      orderBy: { createdAt: 'desc' },
+      where: { order_id: id },
+      orderBy: { created_at: 'desc' },
       include: {
         order: {
           select: {
-            orderNumber: true,
+            order_number: true,
             status: true,
-            paymentStatus: true
+            payment_status: true
           }
         }
       }
@@ -407,7 +407,7 @@ export async function GET(
       success: true,
       data: {
         currentStatus: order.status,
-        currentPaymentStatus: order.paymentStatus,
+        currentPaymentStatus: order.payment_status,
         history: statusHistory
       }
     });

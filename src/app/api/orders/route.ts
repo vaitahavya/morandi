@@ -11,7 +11,7 @@ async function generateOrderNumber(): Promise<string> {
   // Get today's order count
   const todayOrders = await prisma.order.count({
     where: {
-      createdAt: {
+      created_at: {
         gte: new Date(today.setHours(0, 0, 0, 0)),
         lt: new Date(today.setHours(23, 59, 59, 999))
       }
@@ -19,15 +19,15 @@ async function generateOrderNumber(): Promise<string> {
   });
   
   const counter = todayOrders + 1;
-  let orderNumber = `ORD-${dateStr}-${counter.toString().padStart(4, '0')}`;
+  let order_number = `ORD-${dateStr}-${counter.toString().padStart(4, '0')}`;
   
   // Ensure uniqueness
-  while (await prisma.order.findUnique({ where: { orderNumber } })) {
+  while (await prisma.order.findUnique({ where: { order_number } })) {
     const nextCounter = counter + Math.floor(Math.random() * 1000);
-    orderNumber = `ORD-${dateStr}-${nextCounter.toString().padStart(4, '0')}`;
+    order_number = `ORD-${dateStr}-${nextCounter.toString().padStart(4, '0')}`;
   }
   
-  return orderNumber;
+  return order_number;
 }
 
 // GET /api/orders - List orders (admin view or user's own orders)
@@ -40,8 +40,8 @@ export async function GET(request: NextRequest) {
     const page = parseInt(searchParams.get('page') || '1');
     const limit = Math.min(parseInt(searchParams.get('limit') || '20'), 100);
     const status = searchParams.get('status');
-    const paymentStatus = searchParams.get('paymentStatus');
-    const userId = searchParams.get('userId');
+    const payment_status = searchParams.get('payment_status');
+    const user_id = searchParams.get('user_id');
     const search = searchParams.get('search'); // Search by order number or customer email
     const fromDate = searchParams.get('fromDate');
     const toDate = searchParams.get('toDate');
@@ -52,7 +52,7 @@ export async function GET(request: NextRequest) {
     const whereConditions: any = {};
 
     // For non-admin users, only show their own orders
-    if (!session?.user?.id && !userId) {
+    if (!session?.user?.id && !user_id) {
       return NextResponse.json({
         success: false,
         error: 'Authentication required'
@@ -60,7 +60,7 @@ export async function GET(request: NextRequest) {
     }
 
     // If user is requesting their own orders or is admin
-    if (userId && session?.user?.id !== userId) {
+    if (user_id && session?.user?.id !== user_id) {
       return NextResponse.json({
         success: false,
         error: 'Access denied'
@@ -68,7 +68,7 @@ export async function GET(request: NextRequest) {
     }
 
     if (session?.user?.id) {
-      whereConditions.userId = session.user.id;
+      whereConditions.user_id = session.user.id;
     }
 
     // Status filters
@@ -76,25 +76,25 @@ export async function GET(request: NextRequest) {
       whereConditions.status = status;
     }
 
-    if (paymentStatus) {
-      whereConditions.paymentStatus = paymentStatus;
+    if (payment_status) {
+      whereConditions.payment_status = payment_status;
     }
 
     // Search functionality
     if (search) {
       whereConditions.OR = [
-        { orderNumber: { contains: search, mode: 'insensitive' } },
-        { customerEmail: { contains: search, mode: 'insensitive' } },
-        { billingFirstName: { contains: search, mode: 'insensitive' } },
-        { billingLastName: { contains: search, mode: 'insensitive' } }
+        { order_number: { contains: search, mode: 'insensitive' } },
+        { customer_email: { contains: search, mode: 'insensitive' } },
+        { billing_first_name: { contains: search, mode: 'insensitive' } },
+        { billing_last_name: { contains: search, mode: 'insensitive' } }
       ];
     }
 
     // Date range filter
     if (fromDate || toDate) {
-      whereConditions.createdAt = {};
-      if (fromDate) whereConditions.createdAt.gte = new Date(fromDate);
-      if (toDate) whereConditions.createdAt.lte = new Date(toDate);
+      whereConditions.created_at = {};
+      if (fromDate) whereConditions.created_at.gte = new Date(fromDate);
+      if (toDate) whereConditions.created_at.lte = new Date(toDate);
     }
 
     // Execute queries
@@ -102,20 +102,20 @@ export async function GET(request: NextRequest) {
       prisma.order.findMany({
         where: whereConditions,
         include: {
-          items: {
+          order_items: {
             include: {
-              product: {
+              products: {
                 select: {
                   id: true,
                   name: true,
                   slug: true,
                   images: true,
-                  featuredImage: true
+                  featured_image: true
                 }
               }
             }
           },
-          user: {
+          users: {
             select: {
               id: true,
               name: true,
@@ -123,11 +123,11 @@ export async function GET(request: NextRequest) {
             }
           },
           statusHistory: {
-            orderBy: { createdAt: 'desc' },
+            orderBy: { created_at: 'desc' },
             take: 5
           }
         },
-        orderBy: { createdAt: 'desc' },
+        orderBy: { created_at: 'desc' },
         skip: offset,
         take: limit
       }),
@@ -170,14 +170,14 @@ export async function POST(request: NextRequest) {
     // Validate required fields
     const {
       items,
-      customerEmail,
-      billingFirstName,
-      billingLastName,
-      billingAddress1,
-      billingCity,
-      billingPostcode,
-      billingCountry,
-      paymentMethod = 'razorpay'
+      customer_email,
+      billing_first_name,
+      billing_last_name,
+      billing_address1,
+      billing_city,
+      billing_postcode,
+      billing_country,
+      payment_method = 'razorpay'
     } = body;
 
     if (!items || !Array.isArray(items) || items.length === 0) {
@@ -187,7 +187,7 @@ export async function POST(request: NextRequest) {
       }, { status: 400 });
     }
 
-    if (!customerEmail || !billingFirstName || !billingLastName || !billingAddress1) {
+    if (!customer_email || !billing_first_name || !billing_last_name || !billing_address1) {
       return NextResponse.json({
         success: false,
         error: 'Customer and billing information is required'
@@ -217,10 +217,10 @@ export async function POST(request: NextRequest) {
 
       // Check stock availability
       const availableStock = item.variantId 
-        ? product.variants?.[0]?.stockQuantity || 0
-        : product.stockQuantity;
+        ? product.variants?.[0]?.stock_quantity || 0
+        : (product.stock_quantity || 0);
 
-      if (availableStock < item.quantity) {
+      if ((availableStock || 0) < item.quantity) {
         return NextResponse.json({
           success: false,
           error: `Insufficient stock for ${product.name}. Available: ${availableStock}, Requested: ${item.quantity}`
@@ -229,10 +229,10 @@ export async function POST(request: NextRequest) {
 
       // Calculate pricing
       const unitPrice = item.variantId 
-        ? (product.variants?.[0]?.salePrice || product.variants?.[0]?.price || product.price)
-        : (product.salePrice || product.price);
+        ? (product.variants?.[0]?.sale_price || product.variants?.[0]?.price || product.price)
+        : (product.sale_price || product.price);
 
-      const totalPrice = unitPrice * item.quantity;
+      const totalPrice = Number(unitPrice) * item.quantity;
       subtotal += totalPrice;
 
       validatedItems.push({
@@ -245,62 +245,62 @@ export async function POST(request: NextRequest) {
         unitPrice,
         totalPrice,
         attributes: item.variantId ? product.variants?.[0]?.attributes : null,
-        productImage: product.featuredImage || product.images[0] || null
+        productImage: product.featured_image || product.images[0] || null
       });
     }
 
     // Calculate shipping and taxes (placeholder logic)
-    const shippingCost = body.shippingCost || 0;
-    const taxAmount = body.taxAmount || Math.round(subtotal * 0.18); // 18% GST
-    const discountAmount = body.discountAmount || 0;
-    const total = subtotal + shippingCost + taxAmount - discountAmount;
+    const shipping_cost = body.shipping_cost || 0;
+    const tax_amount = body.tax_amount || Math.round(subtotal * 0.18); // 18% GST
+    const discount_amount = body.discount_amount || 0;
+    const total = subtotal + shipping_cost + tax_amount - discount_amount;
 
     // Generate order number
-    const orderNumber = await generateOrderNumber();
+    const order_number = await generateOrderNumber();
 
     // Create order
     const order = await prisma.order.create({
       data: {
-        orderNumber,
-        userId: session?.user?.id || null,
+        order_number,
+        user_id: session?.user?.id || null,
         status: 'pending',
-        paymentStatus: 'pending',
-        customerEmail,
-        customerPhone: body.customerPhone,
+        payment_status: 'pending',
+        customer_email,
+        customer_phone: body.customer_phone,
         
         // Billing address
-        billingFirstName,
-        billingLastName,
-        billingCompany: body.billingCompany,
-        billingAddress1,
-        billingAddress2: body.billingAddress2,
-        billingCity,
-        billingState: body.billingState,
-        billingPostcode,
-        billingCountry,
+        billing_first_name,
+        billing_last_name,
+        billing_company: body.billing_company,
+        billing_address1,
+        billing_address2: body.billing_address2,
+        billing_city,
+        billing_state: body.billing_state,
+        billing_postcode,
+        billing_country,
         
         // Shipping address (copy from billing if not provided)
-        shippingFirstName: body.shippingFirstName || billingFirstName,
-        shippingLastName: body.shippingLastName || billingLastName,
-        shippingCompany: body.shippingCompany || body.billingCompany,
-        shippingAddress1: body.shippingAddress1 || billingAddress1,
-        shippingAddress2: body.shippingAddress2 || body.billingAddress2,
-        shippingCity: body.shippingCity || billingCity,
-        shippingState: body.shippingState || body.billingState,
-        shippingPostcode: body.shippingPostcode || billingPostcode,
-        shippingCountry: body.shippingCountry || billingCountry,
+        shipping_first_name: body.shipping_first_name || billing_first_name,
+        shipping_last_name: body.shipping_last_name || billing_last_name,
+        shipping_company: body.shipping_company || body.billing_company,
+        shipping_address1: body.shipping_address1 || billing_address1,
+        shipping_address2: body.shipping_address2 || body.billing_address2,
+        shipping_city: body.shipping_city || billing_city,
+        shipping_state: body.shipping_state || body.billing_state,
+        shipping_postcode: body.shipping_postcode || billing_postcode,
+        shipping_country: body.shipping_country || billing_country,
         
         // Financial details
         subtotal,
-        taxAmount,
-        shippingCost,
-        discountAmount,
+        tax_amount,
+        shipping_cost,
+        discount_amount,
         total,
         currency: body.currency || 'INR',
         
         // Payment details
-        paymentMethod,
-        paymentMethodTitle: body.paymentMethodTitle || 'Razorpay',
+        payment_method,
+        payment_methodTitle: body.payment_methodTitle || 'Razorpay',
         
         // Shipping details
         shippingMethod: body.shippingMethod,
@@ -311,7 +311,7 @@ export async function POST(request: NextRequest) {
         sourceChannel: 'website',
         
         // Order items
-        items: {
+        order_items: {
           create: validatedItems.map(item => ({
             productId: item.productId,
             variantId: item.variantId,
@@ -327,7 +327,7 @@ export async function POST(request: NextRequest) {
         }
       },
       include: {
-        items: true,
+        order_items: true,
         user: {
           select: {
             id: true,
@@ -347,11 +347,11 @@ export async function POST(request: NextRequest) {
         },
         body: JSON.stringify({
           type: 'order_confirmation',
-          recipient: customerEmail,
+          recipient: customer_email,
           orderId: order.id,
-          userId: order.userId,
+          user_id: order.user_id,
           data: {
-            userName: `${billingFirstName} ${billingLastName}`.trim()
+            userName: `${billing_first_name} ${billing_last_name}`.trim()
           }
         }),
       });

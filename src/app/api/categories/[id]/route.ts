@@ -19,8 +19,8 @@ export async function GET(
       include: {
         parent: true,
         children: {
-          where: { isVisible: true },
-          orderBy: { displayOrder: 'asc' }
+          where: { is_visible: true },
+          orderBy: { display_order: 'asc' }
         }
       }
     });
@@ -39,9 +39,9 @@ export async function GET(
     if (includeProducts) {
       const categoryProducts = await prisma.product.findMany({
         where: {
-          categories: {
+          product_categories: {
             some: {
-              categoryId: category.id
+              category_id: category.id
             }
           },
           status: 'published'
@@ -51,12 +51,12 @@ export async function GET(
           name: true,
           slug: true,
           price: true,
-          salePrice: true,
+          sale_price: true,
           images: true,
-          featuredImage: true,
-          stockStatus: true,
+          featured_image: true,
+          stock_status: true,
           featured: true,
-          shortDescription: true
+          short_description: true
         }
       });
       
@@ -71,17 +71,17 @@ export async function GET(
       slug: category.slug,
       description: category.description,
       image: category.image,
-      parentId: category.parentId,
+      parentId: category.parent_id,
       parent: category.parent,
-      metaTitle: category.metaTitle,
-      metaDescription: category.metaDescription,
-      displayOrder: category.displayOrder,
-      isVisible: category.isVisible,
+      metaTitle: category.meta_title,
+      metaDescription: category.meta_description,
+      displayOrder: category.display_order,
+      isVisible: category.is_visible,
       children: category.children,
       products: products,
       productCount: productCount,
-      createdAt: category.createdAt,
-      updatedAt: category.updatedAt
+      createdAt: category.created_at,
+      updatedAt: category.updated_at
     };
 
     return NextResponse.json({
@@ -120,10 +120,10 @@ export async function PUT(
     }
 
     // Validate parent category if being updated
-    if (body.parentId && body.parentId !== existingCategory.parentId) {
+    if (body.parent_id && body.parent_id !== existingCategory.parent_id) {
       // Check if parent exists
       const parentCategory = await prisma.category.findUnique({
-        where: { id: body.parentId }
+        where: { id: body.parent_id }
       });
       if (!parentCategory) {
         return NextResponse.json({
@@ -133,7 +133,7 @@ export async function PUT(
       }
 
       // Prevent circular references
-      if (body.parentId === id) {
+      if (body.parent_id === id) {
         return NextResponse.json({
           success: false,
           error: 'Category cannot be its own parent'
@@ -141,7 +141,7 @@ export async function PUT(
       }
 
       // Check if the new parent is not a child of this category
-      const isChildOfCategory = await checkIfChildCategory(body.parentId, id);
+      const isChildOfCategory = await checkIfChildCategory(body.parent_id, id);
       if (isChildOfCategory) {
         return NextResponse.json({
           success: false,
@@ -153,15 +153,15 @@ export async function PUT(
     // Prepare update data
     const updateData: any = {};
     const updateableFields = [
-      'name', 'slug', 'description', 'image', 'parentId',
-      'metaTitle', 'metaDescription', 'displayOrder', 'isVisible'
+      'name', 'slug', 'description', 'image', 'parent_id',
+      'meta_title', 'meta_description', 'display_order', 'is_visible'
     ];
 
     updateableFields.forEach(field => {
       if (body[field] !== undefined) {
-        if (field === 'displayOrder') {
+        if (field === 'display_order') {
           updateData[field] = parseInt(body[field]);
-        } else if (field === 'parentId' && body[field] === '') {
+        } else if (field === 'parent_id' && body[field] === '') {
           updateData[field] = null;
         } else {
           updateData[field] = body[field];
@@ -219,9 +219,9 @@ export async function DELETE(
       where: { id },
       include: {
         children: true,
-        products: {
+        product_categories: {
           include: {
-            product: true
+            products: true
           }
         }
       }
@@ -243,7 +243,7 @@ export async function DELETE(
     }
 
     // Handle products in this category
-    if (existingCategory.products.length > 0) {
+    if (existingCategory.product_categories.length > 0) {
       if (moveProducts) {
         // Verify destination category exists
         const destinationCategory = await prisma.category.findUnique({
@@ -258,13 +258,13 @@ export async function DELETE(
 
         // Move products to new category
         await prisma.productCategory.updateMany({
-          where: { categoryId: id },
-          data: { categoryId: moveProducts }
+          where: { category_id: id },
+          data: { category_id: moveProducts }
         });
       } else {
         // Remove category associations from products
         await prisma.productCategory.deleteMany({
-          where: { categoryId: id }
+          where: { category_id: id }
         });
       }
     }
@@ -293,17 +293,17 @@ export async function DELETE(
 async function checkIfChildCategory(potentialChildId: string, parentId: string): Promise<boolean> {
   const category = await prisma.category.findUnique({
     where: { id: potentialChildId },
-    select: { parentId: true }
+    select: { parent_id: true }
   });
 
-  if (!category || !category.parentId) {
+  if (!category || !category.parent_id) {
     return false;
   }
 
-  if (category.parentId === parentId) {
+  if (category.parent_id === parentId) {
     return true;
   }
 
   // Recursively check up the hierarchy
-  return checkIfChildCategory(category.parentId, parentId);
+  return checkIfChildCategory(category.parent_id, parentId);
 }

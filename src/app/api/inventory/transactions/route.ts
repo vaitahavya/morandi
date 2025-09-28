@@ -8,7 +8,7 @@ export async function GET(request: NextRequest) {
     
     const page = parseInt(searchParams.get('page') || '1');
     const limit = Math.min(parseInt(searchParams.get('limit') || '50'), 100);
-    const productId = searchParams.get('productId');
+    const product_id = searchParams.get('product_id');
     const type = searchParams.get('type'); // sale, restock, adjustment, return
     const fromDate = searchParams.get('fromDate');
     const toDate = searchParams.get('toDate');
@@ -18,8 +18,8 @@ export async function GET(request: NextRequest) {
     // Build where conditions
     const whereConditions: any = {};
 
-    if (productId) {
-      whereConditions.productId = productId;
+    if (product_id) {
+      whereConditions.product_id = product_id;
     }
 
     if (type) {
@@ -27,9 +27,9 @@ export async function GET(request: NextRequest) {
     }
 
     if (fromDate || toDate) {
-      whereConditions.createdAt = {};
-      if (fromDate) whereConditions.createdAt.gte = new Date(fromDate);
-      if (toDate) whereConditions.createdAt.lte = new Date(toDate);
+      whereConditions.created_at = {};
+      if (fromDate) whereConditions.created_at.gte = new Date(fromDate);
+      if (toDate) whereConditions.created_at.lte = new Date(toDate);
     }
 
     // Get transactions with product information
@@ -43,11 +43,11 @@ export async function GET(request: NextRequest) {
               name: true,
               sku: true,
               slug: true,
-              featuredImage: true
+              featured_image: true
             }
           }
         },
-        orderBy: { createdAt: 'desc' },
+        orderBy: { created_at: 'desc' },
         skip: offset,
         take: limit
       }),

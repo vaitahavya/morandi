@@ -46,9 +46,9 @@ export async function GET(request: NextRequest) {
       const categoryIds = categories.map(cat => cat.id);
       const productCountResults = await prisma.product.count({
         where: {
-          categories: {
+          product_categories: {
             some: {
-              categoryId: {
+              category_id: {
                 in: categoryIds
               }
             }
@@ -61,9 +61,9 @@ export async function GET(request: NextRequest) {
       for (const category of categories) {
         const count = await prisma.product.count({
           where: {
-            categories: {
+            product_categories: {
               some: {
-                categoryId: category.id
+                category_id: category.id
               }
             },
             status: 'published'
@@ -80,26 +80,26 @@ export async function GET(request: NextRequest) {
       slug: category.slug,
       description: category.description,
       image: category.image,
-      parentId: category.parentId,
+      parentId: category.parent_id,
       parent: category.parent,
-      metaTitle: category.metaTitle,
-      metaDescription: category.metaDescription,
-      displayOrder: category.displayOrder,
-      isVisible: category.isVisible,
+      metaTitle: category.meta_title,
+      metaDescription: category.meta_description,
+      displayOrder: category.display_order,
+      isVisible: category.is_visible,
       children: flat ? undefined : category.children.map(child => ({
         id: child.id,
         name: child.name,
         slug: child.slug,
         description: child.description,
         image: child.image,
-        displayOrder: child.displayOrder,
-        isVisible: child.isVisible
+        displayOrder: child.display_order,
+        isVisible: child.is_visible
       })),
       productCount: includeProductCount 
         ? productCounts[category.id] || 0
         : undefined,
-      createdAt: category.createdAt,
-      updatedAt: category.updatedAt
+      createdAt: category.created_at,
+      updatedAt: category.updated_at
     }));
 
     // Build hierarchy if not flat
@@ -174,11 +174,11 @@ export async function POST(request: NextRequest) {
         slug,
         description: body.description,
         image: body.image,
-        parentId: body.parentId || null,
-        metaTitle: body.metaTitle,
-        metaDescription: body.metaDescription,
-        displayOrder: body.displayOrder || 0,
-        isVisible: body.isVisible !== false
+        parent_id: body.parentId || null,
+        meta_title: body.metaTitle,
+        meta_description: body.metaDescription,
+        display_order: body.displayOrder || 0,
+        is_visible: body.isVisible !== false
       },
       include: {
         parent: true,

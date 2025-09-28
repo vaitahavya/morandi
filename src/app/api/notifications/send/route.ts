@@ -38,9 +38,9 @@ export async function POST(request: NextRequest) {
         const order = await prisma.order.findUnique({
           where: { id: orderId },
           include: {
-            items: {
+            order_items: {
               include: {
-                product: true
+                products: true
               }
             }
           }
@@ -158,7 +158,7 @@ export async function GET(request: NextRequest) {
 
     const notifications = await prisma.emailNotification.findMany({
       where,
-      orderBy: { createdAt: 'desc' },
+      orderBy: { created_at: 'desc' },
       take: limit,
     });
 

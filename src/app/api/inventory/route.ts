@@ -8,26 +8,26 @@ export async function GET(request: NextRequest) {
     
     const lowStockOnly = searchParams.get('lowStockOnly') === 'true';
     const outOfStockOnly = searchParams.get('outOfStockOnly') === 'true';
-    const productId = searchParams.get('productId');
+    const product_id = searchParams.get('product_id');
 
     // Build where conditions
     const whereConditions: any = {
       status: 'published'
     };
 
-    if (productId) {
-      whereConditions.id = productId;
+    if (product_id) {
+      whereConditions.id = product_id;
     }
 
     if (lowStockOnly) {
       whereConditions.OR = [
-        { stockStatus: 'lowstock' },
-        { stockStatus: 'outofstock' }
+        { stock_status: 'lowstock' },
+        { stock_status: 'outofstock' }
       ];
     }
 
     if (outOfStockOnly) {
-      whereConditions.stockQuantity = { lte: 0 };
+      whereConditions.stock_quantity = { lte: 0 };
     }
 
     // Get products with inventory information
@@ -38,24 +38,24 @@ export async function GET(request: NextRequest) {
         name: true,
         sku: true,
         slug: true,
-        stockQuantity: true,
-        stockStatus: true,
-        lowStockThreshold: true,
+        stock_quantity: true,
+        stock_status: true,
+        low_stock_threshold: true,
         price: true,
-        featuredImage: true,
+        featured_image: true,
         images: true
       },
       orderBy: [
-        { stockQuantity: 'asc' },
+        { stock_quantity: 'asc' },
         { name: 'asc' }
       ]
     });
 
     // Get inventory statistics
     const stats = await prisma.product.groupBy({
-      by: ['stockStatus'],
+      by: ['stock_status'],
       _count: {
-        stockStatus: true
+        stock_status: true
       },
       where: {
         status: 'published'
@@ -63,10 +63,10 @@ export async function GET(request: NextRequest) {
     });
 
     const inventoryStats = {
-      inStock: stats.find(s => s.stockStatus === 'instock')?._count.stockStatus || 0,
-      lowStock: stats.find(s => s.stockStatus === 'lowstock')?._count.stockStatus || 0,
-      outOfStock: stats.find(s => s.stockStatus === 'outofstock')?._count.stockStatus || 0,
-      total: stats.reduce((sum, s) => sum + s._count.stockStatus, 0)
+      inStock: stats.find(s => s.stock_status === 'instock')?._count.stock_status || 0,
+      lowStock: stats.find(s => s.stock_status === 'lowstock')?._count.stock_status || 0,
+      outOfStock: stats.find(s => s.stock_status === 'outofstock')?._count.stock_status || 0,
+      total: stats.reduce((sum, s) => sum + s._count.stock_status, 0)
     };
 
     return NextResponse.json({
@@ -90,9 +90,9 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { productId, adjustment, reason, notes } = body;
+    const { product_id, adjustment, reason, notes } = body;
 
-    if (!productId || adjustment === undefined) {
+    if (!product_id || adjustment === undefined) {
       return NextResponse.json({
         success: false,
         error: 'Product ID and adjustment amount are required'
@@ -101,8 +101,8 @@ export async function POST(request: NextRequest) {
 
     // Get current product
     const product = await prisma.product.findUnique({
-      where: { id: productId },
-      select: { stockQuantity: true, name: true, lowStockThreshold: true }
+      where: { id: product_id },
+      select: { stock_quantity: true, name: true, low_stock_threshold: true }
     });
 
     if (!product) {
@@ -112,8 +112,8 @@ export async function POST(request: NextRequest) {
       }, { status: 404 });
     }
 
-    const newStock = Math.max(0, product.stockQuantity + adjustment);
-    const lowThreshold = product.lowStockThreshold || 5;
+    const newStock = Math.max(0, product.stock_quantity + adjustment);
+    const lowThreshold = product.low_stock_threshold || 5;
 
     // Determine new stock status
     let newStockStatus = 'instock';
@@ -127,21 +127,21 @@ export async function POST(request: NextRequest) {
     const result = await prisma.$transaction(async (tx) => {
       // Update product stock
       const updatedProduct = await tx.product.update({
-        where: { id: productId },
+        where: { id: product_id },
         data: {
-          stockQuantity: newStock,
-          stockStatus: newStockStatus
+          stock_quantity: newStock,
+          stock_status: newStockStatus
         }
       });
 
       // Create inventory transaction
       const transaction = await tx.inventoryTransaction.create({
         data: {
-          productId,
+          product_id,
           type: adjustment > 0 ? 'restock' : 'adjustment',
           quantity: adjustment,
           reason: reason || 'Manual stock adjustment',
-          stockAfter: newStock,
+          stock_after: newStock,
           notes
         }
       });

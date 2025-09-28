@@ -12,13 +12,13 @@ export async function GET(request: NextRequest) {
       where: {
         status: 'published',
         OR: [
-          { stockStatus: 'lowstock' },
-          { stockStatus: 'outofstock' },
+          { stock_status: 'lowstock' },
+          { stock_status: 'outofstock' },
           {
             AND: [
-              { stockQuantity: { lte: 5 } }, // Default threshold for products without custom threshold
-              { manageStock: true },
-              { lowStockThreshold: null }
+              { stock_quantity: { lte: 5 } }, // Default threshold for products without custom threshold
+              { manage_stock: true },
+              { low_stock_threshold: null }
             ]
           }
         ]
@@ -28,14 +28,14 @@ export async function GET(request: NextRequest) {
         name: true,
         sku: true,
         slug: true,
-        stockQuantity: true,
-        stockStatus: true,
-        lowStockThreshold: true,
-        featuredImage: true,
+        stock_quantity: true,
+        stock_status: true,
+        low_stock_threshold: true,
+        featured_image: true,
         price: true
       },
       orderBy: [
-        { stockQuantity: 'asc' },
+        { stock_quantity: 'asc' },
         { name: 'asc' }
       ]
     });
@@ -44,30 +44,30 @@ export async function GET(request: NextRequest) {
     const customThresholdProducts = await prisma.product.findMany({
       where: {
         status: 'published',
-        manageStock: true,
-        lowStockThreshold: { not: null },
-        stockQuantity: { lte: 50 } // Reasonable upper bound for filtering
+        manage_stock: true,
+        low_stock_threshold: { not: null },
+        stock_quantity: { lte: 50 } // Reasonable upper bound for filtering
       },
       select: {
         id: true,
         name: true,
         sku: true,
         slug: true,
-        stockQuantity: true,
-        stockStatus: true,
-        lowStockThreshold: true,
-        featuredImage: true,
+        stock_quantity: true,
+        stock_status: true,
+        low_stock_threshold: true,
+        featured_image: true,
         price: true
       },
       orderBy: [
-        { stockQuantity: 'asc' },
+        { stock_quantity: 'asc' },
         { name: 'asc' }
       ]
     });
 
     // Filter custom threshold products that are actually low stock
     const filteredCustomProducts = customThresholdProducts.filter(product => 
-      product.stockQuantity <= (product.lowStockThreshold || 5)
+      (product.stock_quantity || 0) <= (product.low_stock_threshold || 5)
     );
 
     // Combine and deduplicate products
@@ -78,16 +78,16 @@ export async function GET(request: NextRequest) {
 
     // Categorize alerts by severity
     const alerts = uniqueProducts.map(product => {
-      const threshold = product.lowStockThreshold || 5;
+      const threshold = product.low_stock_threshold || 5;
       let severity: 'critical' | 'warning' = 'warning';
       let message = '';
 
-      if (product.stockQuantity <= 0) {
+      if ((product.stock_quantity || 0) <= 0) {
         severity = 'critical';
         message = 'Out of stock';
-      } else if (product.stockQuantity <= threshold) {
+      } else if ((product.stock_quantity || 0) <= threshold) {
         severity = 'warning';
-        message = `Low stock: ${product.stockQuantity} remaining`;
+        message = `Low stock: ${product.stock_quantity || 0} remaining`;
       }
 
       return {
@@ -96,11 +96,11 @@ export async function GET(request: NextRequest) {
         productName: product.name,
         productSku: product.sku,
         productSlug: product.slug,
-        currentStock: product.stockQuantity,
+        currentStock: product.stock_quantity || 0,
         threshold: threshold,
         severity,
         message,
-        productImage: product.featuredImage,
+        productImage: product.featured_image,
         price: product.price,
         createdAt: new Date().toISOString() // When alert was generated
       };
@@ -121,8 +121,8 @@ export async function GET(request: NextRequest) {
     // Get recent stock movements for context
     const recentTransactions = await prisma.inventoryTransaction.findMany({
       where: {
-        productId: { in: uniqueProducts.map(p => p.id) },
-        createdAt: {
+        product_id: { in: uniqueProducts.map(p => p.id) },
+        created_at: {
           gte: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000) // Last 7 days
         }
       },
@@ -134,7 +134,7 @@ export async function GET(request: NextRequest) {
           }
         }
       },
-      orderBy: { createdAt: 'desc' },
+      orderBy: { created_at: 'desc' },
       take: 10
     });
 
@@ -169,7 +169,7 @@ export async function POST(request: NextRequest) {
           id: { in: productIds }
         },
         data: {
-          lowStockThreshold: newThreshold
+          low_stock_threshold: newThreshold
         }
       });
 
@@ -184,32 +184,32 @@ export async function POST(request: NextRequest) {
       // Quick restock action - set stock to threshold + 10
       const products = await prisma.product.findMany({
         where: { id: { in: productIds } },
-        select: { id: true, name: true, lowStockThreshold: true, stockQuantity: true }
+        select: { id: true, name: true, low_stock_threshold: true, stock_quantity: true }
       });
 
       const results = [];
       for (const product of products) {
-        const newStock = (product.lowStockThreshold || 5) + 10;
-        const adjustment = newStock - product.stockQuantity;
+        const newStock = (product.low_stock_threshold || 5) + 10;
+        const adjustment = newStock - (product.stock_quantity || 0);
 
         const result = await prisma.$transaction(async (tx) => {
           // Update stock
           const updatedProduct = await tx.product.update({
             where: { id: product.id },
             data: {
-              stockQuantity: newStock,
-              stockStatus: 'instock'
+              stock_quantity: newStock,
+              stock_status: 'instock'
             }
           });
 
           // Create transaction
           await tx.inventoryTransaction.create({
             data: {
-              productId: product.id,
+              product_id: product.id,
               type: 'restock',
               quantity: adjustment,
               reason: 'Quick restock via alerts',
-              stockAfter: newStock,
+              stock_after: newStock,
               notes: 'Automated restock from inventory alerts'
             }
           });
