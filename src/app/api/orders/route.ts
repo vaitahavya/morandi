@@ -303,12 +303,12 @@ export async function POST(request: NextRequest) {
         payment_method_title: body.payment_methodTitle || 'Razorpay',
         
         // Shipping details
-        shippingMethod: body.shippingMethod,
-        shippingMethodTitle: body.shippingMethodTitle,
+        shipping_method: body.shippingMethod,
+        shipping_method_title: body.shippingMethodTitle,
         
         // Notes
-        customerNotes: body.customerNotes,
-        sourceChannel: 'website',
+        customer_notes: body.customerNotes,
+        source_channel: 'website',
         
         // Order items
         order_items: {
