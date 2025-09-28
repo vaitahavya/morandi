@@ -59,7 +59,7 @@ export async function POST(request: NextRequest) {
               select: {
                 id: true,
                 name: true,
-                stockQuantity: true
+                stock_quantity: true
               }
             }
           }
@@ -165,7 +165,7 @@ export async function POST(request: NextRequest) {
 
       // Update inventory for confirmed order
       for (const item of order.order_items) {
-        const currentStock = item.products?.stockQuantity || 0;
+        const currentStock = item.products?.stock_quantity || 0;
         const newStock = Math.max(0, currentStock - item.quantity);
 
         // Create inventory transaction
