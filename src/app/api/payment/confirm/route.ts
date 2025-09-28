@@ -124,16 +124,16 @@ export async function POST(request: NextRequest) {
       const updatedOrder = await tx.order.update({
         where: { id: order.id },
         data: {
-          paymentStatus: 'paid',
+          payment_status: 'paid',
           status: 'confirmed', // Auto-confirm order on successful payment
-          razorpayPaymentId: razorpay_payment_id,
-          razorpaySignature: razorpay_signature,
-          transactionId: razorpay_payment_id
+          razorpay_payment_id: razorpay_payment_id,
+          razorpay_signature: razorpay_signature,
+          transaction_id: razorpay_payment_id
         },
         include: {
-          items: {
+          order_items: {
             include: {
-              product: {
+              products: {
                 select: {
                   id: true,
                   name: true,
@@ -143,7 +143,7 @@ export async function POST(request: NextRequest) {
               }
             }
           },
-          user: {
+          users: {
             select: {
               id: true,
               name: true,
