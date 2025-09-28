@@ -76,9 +76,9 @@ export async function GET(request: NextRequest) {
         skip: offset,
         take: limit,
         include: {
-          categories: {
+          product_categories: {
             include: {
-              category: true
+              categories: true
             }
           },
           variants: {
@@ -137,7 +137,7 @@ export async function GET(request: NextRequest) {
         featured: product.featured,
         metaTitle: product.meta_title,
         metaDescription: product.meta_description,
-        categories: product.categories.map(pc => pc.category),
+        categories: product.product_categories.map(pc => pc.categories),
         variants: product.variants,
         attributes: product.attributes,
         avgRating: Math.round(avgRating * 10) / 10, // Round to 1 decimal
@@ -145,7 +145,6 @@ export async function GET(request: NextRequest) {
         createdAt: product.created_at,
         updatedAt: product.updated_at,
         // Legacy fields for compatibility
-        category: product.category,
         tags: product.tags,
         inStock: product.stock_status === 'instock'
       };
@@ -239,14 +238,13 @@ export async function POST(request: NextRequest) {
         meta_title: body.metaTitle,
         meta_description: body.metaDescription,
         // Legacy fields for backward compatibility
-        category: body.category || 'uncategorized',
         tags: body.tags || [],
         in_stock: (body.stockQuantity || 0) > 0
       },
       include: {
-        categories: {
+        product_categories: {
           include: {
-            category: true
+            categories: true
           }
         },
         variants: true,

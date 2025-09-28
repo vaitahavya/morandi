@@ -113,15 +113,15 @@ async function handlePaymentCaptured(payment: any) {
 
     // Find order by Razorpay order ID
     const order = await prisma.order.findFirst({
-      where: { razorpayOrderId: payment.order_id },
+      where: { razorpay_order_id: payment.order_id },
       include: {
-        items: {
+        order_items: {
           include: {
-            product: {
+            products: {
               select: {
                 id: true,
                 name: true,
-                stockQuantity: true
+                stock_quantity: true
               }
             }
           }
@@ -135,15 +135,15 @@ async function handlePaymentCaptured(payment: any) {
     }
 
     // Skip if already processed
-    if (order.paymentStatus === 'paid') {
-      console.log(`Payment already processed for order: ${order.orderNumber}`);
+    if (order.payment_status === 'paid') {
+      console.log(`Payment already processed for order: ${order.order_number}`);
       return;
     }
 
     // Verify payment amount
     const paidAmount = payment.amount / 100; // Convert from paise
-    if (Math.abs(paidAmount - order.total) > 0.01) {
-      console.error(`Amount mismatch for order ${order.orderNumber}: expected ${order.total}, got ${paidAmount}`);
+    if (Math.abs(paidAmount - Number(order.total)) > 0.01) {
+      console.error(`Amount mismatch for order ${order.order_number}: expected ${order.total}, got ${paidAmount}`);
       return;
     }
 
@@ -153,17 +153,17 @@ async function handlePaymentCaptured(payment: any) {
       await tx.order.update({
         where: { id: order.id },
         data: {
-          paymentStatus: 'paid',
+          payment_status: 'paid',
           status: order.status === 'pending' ? 'confirmed' : order.status,
-          razorpayPaymentId: payment.id,
-          transactionId: payment.id
+          razorpay_payment_id: payment.id,
+          transaction_id: payment.id
         }
       });
 
       // Create status history
       await tx.orderStatusHistory.create({
         data: {
-          orderId: order.id,
+          order_id: order.id,
           status: 'confirmed',
           notes: `Payment captured via webhook - Payment ID: ${payment.id}`
         }
@@ -171,48 +171,50 @@ async function handlePaymentCaptured(payment: any) {
 
       // Update inventory if order is being confirmed
       if (order.status === 'pending') {
-        for (const item of order.items) {
-          const currentStock = item.product.stockQuantity;
+        for (const item of order.order_items) {
+          const currentStock = item.products?.stock_quantity || 0;
           const newStock = Math.max(0, currentStock - item.quantity);
 
           // Create inventory transaction
           await tx.inventoryTransaction.create({
             data: {
-              productId: item.productId,
+              product_id: item.product_id,
               type: 'sale',
               quantity: -item.quantity,
-              reason: `Order confirmed via webhook: ${order.orderNumber}`,
+              reason: `Order confirmed via webhook: ${order.order_number}`,
               reference: order.id,
-              stockAfter: newStock
+              stock_after: newStock
             }
           });
 
           // Update product stock
-          await tx.product.update({
-            where: { id: item.productId },
-            data: {
-              stockQuantity: newStock,
-              stockStatus: newStock <= 0 ? 'outofstock' : 
-                          newStock <= 5 ? 'lowstock' : 'instock'
-            }
-          });
+          if (item.product_id) {
+            await tx.product.update({
+              where: { id: item.product_id },
+              data: {
+                stock_quantity: newStock,
+                stock_status: newStock <= 0 ? 'outofstock' : 
+                            newStock <= 5 ? 'lowstock' : 'instock'
+              }
+            });
+          }
         }
       }
 
       // Create email notification
       await tx.emailNotification.create({
         data: {
-          userId: order.userId,
-          orderId: order.id,
+          user_id: order.user_id,
+          order_id: order.id,
           type: 'payment_confirmed',
-          subject: `Payment Confirmed - ${order.orderNumber}`,
-          content: `Payment for order ${order.orderNumber} has been confirmed.`,
+          subject: `Payment Confirmed - ${order.order_number}`,
+          content: `Payment for order ${order.order_number} has been confirmed.`,
           sent: false
         }
       });
     });
 
-    console.log(`Successfully processed payment captured for order: ${order.orderNumber}`);
+    console.log(`Successfully processed payment captured for order: ${order.order_number}`);
   } catch (error) {
     console.error('Error handling payment captured:', error);
   }
@@ -224,7 +226,7 @@ async function handlePaymentFailed(payment: any) {
     console.log(`Processing payment failed: ${payment.id}`);
 
     const order = await prisma.order.findFirst({
-      where: { razorpayOrderId: payment.order_id }
+      where: { razorpay_order_id: payment.order_id }
     });
 
     if (!order) {
@@ -237,16 +239,16 @@ async function handlePaymentFailed(payment: any) {
       await tx.order.update({
         where: { id: order.id },
         data: {
-          paymentStatus: 'failed',
-          razorpayPaymentId: payment.id
+          payment_status: 'failed',
+          razorpay_payment_id: payment.id
         }
       });
 
       // Create status history
       await tx.orderStatusHistory.create({
         data: {
-          orderId: order.id,
-          status: order.status,
+          order_id: order.id,
+          status: order.status || 'pending',
           notes: `Payment failed - Payment ID: ${payment.id}, Reason: ${payment.error_description || 'Unknown'}`
         }
       });
@@ -254,17 +256,17 @@ async function handlePaymentFailed(payment: any) {
       // Create notification
       await tx.emailNotification.create({
         data: {
-          userId: order.userId,
-          orderId: order.id,
+          user_id: order.user_id,
+          order_id: order.id,
           type: 'payment_failed',
-          subject: `Payment Failed - ${order.orderNumber}`,
-          content: `Payment for order ${order.orderNumber} has failed. Please try again.`,
+          subject: `Payment Failed - ${order.order_number}`,
+          content: `Payment for order ${order.order_number} has failed. Please try again.`,
           sent: false
         }
       });
     });
 
-    console.log(`Successfully processed payment failed for order: ${order.orderNumber}`);
+    console.log(`Successfully processed payment failed for order: ${order.order_number}`);
   } catch (error) {
     console.error('Error handling payment failed:', error);
   }
@@ -276,7 +278,7 @@ async function handleOrderPaid(razorpayOrder: any) {
     console.log(`Processing order paid: ${razorpayOrder.id}`);
 
     const order = await prisma.order.findFirst({
-      where: { razorpayOrderId: razorpayOrder.id }
+      where: { razorpay_order_id: razorpayOrder.id }
     });
 
     if (!order) {
@@ -288,13 +290,13 @@ async function handleOrderPaid(razorpayOrder: any) {
     // Usually follows payment.captured for the same transaction
     await prisma.orderStatusHistory.create({
       data: {
-        orderId: order.id,
-        status: order.status,
+        order_id: order.id,
+        status: order.status || 'pending',
         notes: `Order marked as paid by Razorpay - Order ID: ${razorpayOrder.id}`
       }
     });
 
-    console.log(`Successfully processed order paid for: ${order.orderNumber}`);
+    console.log(`Successfully processed order paid for: ${order.order_number}`);
   } catch (error) {
     console.error('Error handling order paid:', error);
   }
@@ -306,7 +308,7 @@ async function handlePaymentAuthorized(payment: any) {
     console.log(`Processing payment authorized: ${payment.id}`);
 
     const order = await prisma.order.findFirst({
-      where: { razorpayOrderId: payment.order_id }
+      where: { razorpay_order_id: payment.order_id }
     });
 
     if (!order) {
@@ -318,13 +320,13 @@ async function handlePaymentAuthorized(payment: any) {
     // For manual capture, this indicates payment is ready to be captured
     await prisma.orderStatusHistory.create({
       data: {
-        orderId: order.id,
-        status: order.status,
+        order_id: order.id,
+        status: order.status || 'pending',
         notes: `Payment authorized - Payment ID: ${payment.id}`
       }
     });
 
-    console.log(`Successfully processed payment authorized for order: ${order.orderNumber}`);
+    console.log(`Successfully processed payment authorized for order: ${order.order_number}`);
   } catch (error) {
     console.error('Error handling payment authorized:', error);
   }
@@ -337,7 +339,7 @@ async function handleRefundCreated(refund: any) {
 
     // Find order by payment ID
     const order = await prisma.order.findFirst({
-      where: { razorpayPaymentId: refund.payment_id }
+      where: { razorpay_payment_id: refund.payment_id }
     });
 
     if (!order) {
@@ -346,14 +348,14 @@ async function handleRefundCreated(refund: any) {
     }
 
     const refundAmount = refund.amount / 100; // Convert from paise
-    const isFullRefund = Math.abs(refundAmount - order.total) < 0.01;
+    const isFullRefund = Math.abs(refundAmount - Number(order.total)) < 0.01;
 
     await prisma.$transaction(async (tx) => {
       // Update order payment status
       await tx.order.update({
         where: { id: order.id },
         data: {
-          paymentStatus: isFullRefund ? 'refunded' : 'partially_refunded',
+          payment_status: isFullRefund ? 'refunded' : 'partially_refunded',
           status: isFullRefund ? 'refunded' : order.status
         }
       });
@@ -361,8 +363,8 @@ async function handleRefundCreated(refund: any) {
       // Create status history
       await tx.orderStatusHistory.create({
         data: {
-          orderId: order.id,
-          status: isFullRefund ? 'refunded' : order.status,
+          order_id: order.id,
+          status: isFullRefund ? 'refunded' : (order.status || 'pending'),
           notes: `${isFullRefund ? 'Full' : 'Partial'} refund processed - Amount: ₹${refundAmount}, Refund ID: ${refund.id}`
         }
       });
@@ -370,17 +372,17 @@ async function handleRefundCreated(refund: any) {
       // Create notification
       await tx.emailNotification.create({
         data: {
-          userId: order.userId,
-          orderId: order.id,
+          user_id: order.user_id,
+          order_id: order.id,
           type: 'refund_processed',
-          subject: `Refund Processed - ${order.orderNumber}`,
-          content: `A refund of ₹${refundAmount} has been processed for order ${order.orderNumber}.`,
+          subject: `Refund Processed - ${order.order_number}`,
+          content: `A refund of ₹${refundAmount} has been processed for order ${order.order_number}.`,
           sent: false
         }
       });
     });
 
-    console.log(`Successfully processed refund for order: ${order.orderNumber}`);
+    console.log(`Successfully processed refund for order: ${order.order_number}`);
   } catch (error) {
     console.error('Error handling refund created:', error);
   }

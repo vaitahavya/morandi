@@ -15,9 +15,9 @@ export async function GET(
     const product = await prisma.product.findFirst({
       where: isUUID ? { id } : { slug: id },
       include: {
-        categories: {
+        product_categories: {
           include: {
-            category: true
+            categories: true
           }
         },
         variants: {
@@ -26,7 +26,7 @@ export async function GET(
         attributes: true,
         reviews: {
           include: {
-            user: {
+            users: {
               select: {
                 id: true,
                 name: true,
@@ -34,20 +34,20 @@ export async function GET(
               }
             }
           },
-          orderBy: { createdAt: 'desc' }
+          orderBy: { created_at: 'desc' }
         },
-        recommendations: {
+        product_recommendations_product_recommendations_product_idToproducts: {
           include: {
-            recommendedProduct: {
+            products_product_recommendations_recommended_product_idToproducts: {
               select: {
                 id: true,
                 name: true,
                 slug: true,
                 price: true,
-                salePrice: true,
+                sale_price: true,
                 images: true,
-                featuredImage: true,
-                stockStatus: true
+                featured_image: true,
+                stock_status: true
               }
             }
           },
@@ -66,11 +66,11 @@ export async function GET(
 
     // Calculate average rating
     const avgRating = product.reviews.length > 0
-      ? product.reviews.reduce((sum, review) => sum + review.rating, 0) / product.reviews.length
+      ? product.reviews.reduce((sum: number, review: any) => sum + review.rating, 0) / product.reviews.length
       : 0;
 
     // Get effective price
-    const effectivePrice = product.salePrice || product.price;
+    const effectivePrice = product.sale_price || product.price;
 
     // Transform data
     const transformedProduct = {
@@ -78,41 +78,40 @@ export async function GET(
       name: product.name,
       slug: product.slug,
       description: product.description,
-      shortDescription: product.shortDescription,
+      short_description: product.short_description,
       sku: product.sku,
       price: effectivePrice,
-      regularPrice: product.regularPrice || product.price,
-      salePrice: product.salePrice,
+      regular_price: product.regular_price || product.price,
+      sale_price: product.sale_price,
       images: product.images,
-      featuredImage: product.featuredImage,
-      stockQuantity: product.stockQuantity,
-      stockStatus: product.stockStatus,
-      manageStock: product.manageStock,
-      lowStockThreshold: product.lowStockThreshold,
+      featured_image: product.featured_image,
+      stock_quantity: product.stock_quantity,
+      stock_status: product.stock_status,
+      manage_stock: product.manage_stock,
+      low_stock_threshold: product.low_stock_threshold,
       weight: product.weight,
       dimensions: product.dimensions,
       status: product.status,
       featured: product.featured,
-      metaTitle: product.metaTitle,
-      metaDescription: product.metaDescription,
-      woocommerceId: product.woocommerceId,
-      categories: product.categories.map(pc => pc.category),
+      meta_title: product.meta_title,
+      meta_description: product.meta_description,
+      woocommerce_id: product.woocommerce_id,
+      categories: product.product_categories.map((pc: any) => pc.categories),
       variants: product.variants,
-      attributes: product.attributes.reduce((acc, attr) => {
+      attributes: product.attributes.reduce((acc: Record<string, string[]>, attr: any) => {
         if (!acc[attr.name]) acc[attr.name] = [];
         acc[attr.name].push(attr.value);
         return acc;
       }, {} as Record<string, string[]>),
       reviews: product.reviews,
-      recommendations: product.recommendations.map(rec => rec.recommendedProduct),
+      recommendations: product.product_recommendations_product_recommendations_product_idToproducts.map((rec: any) => rec.products_product_recommendations_recommended_product_idToproducts),
       avgRating: Math.round(avgRating * 10) / 10,
       reviewCount: product.reviews.length,
-      createdAt: product.createdAt,
-      updatedAt: product.updatedAt,
+      created_at: product.created_at,
+      updated_at: product.updated_at,
       // Legacy fields for compatibility
-      category: product.category,
       tags: product.tags,
-      inStock: product.stockStatus === 'instock'
+      inStock: product.stock_status === 'instock'
     };
 
     return NextResponse.json({
@@ -155,18 +154,18 @@ export async function PUT(
 
     // Only update provided fields
     const updateableFields = [
-      'name', 'slug', 'description', 'shortDescription', 'sku',
-      'price', 'regularPrice', 'salePrice', 'images', 'featuredImage',
-      'stockQuantity', 'stockStatus', 'manageStock', 'lowStockThreshold',
-      'weight', 'dimensions', 'status', 'featured', 'metaTitle', 'metaDescription',
+      'name', 'slug', 'description', 'short_description', 'sku',
+      'price', 'regular_price', 'sale_price', 'images', 'featured_image',
+      'stock_quantity', 'stock_status', 'manage_stock', 'low_stock_threshold',
+      'weight', 'dimensions', 'status', 'featured', 'meta_title', 'meta_description',
       'category', 'tags'
     ];
 
     updateableFields.forEach(field => {
       if (body[field] !== undefined) {
-        if (['price', 'regularPrice', 'salePrice', 'weight'].includes(field) && body[field] !== null) {
+        if (['price', 'regular_price', 'sale_price', 'weight'].includes(field) && body[field] !== null) {
           updateData[field] = parseFloat(body[field]);
-        } else if (['stockQuantity', 'lowStockThreshold'].includes(field)) {
+        } else if (['stock_quantity', 'low_stock_threshold'].includes(field)) {
           updateData[field] = parseInt(body[field]);
         } else {
           updateData[field] = body[field];
@@ -174,10 +173,10 @@ export async function PUT(
       }
     });
 
-    // Update inStock based on stockQuantity and stockStatus
-    if (updateData.stockQuantity !== undefined || updateData.stockStatus !== undefined) {
-      const newStockQuantity = updateData.stockQuantity ?? existingProduct.stockQuantity;
-      const newStockStatus = updateData.stockStatus ?? existingProduct.stockStatus;
+    // Update inStock based on stock_quantity and stock_status
+    if (updateData.stock_quantity !== undefined || updateData.stock_status !== undefined) {
+      const newStockQuantity = updateData.stock_quantity ?? existingProduct.stock_quantity;
+      const newStockStatus = updateData.stock_status ?? existingProduct.stock_status;
       updateData.inStock = newStockQuantity > 0 && newStockStatus === 'instock';
     }
 
@@ -186,9 +185,9 @@ export async function PUT(
       where: { id },
       data: updateData,
       include: {
-        categories: {
+        product_categories: {
           include: {
-            category: true
+            categories: true
           }
         },
         variants: true,
@@ -197,17 +196,17 @@ export async function PUT(
     });
 
     // Create inventory transaction if stock quantity changed
-    if (updateData.stockQuantity !== undefined && updateData.stockQuantity !== existingProduct.stockQuantity) {
-      const quantityChange = updateData.stockQuantity - existingProduct.stockQuantity;
+    if (updateData.stock_quantity !== undefined && updateData.stock_quantity !== existingProduct.stock_quantity) {
+      const quantityChange = updateData.stock_quantity - (existingProduct.stock_quantity || 0);
       
       await prisma.inventoryTransaction.create({
         data: {
-          productId: id,
+          product_id: id,
           type: quantityChange > 0 ? 'restock' : 'adjustment',
           quantity: quantityChange,
           reason: 'Manual update via API',
-          stockAfter: updateData.stockQuantity,
-          notes: `Stock updated from ${existingProduct.stockQuantity} to ${updateData.stockQuantity}`
+          stock_after: updateData.stock_quantity,
+          notes: `Stock updated from ${existingProduct.stock_quantity || 0} to ${updateData.stock_quantity}`
         }
       });
     }
@@ -249,8 +248,8 @@ export async function DELETE(
     const existingProduct = await prisma.product.findUnique({
       where: { id },
       include: {
-        orderItems: true,
-        wishlist: true,
+        order_items: true,
+        wishlist_items: true,
         reviews: true
       }
     });
@@ -263,7 +262,7 @@ export async function DELETE(
     }
 
     // Check if product has associated orders
-    if (existingProduct.orderItems.length > 0) {
+    if (existingProduct.order_items.length > 0) {
       return NextResponse.json({
         success: false,
         error: 'Cannot delete product that has been ordered. Consider marking it as inactive instead.'

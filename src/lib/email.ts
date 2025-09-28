@@ -33,13 +33,13 @@ export async function sendEmail(emailData: EmailData) {
     try {
       await prisma.emailNotification.create({
         data: {
-          userId: emailData.userId,
-          orderId: emailData.orderId,
+          user_id: emailData.userId,
+          order_id: emailData.orderId,
           type: emailData.type,
           subject: emailData.subject,
           content: emailData.html,
           sent: true,
-          sentAt: new Date(),
+          sent_at: new Date(),
         },
       });
     } catch (error) {
@@ -55,8 +55,8 @@ export async function sendEmail(emailData: EmailData) {
     try {
       await prisma.emailNotification.create({
         data: {
-          userId: emailData.userId,
-          orderId: emailData.orderId,
+          user_id: emailData.userId,
+          order_id: emailData.orderId,
           type: emailData.type,
           subject: emailData.subject,
           content: emailData.html,

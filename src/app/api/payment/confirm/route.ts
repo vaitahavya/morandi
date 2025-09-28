@@ -5,11 +5,13 @@ import { prisma } from '@/lib/db';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 
-// Initialize Razorpay instance
-const razorpay = new Razorpay({
-  key_id: process.env.RAZORPAY_KEY_ID!,
-  key_secret: process.env.RAZORPAY_KEY_SECRET!,
-});
+// Initialize Razorpay instance (only if credentials are available)
+const razorpay = process.env.RAZORPAY_KEY_ID && process.env.RAZORPAY_KEY_SECRET 
+  ? new Razorpay({
+      key_id: process.env.RAZORPAY_KEY_ID,
+      key_secret: process.env.RAZORPAY_KEY_SECRET,
+    })
+  : null;
 
 // POST /api/payment/confirm - Confirm payment after successful Razorpay payment
 export async function POST(request: NextRequest) {
@@ -92,6 +94,13 @@ export async function POST(request: NextRequest) {
 
     // Fetch payment details from Razorpay
     let paymentDetails;
+    if (!razorpay) {
+      return NextResponse.json({
+        success: false,
+        error: 'Payment service not configured'
+      }, { status: 500 });
+    }
+    
     try {
       paymentDetails = await razorpay.payments.fetch(razorpay_payment_id);
     } catch (error) {
@@ -171,21 +180,21 @@ export async function POST(request: NextRequest) {
         // Create inventory transaction
         await tx.inventoryTransaction.create({
           data: {
-            productId: item.productId,
+            product_id: item.product_id,
             type: 'sale',
             quantity: -item.quantity,
             reason: `Order confirmed: ${order.order_number}`,
             reference: order.id,
-            stockAfter: newStock
+            stock_after: newStock
           }
         });
 
         // Update product stock
-        await tx.product.update({
-          where: { id: item.productId },
+        item.product_id && await tx.product.update({
+          where: { id: item.product_id },
           data: {
-            stockQuantity: newStock,
-            stockStatus: newStock <= 0 ? 'outofstock' : 
+            stock_quantity: newStock,
+            stock_status: newStock <= 0 ? 'outofstock' : 
                         newStock <= 5 ? 'lowstock' : 'instock'
           }
         });
@@ -194,8 +203,8 @@ export async function POST(request: NextRequest) {
       // Create email notification for order confirmation
       await tx.emailNotification.create({
         data: {
-          userId: order.user_id,
-          orderId: order.id,
+          user_id: order.user_id,
+          order_id: order.id,
           type: 'order_confirmation',
           subject: `Order Confirmed - ${order.order_number}`,
           content: `Your order ${order.order_number} has been confirmed and payment received.`,
@@ -272,14 +281,14 @@ export async function GET(request: NextRequest) {
       where: whereClause,
       select: {
         id: true,
-        orderNumber: true,
+        order_number: true,
         status: true,
-        paymentStatus: true,
-        razorpayOrderId: true,
-        razorpayPaymentId: true,
+        payment_status: true,
+        razorpay_order_id: true,
+        razorpay_payment_id: true,
         total: true,
         currency: true,
-        createdAt: true
+        created_at: true
       }
     });
 
@@ -292,7 +301,7 @@ export async function GET(request: NextRequest) {
 
     // Get payment details from Razorpay if payment ID exists
     let paymentDetails = null;
-    if (order.razorpay_payment_id) {
+    if (order.razorpay_payment_id && razorpay) {
       try {
         const payment = await razorpay.payments.fetch(order.razorpay_payment_id);
         paymentDetails = {

@@ -4,11 +4,13 @@ import { prisma } from '@/lib/db';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 
-// Initialize Razorpay instance
-const razorpay = new Razorpay({
-  key_id: process.env.RAZORPAY_KEY_ID!,
-  key_secret: process.env.RAZORPAY_KEY_SECRET!,
-});
+// Initialize Razorpay instance (only if credentials are available)
+const razorpay = process.env.RAZORPAY_KEY_ID && process.env.RAZORPAY_KEY_SECRET 
+  ? new Razorpay({
+      key_id: process.env.RAZORPAY_KEY_ID,
+      key_secret: process.env.RAZORPAY_KEY_SECRET,
+    })
+  : null;
 
 // POST /api/payment/create-intent - Create Razorpay payment order
 export async function POST(request: NextRequest) {
@@ -29,9 +31,9 @@ export async function POST(request: NextRequest) {
     const order = await prisma.order.findUnique({
       where: { id: orderId },
       include: {
-        items: {
+        order_items: {
           include: {
-            product: {
+            products: {
               select: {
                 name: true,
                 slug: true
@@ -39,7 +41,7 @@ export async function POST(request: NextRequest) {
             }
           }
         },
-        user: {
+        users: {
           select: {
             name: true,
             email: true
@@ -56,7 +58,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Verify user has permission to pay for this order
-    if (order.userId && order.userId !== session?.user?.id) {
+    if (order.user_id && order.user_id !== session?.user?.id) {
       return NextResponse.json({
         success: false,
         error: 'Access denied'
@@ -64,7 +66,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Verify order amount matches
-    const orderAmount = Math.round(order.total * 100); // Convert to paise
+    const orderAmount = Math.round(order.total.toNumber() * 100); // Convert to paise
     const requestAmount = Math.round(amount * 100);
 
     if (orderAmount !== requestAmount) {
@@ -82,7 +84,7 @@ export async function POST(request: NextRequest) {
       }, { status: 400 });
     }
 
-    if (order.paymentStatus === 'paid') {
+    if (order.payment_status === 'paid') {
       return NextResponse.json({
         success: false,
         error: 'Order is already paid'
@@ -93,23 +95,30 @@ export async function POST(request: NextRequest) {
     const razorpayOrderOptions = {
       amount: orderAmount, // Amount in paise
       currency: currency.toUpperCase(),
-      receipt: order.orderNumber,
+      receipt: order.order_number,
       notes: {
         order_id: order.id,
-        order_number: order.orderNumber,
-        customer_email: order.customerEmail,
-        customer_name: `${order.billingFirstName} ${order.billingLastName}`
+        order_number: order.order_number,
+        customer_email: order.customer_email,
+        customer_name: `${order.billing_first_name} ${order.billing_last_name}`
       }
     };
 
-    const razorpayOrder = await razorpay.orders.create(razorpayOrderOptions);
+    if (!razorpay) {
+      return NextResponse.json({
+        success: false,
+        error: 'Payment service not configured'
+      }, { status: 500 });
+    }
+
+    const razorpayOrder = await razorpay.orders.create(razorpayOrderOptions as any);
 
     // Update our order with Razorpay order ID
     await prisma.order.update({
       where: { id: orderId },
       data: {
-        razorpayOrderId: razorpayOrder.id,
-        paymentStatus: 'pending'
+        razorpay_order_id: razorpayOrder.id,
+        payment_status: 'pending'
       }
     });
 
@@ -124,9 +133,9 @@ export async function POST(request: NextRequest) {
       key: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID,
       order_id: razorpayOrder.id,
       prefill: {
-        name: `${order.billingFirstName} ${order.billingLastName}`,
-        email: order.customerEmail,
-        contact: order.customerPhone || ''
+          name: `${order.billing_first_name} ${order.billing_last_name}`,
+        email: order.customer_email,
+        contact: order.customer_phone || ''
       },
       theme: {
         color: '#3B82F6' // Primary blue color
@@ -175,17 +184,17 @@ export async function GET(request: NextRequest) {
     // Find order
     const whereClause = orderId 
       ? { id: orderId }
-      : { razorpayOrderId: razorpayOrderId };
+      : { razorpay_order_id: razorpayOrderId };
 
     const order = await prisma.order.findFirst({
       where: whereClause,
       select: {
         id: true,
-        orderNumber: true,
+        order_number: true,
         status: true,
-        paymentStatus: true,
-        razorpayOrderId: true,
-        razorpayPaymentId: true,
+        payment_status: true,
+        razorpay_order_id: true,
+        razorpay_payment_id: true,
         total: true,
         currency: true
       }
@@ -200,9 +209,9 @@ export async function GET(request: NextRequest) {
 
     // Get Razorpay order status if we have the ID
     let razorpayStatus = null;
-    if (order.razorpayOrderId) {
+    if (order.razorpay_order_id && razorpay) {
       try {
-        const razorpayOrder = await razorpay.orders.fetch(order.razorpayOrderId);
+        const razorpayOrder = await razorpay.orders.fetch(order.razorpay_order_id);
         razorpayStatus = {
           id: razorpayOrder.id,
           status: razorpayOrder.status,
@@ -220,9 +229,9 @@ export async function GET(request: NextRequest) {
       data: {
         order: {
           id: order.id,
-          orderNumber: order.orderNumber,
+          order_number: order.order_number,
           status: order.status,
-          paymentStatus: order.paymentStatus,
+          payment_status: order.payment_status,
           total: order.total,
           currency: order.currency
         },

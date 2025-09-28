@@ -153,9 +153,9 @@ export async function GET(request: NextRequest) {
         skip: offset,
         take: limit,
         include: {
-          categories: {
+          product_categories: {
             include: {
-              category: true
+              categories: true
             }
           },
           variants: {
@@ -182,7 +182,7 @@ export async function GET(request: NextRequest) {
         ? product.reviews.reduce((sum, review) => sum + review.rating, 0) / product.reviews.length
         : 0;
 
-      const effectivePrice = product.salePrice || product.price;
+      const effectivePrice = product.sale_price || product.price;
 
       // Calculate search relevance score if we have a query
       let relevanceScore = 0;
@@ -191,9 +191,9 @@ export async function GET(request: NextRequest) {
         if (product.name.toLowerCase().includes(query)) relevanceScore += 10;
         if (product.sku?.toLowerCase().includes(query)) relevanceScore += 8;
         if (product.description?.toLowerCase().includes(query)) relevanceScore += 5;
-        if (product.shortDescription?.toLowerCase().includes(query)) relevanceScore += 5;
+        if (product.short_description?.toLowerCase().includes(query)) relevanceScore += 5;
         if (product.featured) relevanceScore += 3;
-        if (product.stockStatus === 'instock') relevanceScore += 2;
+        if (product.stock_status === 'instock') relevanceScore += 2;
       }
 
       return {
@@ -201,17 +201,17 @@ export async function GET(request: NextRequest) {
         name: product.name,
         slug: product.slug,
         description: product.description,
-        shortDescription: product.shortDescription,
+        shortDescription: product.short_description,
         sku: product.sku,
         price: effectivePrice,
-        regularPrice: product.regularPrice || product.price,
-        salePrice: product.salePrice,
+        regularPrice: product.regular_price || product.price,
+        salePrice: product.sale_price,
         images: product.images,
-        featuredImage: product.featuredImage,
-        stockQuantity: product.stockQuantity,
-        stockStatus: product.stockStatus,
+        featuredImage: product.featured_image,
+        stockQuantity: product.stock_quantity,
+        stockStatus: product.stock_status,
         featured: product.featured,
-        categories: product.categories.map(pc => pc.category),
+        categories: product.product_categories.map(pc => pc.categories),
         variants: product.variants,
         attributes: product.attributes.reduce((acc, attr) => {
           if (!acc[attr.name]) acc[attr.name] = [];
@@ -222,9 +222,8 @@ export async function GET(request: NextRequest) {
         reviewCount: product.reviews.length,
         relevanceScore: relevanceScore,
         // Legacy compatibility
-        category: product.category,
         tags: product.tags,
-        inStock: product.stockStatus === 'instock'
+        inStock: product.stock_status === 'instock'
       };
     });
 
