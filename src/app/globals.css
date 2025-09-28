@@ -3,5 +3,41 @@
 @tailwind utilities;
 
 body {
-  @apply bg-gray-50 text-gray-900;
+  @apply bg-morandi-white text-deep-charcoal font-sans;
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #f1f1f1;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #B7C4B2;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #9BA896;
+}
+
+/* Smooth scrolling */
+html {
+  scroll-behavior: smooth;
+}
+
+/* Custom button styles */
+.btn-primary {
+  @apply bg-clay-pink text-morandi-white px-8 py-3 rounded-xl font-medium hover:bg-opacity-90 transition-all duration-300 shadow-soft;
+}
+
+.btn-secondary {
+  @apply bg-soft-sage text-deep-charcoal px-8 py-3 rounded-xl font-medium hover:bg-opacity-90 transition-all duration-300 shadow-soft;
+}
+
+.btn-outline {
+  @apply border-2 border-clay-pink text-clay-pink px-8 py-3 rounded-xl font-medium hover:bg-clay-pink hover:text-morandi-white transition-all duration-300;
 }

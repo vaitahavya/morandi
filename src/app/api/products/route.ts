@@ -14,7 +14,7 @@ export async function GET(request: NextRequest) {
     const status = searchParams.get('status') || 'published';
     const featured = searchParams.get('featured');
     const inStock = searchParams.get('inStock');
-    const sortBy = searchParams.get('sortBy') || 'createdAt';
+    const sortBy = searchParams.get('sortBy') || 'created_at';
     const sortOrder = searchParams.get('sortOrder') || 'desc';
     const minPrice = searchParams.get('minPrice');
     const maxPrice = searchParams.get('maxPrice');
@@ -32,7 +32,7 @@ export async function GET(request: NextRequest) {
       whereConditions.OR = [
         { name: { contains: search, mode: 'insensitive' } },
         { description: { contains: search, mode: 'insensitive' } },
-        { shortDescription: { contains: search, mode: 'insensitive' } },
+        { short_description: { contains: search, mode: 'insensitive' } },
         { sku: { contains: search, mode: 'insensitive' } }
       ];
     }
@@ -49,7 +49,7 @@ export async function GET(request: NextRequest) {
 
     // Stock filter
     if (inStock !== null) {
-      whereConditions.stockStatus = inStock === 'true' ? 'instock' : { not: 'instock' };
+      whereConditions.stock_status = inStock === 'true' ? 'instock' : { not: 'instock' };
     }
 
     // Price range filter
@@ -60,12 +60,12 @@ export async function GET(request: NextRequest) {
     }
 
     // Validate sort field
-    const validSortFields = ['name', 'price', 'createdAt', 'updatedAt', 'stockQuantity', 'featured'];
+    const validSortFields = ['name', 'price', 'created_at', 'updated_at', 'stock_quantity', 'featured'];
     const orderBy: any = {};
     if (validSortFields.includes(sortBy)) {
       orderBy[sortBy] = sortOrder === 'asc' ? 'asc' : 'desc';
     } else {
-      orderBy.createdAt = 'desc';
+      orderBy.created_at = 'desc';
     }
 
     // Execute queries in parallel
@@ -108,7 +108,7 @@ export async function GET(request: NextRequest) {
         : 0;
 
       // Get effective price (sale price if available, otherwise regular price)
-      const effectivePrice = product.salePrice || product.price;
+      const effectivePrice = product.sale_price || product.price;
 
       // Transform images from string array to object array
       const transformedImages = product.images.map((imageUrl, index) => ({
@@ -122,32 +122,32 @@ export async function GET(request: NextRequest) {
         name: product.name,
         slug: product.slug,
         description: product.description,
-        shortDescription: product.shortDescription,
+        shortDescription: product.short_description,
         sku: product.sku,
         price: effectivePrice,
-        regularPrice: product.regularPrice || product.price,
-        salePrice: product.salePrice,
+        regularPrice: product.regular_price || product.price,
+        salePrice: product.sale_price,
         images: transformedImages,
-        featuredImage: product.featuredImage,
-        stockQuantity: product.stockQuantity,
-        stockStatus: product.stockStatus,
+        featuredImage: product.featured_image,
+        stockQuantity: product.stock_quantity,
+        stockStatus: product.stock_status,
         weight: product.weight,
         dimensions: product.dimensions,
         status: product.status,
         featured: product.featured,
-        metaTitle: product.metaTitle,
-        metaDescription: product.metaDescription,
+        metaTitle: product.meta_title,
+        metaDescription: product.meta_description,
         categories: product.categories.map(pc => pc.category),
         variants: product.variants,
         attributes: product.attributes,
         avgRating: Math.round(avgRating * 10) / 10, // Round to 1 decimal
         reviewCount: product.reviews.length,
-        createdAt: product.createdAt,
-        updatedAt: product.updatedAt,
+        createdAt: product.created_at,
+        updatedAt: product.updated_at,
         // Legacy fields for compatibility
         category: product.category,
         tags: product.tags,
-        inStock: product.stockStatus === 'instock'
+        inStock: product.stock_status === 'instock'
       };
     });
 
@@ -221,27 +221,27 @@ export async function POST(request: NextRequest) {
         name,
         slug,
         description: body.description,
-        shortDescription: body.shortDescription,
+        short_description: body.shortDescription,
         sku: body.sku,
         price: parseFloat(price),
-        regularPrice: body.regularPrice ? parseFloat(body.regularPrice) : parseFloat(price),
-        salePrice: body.salePrice ? parseFloat(body.salePrice) : null,
+        regular_price: body.regularPrice ? parseFloat(body.regularPrice) : parseFloat(price),
+        sale_price: body.salePrice ? parseFloat(body.salePrice) : null,
         images: body.images || [],
-        featuredImage: body.featuredImage,
-        stockQuantity: body.stockQuantity || 0,
-        stockStatus: body.stockStatus || 'instock',
-        manageStock: body.manageStock !== false,
-        lowStockThreshold: body.lowStockThreshold || 5,
+        featured_image: body.featuredImage,
+        stock_quantity: body.stockQuantity || 0,
+        stock_status: body.stockStatus || 'instock',
+        manage_stock: body.manageStock !== false,
+        low_stock_threshold: body.lowStockThreshold || 5,
         weight: body.weight ? parseFloat(body.weight) : null,
         dimensions: body.dimensions,
         status: body.status || 'published',
         featured: body.featured || false,
-        metaTitle: body.metaTitle,
-        metaDescription: body.metaDescription,
+        meta_title: body.metaTitle,
+        meta_description: body.metaDescription,
         // Legacy fields for backward compatibility
         category: body.category || 'uncategorized',
         tags: body.tags || [],
-        inStock: (body.stockQuantity || 0) > 0
+        in_stock: (body.stockQuantity || 0) > 0
       },
       include: {
         categories: {

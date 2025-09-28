@@ -59,6 +59,15 @@ export default function MobileMenu() {
                 </li>
                 <li>
                   <Link
+                    href="/collections"
+                    onClick={toggleMenu}
+                    className="block text-lg text-gray-700 hover:text-primary-700"
+                  >
+                    Collections
+                  </Link>
+                </li>
+                <li>
+                  <Link
                     href="/about"
                     onClick={toggleMenu}
                     className="block text-lg text-gray-700 hover:text-primary-700"

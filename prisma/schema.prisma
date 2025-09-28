@@ -1,6 +1,3 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
 generator client {
   provider = "prisma-client-js"
 }
@@ -11,428 +8,660 @@ datasource db {
 }
 
 model User {
-  id            String    @id @default(cuid())
-  email         String    @unique
-  name          String?
-  password      String?
-  image         String?
-  emailVerified DateTime?
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
+  id                                  String                  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  email                               String                  @unique @db.VarChar
+  name                                String?                 @db.VarChar
+  password                            String?                 @db.VarChar
+  image                               String?                 @db.VarChar
+  email_verified                      DateTime?               @db.Timestamptz(6)
+  created_at                          DateTime?               @default(now()) @db.Timestamptz(6)
+  updated_at                          DateTime?               @default(now()) @db.Timestamptz(6)
+  email_notifications                 EmailNotification[]
+  inventory_transactions              InventoryTransaction[]
+  order_status_history                OrderStatusHistory[]
+  orders                              Order[]
+  return_items                        return_items[]
+  return_status_history               return_status_history[]
+  returns_returns_processed_byTousers returns[]               @relation("returns_processed_byTousers")
+  returns_returns_qc_byTousers        returns[]               @relation("returns_qc_byTousers")
+  reviews                             Review[]
+  wishlist_items                      WishlistItem[]
 
-  // Relations
-  orders        Order[]
-  wishlist      WishlistItem[]
-  reviews       Review[]
-  notifications EmailNotification[]
-
+  @@index([email], map: "idx_users_email")
   @@map("users")
 }
 
 model Product {
-  id                 String   @id @default(cuid())
-  name               String
-  slug               String   @unique
-  description        String?
-  shortDescription   String?
-  sku                String?  @unique
-  
-  // Pricing
-  price              Float
-  regularPrice       Float?
-  salePrice          Float?
-  
-  // Images and media
-  images             String[]
-  featuredImage      String?
-  
-  // Inventory
-  stockQuantity      Int      @default(0)
-  stockStatus        String   @default("instock") // instock, outofstock, onbackorder
-  manageStock        Boolean  @default(true)
-  lowStockThreshold  Int?     @default(5)
-  
-  // Physical properties  
-  weight             Float?
-  dimensions         Json?    // {length, width, height, unit}
-  
-  // Status and visibility
-  status             String   @default("published") // draft, published, private
-  featured           Boolean  @default(false)
-  
-  // SEO
-  metaTitle          String?
-  metaDescription    String?
-  
-  // WooCommerce migration
-  woocommerceId      String?  @unique
-  
-  // Legacy field (will be replaced by proper categories)
-  category           String?
-  tags               String[]
-  inStock            Boolean  @default(true)
-  
-  createdAt          DateTime @default(now())
-  updatedAt          DateTime @updatedAt
+  id                                                                               String                  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  woocommerce_id                                                                   String?                 @unique @db.VarChar
+  name                                                                             String                  @db.VarChar
+  description                                                                      String?
+  price                                                                            Decimal                 @db.Decimal(10, 2)
+  images                                                                           String[]
+  category                                                                         String                  @db.VarChar
+  tags                                                                             String[]
+  in_stock                                                                         Boolean?                @default(true)
+  created_at                                                                       DateTime?               @default(now()) @db.Timestamptz(6)
+  updated_at                                                                       DateTime?               @default(now()) @updatedAt @db.Timestamptz(6)
+  slug                                                                             String?                 @unique @db.VarChar
+  short_description                                                                String?
+  sku                                                                              String?                 @unique @db.VarChar
+  regular_price                                                                    Decimal?                @db.Decimal(10, 2)
+  sale_price                                                                       Decimal?                @db.Decimal(10, 2)
+  featured_image                                                                   String?                 @db.VarChar
+  stock_quantity                                                                   Int?                    @default(0)
+  stock_status                                                                     String?                 @default("instock") @db.VarChar
+  manage_stock                                                                     Boolean?                @default(true)
+  low_stock_threshold                                                              Int?                    @default(5)
+  weight                                                                           Decimal?                @db.Decimal(8, 2)
+  dimensions                                                                       Json?
+  status                                                                           String?                 @default("published") @db.VarChar
+  featured                                                                         Boolean?                @default(false)
+  meta_title                                                                       String?                 @db.VarChar
+  meta_description                                                                 String?
+  featured_products                                                                featured_products[]
+  inventoryTransactions                                                            InventoryTransaction[]
+  order_items                                                                      OrderItem[]
+  attributes                                                                       ProductAttribute[]
+  product_categories                                                               ProductCategory[]
+  product_recommendations_product_recommendations_product_idToproducts             ProductRecommendation[] @relation("product_recommendations_product_idToproducts")
+  product_recommendations_product_recommendations_recommended_product_idToproducts ProductRecommendation[] @relation("product_recommendations_recommended_product_idToproducts")
+  variants                                                                         ProductVariant[]
+  return_items                                                                     return_items[]
+  reviews                                                                          Review[]
+  wishlist_items                                                                   WishlistItem[]
 
-  // Relations
-  orderItems         OrderItem[]
-  wishlist           WishlistItem[]
-  reviews            Review[]
-  recommendations    ProductRecommendation[] @relation("ProductRecommendations")
-  recommendedBy      ProductRecommendation[] @relation("RecommendedProduct")
-  variants           ProductVariant[]
-  categories         ProductCategory[]
-  attributes         ProductAttribute[]
-  inventoryTransactions InventoryTransaction[]
-
+  @@index([category], map: "idx_products_category")
+  @@index([featured], map: "idx_products_featured")
+  @@index([sku], map: "idx_products_sku")
+  @@index([slug], map: "idx_products_slug")
+  @@index([status], map: "idx_products_status")
+  @@index([stock_status], map: "idx_products_stock_status")
+  @@index([woocommerce_id], map: "idx_products_woocommerce_id")
   @@map("products")
 }
 
 model Order {
-  id        String   @id @default(cuid())
-  userId    String?  // Allow guest orders
-  orderNumber String @unique // Human-readable order number
-  
-  // Order status and workflow
-  status    String   @default("pending") // pending, confirmed, processing, shipped, delivered, cancelled, refunded
-  paymentStatus String @default("pending") // pending, paid, failed, refunded, partially_refunded
-  
-  // Customer information
-  customerEmail String
-  customerPhone String?
-  
-  // Billing address
-  billingFirstName String
-  billingLastName  String
-  billingCompany   String?
-  billingAddress1  String
-  billingAddress2  String?
-  billingCity      String
-  billingState     String?
-  billingPostcode  String
-  billingCountry   String
-  
-  // Shipping address
-  shippingFirstName String?
-  shippingLastName  String?
-  shippingCompany   String?
-  shippingAddress1  String?
-  shippingAddress2  String?
-  shippingCity      String?
-  shippingState     String?
-  shippingPostcode  String?
-  shippingCountry   String?
-  
-  // Financial details
-  subtotal      Float
-  taxAmount     Float   @default(0)
-  shippingCost  Float   @default(0)
-  discountAmount Float  @default(0)
-  total         Float
-  currency      String  @default("INR")
-  
-  // Payment information
-  paymentMethod       String? // "razorpay", "cod", etc.
-  paymentMethodTitle  String?
-  transactionId       String? // Payment gateway transaction ID
-  razorpayOrderId     String? // Razorpay specific
-  razorpayPaymentId   String? // Razorpay specific
-  razorpaySignature   String? // Razorpay specific
-  
-  // Shipping information
-  shippingMethod      String?
-  shippingMethodTitle String?
-  trackingNumber      String?
-  shippingCarrier     String?
-  estimatedDelivery   DateTime?
-  shippedAt           DateTime?
-  deliveredAt         DateTime?
-  
-  // Order metadata
-  customerNotes String?
-  adminNotes    String?
-  sourceChannel String? @default("website") // website, admin, api
-  
-  // Timestamps
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id                    String               @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  user_id               String?              @db.Uuid
+  status                String?              @default("pending") @db.VarChar
+  total                 Decimal              @db.Decimal(10, 2)
+  created_at            DateTime?            @default(now()) @db.Timestamptz(6)
+  updated_at            DateTime?            @default(now()) @db.Timestamptz(6)
+  order_number          String?              @unique @db.VarChar
+  payment_status        String?              @default("pending") @db.VarChar
+  customer_email        String?              @db.VarChar
+  customer_phone        String?              @db.VarChar
+  billing_first_name    String?              @db.VarChar
+  billing_last_name     String?              @db.VarChar
+  billing_company       String?              @db.VarChar
+  billing_address1      String?              @db.VarChar
+  billing_address2      String?              @db.VarChar
+  billing_city          String?              @db.VarChar
+  billing_state         String?              @db.VarChar
+  billing_postcode      String?              @db.VarChar
+  billing_country       String?              @db.VarChar
+  shipping_first_name   String?              @db.VarChar
+  shipping_last_name    String?              @db.VarChar
+  shipping_company      String?              @db.VarChar
+  shipping_address1     String?              @db.VarChar
+  shipping_address2     String?              @db.VarChar
+  shipping_city         String?              @db.VarChar
+  shipping_state        String?              @db.VarChar
+  shipping_postcode     String?              @db.VarChar
+  shipping_country      String?              @db.VarChar
+  subtotal              Decimal?             @db.Decimal(10, 2)
+  tax_amount            Decimal?             @default(0) @db.Decimal(10, 2)
+  shipping_cost         Decimal?             @default(0) @db.Decimal(10, 2)
+  discount_amount       Decimal?             @default(0) @db.Decimal(10, 2)
+  currency              String?              @default("INR") @db.VarChar
+  payment_method        String?              @db.VarChar
+  payment_method_title  String?              @db.VarChar
+  transaction_id        String?              @db.VarChar
+  razorpay_order_id     String?              @db.VarChar
+  razorpay_payment_id   String?              @db.VarChar
+  razorpay_signature    String?              @db.VarChar
+  shipping_method       String?              @db.VarChar
+  shipping_method_title String?              @db.VarChar
+  tracking_number       String?              @db.VarChar
+  shipping_carrier      String?              @db.VarChar
+  estimated_delivery    DateTime?            @db.Timestamptz(6)
+  shipped_at            DateTime?            @db.Timestamptz(6)
+  delivered_at          DateTime?            @db.Timestamptz(6)
+  customer_notes        String?
+  admin_notes           String?
+  source_channel        String?              @default("website") @db.VarChar
+  return_eligible       Boolean?             @default(true)
+  return_deadline       DateTime?            @db.Timestamptz(6)
+  email_notifications   EmailNotification[]
+  order_items           OrderItem[]
+  statusHistory         OrderStatusHistory[]
+  users                 User?                @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  returns               returns[]
 
-  // Relations
-  user      User?       @relation(fields: [userId], references: [id])
-  items     OrderItem[]
-  notifications EmailNotification[]
-  statusHistory OrderStatusHistory[]
-
+  @@index([created_at], map: "idx_orders_created_at")
+  @@index([customer_email], map: "idx_orders_customer_email")
+  @@index([order_number], map: "idx_orders_order_number")
+  @@index([payment_status], map: "idx_orders_payment_status")
+  @@index([razorpay_order_id], map: "idx_orders_razorpay_order_id")
+  @@index([status], map: "idx_orders_status")
+  @@index([user_id], map: "idx_orders_user_id")
   @@map("orders")
 }
 
 model OrderItem {
-  id        String @id @default(cuid())
-  orderId   String
-  productId String
-  variantId String? // Product variant if applicable
-  
-  // Product details at time of order (snapshot)
-  productName    String
-  productSku     String?
-  variantName    String?
-  
-  // Pricing details
-  quantity       Int
-  unitPrice      Float    // Price per unit at time of order
-  totalPrice     Float    // quantity * unitPrice
-  
-  // Product attributes at time of order (size, color, etc.)
-  attributes     Json?    // Store variant attributes as JSON
-  
-  // Product image at time of order
-  productImage   String?
+  id            String         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  order_id      String?        @db.Uuid
+  product_id    String?        @db.Uuid
+  quantity      Int
+  price         Decimal        @db.Decimal(10, 2)
+  variant_id    String?        @db.Uuid
+  product_name  String?        @db.VarChar
+  product_sku   String?        @db.VarChar
+  variant_name  String?        @db.VarChar
+  unit_price    Decimal?       @db.Decimal(10, 2)
+  total_price   Decimal?       @db.Decimal(10, 2)
+  attributes    Json?
+  product_image String?        @db.VarChar
+  orders        Order?         @relation(fields: [order_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  products      Product?       @relation(fields: [product_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  return_items  return_items[]
 
-  // Relations
-  order     Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
-  product   Product @relation(fields: [productId], references: [id])
-
+  @@index([order_id], map: "idx_order_items_order_id")
+  @@index([product_name], map: "idx_order_items_product_name")
+  @@index([variant_id], map: "idx_order_items_variant_id")
   @@map("order_items")
 }
 
 model WishlistItem {
-  id        String @id @default(cuid())
-  userId    String
-  productId String
-  createdAt DateTime @default(now())
+  id         String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  user_id    String?   @db.Uuid
+  product_id String?   @db.Uuid
+  created_at DateTime? @default(now()) @db.Timestamptz(6)
+  products   Product?  @relation(fields: [product_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  users      User?     @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
 
-  // Relations
-  user      User    @relation(fields: [userId], references: [id])
-  product   Product @relation(fields: [productId], references: [id])
-
-  @@unique([userId, productId])
+  @@unique([user_id, product_id])
+  @@index([user_id], map: "idx_wishlist_items_user_id")
   @@map("wishlist_items")
 }
 
 model Review {
-  id        String @id @default(cuid())
-  userId    String
-  productId String
-  rating    Int
-  comment   String?
-  createdAt DateTime @default(now())
+  id         String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  user_id    String?   @db.Uuid
+  product_id String?   @db.Uuid
+  rating     Int
+  comment    String?
+  created_at DateTime? @default(now()) @db.Timestamptz(6)
+  products   Product?  @relation(fields: [product_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  users      User?     @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
 
-  // Relations
-  user      User    @relation(fields: [userId], references: [id])
-  product   Product @relation(fields: [productId], references: [id])
-
+  @@index([product_id], map: "idx_reviews_product_id")
   @@map("reviews")
 }
 
 model ProductRecommendation {
-  id           String @id @default(cuid())
-  productId    String
-  recommendedProductId String
-  score        Float
-  reason       String? // "bought_together", "viewed_together", "category_similarity"
-  createdAt    DateTime @default(now())
+  id                                                                String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  product_id                                                        String?   @db.Uuid
+  recommended_product_id                                            String?   @db.Uuid
+  score                                                             Decimal   @db.Decimal(3, 2)
+  reason                                                            String?   @db.VarChar
+  created_at                                                        DateTime? @default(now()) @db.Timestamptz(6)
+  products_product_recommendations_product_idToproducts             Product?  @relation("product_recommendations_product_idToproducts", fields: [product_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  products_product_recommendations_recommended_product_idToproducts Product?  @relation("product_recommendations_recommended_product_idToproducts", fields: [recommended_product_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
 
-  // Relations
-  product      Product @relation("ProductRecommendations", fields: [productId], references: [id])
-  recommendedProduct Product @relation("RecommendedProduct", fields: [recommendedProductId], references: [id])
-
-  @@unique([productId, recommendedProductId])
+  @@unique([product_id, recommended_product_id])
+  @@index([product_id], map: "idx_product_recommendations_product_id")
   @@map("product_recommendations")
 }
 
 model EmailNotification {
-  id        String   @id @default(cuid())
-  userId    String?
-  orderId   String?
-  type      String   // "order_confirmation", "order_shipped", "order_delivered", "abandoned_cart", "product_recommendation"
-  subject   String
-  content   String
-  sent      Boolean  @default(false)
-  sentAt    DateTime?
-  createdAt DateTime @default(now())
+  id         String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  user_id    String?   @db.Uuid
+  order_id   String?   @db.Uuid
+  type       String    @db.VarChar
+  subject    String    @db.VarChar
+  content    String
+  sent       Boolean?  @default(false)
+  sent_at    DateTime? @db.Timestamptz(6)
+  created_at DateTime? @default(now()) @db.Timestamptz(6)
+  orders     Order?    @relation(fields: [order_id], references: [id], onUpdate: NoAction)
+  users      User?     @relation(fields: [user_id], references: [id], onUpdate: NoAction)
 
-  // Relations
-  user      User?    @relation(fields: [userId], references: [id])
-  order     Order?   @relation(fields: [orderId], references: [id])
-
+  @@index([user_id], map: "idx_email_notifications_user_id")
   @@map("email_notifications")
 }
 
-// New models for enhanced e-commerce functionality
-
 model Category {
-  id          String   @id @default(cuid())
-  name        String
-  slug        String   @unique
-  description String?
-  image       String?
-  parentId    String?
-  
-  // SEO fields
-  metaTitle       String?
-  metaDescription String?
-  
-  // Display options
-  displayOrder    Int?     @default(0)
-  isVisible       Boolean  @default(true)
-  
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id                 String            @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name               String            @db.VarChar
+  slug               String            @unique @db.VarChar
+  description        String?
+  image              String?           @db.VarChar
+  parent_id          String?           @db.Uuid
+  meta_title         String?           @db.VarChar
+  meta_description   String?
+  display_order      Int?              @default(0)
+  is_visible         Boolean?          @default(true)
+  created_at         DateTime?         @default(now()) @db.Timestamptz(6)
+  updated_at         DateTime?         @default(now()) @updatedAt @db.Timestamptz(6)
+  parent             Category?         @relation("CategoryHierarchy", fields: [parent_id], references: [id], onUpdate: NoAction)
+  children           Category[]        @relation("CategoryHierarchy")
+  product_categories ProductCategory[]
 
-  // Relations
-  parent      Category?         @relation("CategoryHierarchy", fields: [parentId], references: [id])
-  children    Category[]        @relation("CategoryHierarchy")
-  products    ProductCategory[]
-
+  @@index([is_visible], map: "idx_categories_is_visible")
+  @@index([parent_id], map: "idx_categories_parent_id")
+  @@index([slug], map: "idx_categories_slug")
   @@map("categories")
 }
 
 model ProductCategory {
-  productId  String
-  categoryId String
-  
-  // Relations
-  product    Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
-  category   Category @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  product_id  String   @db.Uuid
+  category_id String   @db.Uuid
+  categories  Category @relation(fields: [category_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  products    Product  @relation(fields: [product_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
 
-  @@id([productId, categoryId])
+  @@id([product_id, category_id])
+  @@index([category_id], map: "idx_product_categories_category_id")
+  @@index([product_id], map: "idx_product_categories_product_id")
   @@map("product_categories")
 }
 
 model ProductVariant {
-  id              String  @id @default(cuid())
-  productId       String
-  name            String
-  sku             String? @unique
-  
-  // Pricing
-  price           Float
-  regularPrice    Float?
-  salePrice       Float?
-  
-  // Inventory
-  stockQuantity   Int     @default(0)
-  stockStatus     String  @default("instock")
-  
-  // Attributes (color, size, etc.)
-  attributes      Json    // {color: "red", size: "large"}
-  
-  // Images specific to this variant
-  images          String[]
-  
-  // Physical properties
-  weight          Float?
-  dimensions      Json?
-  
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  id             String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  product_id     String?   @db.Uuid
+  name           String    @db.VarChar
+  sku            String?   @unique @db.VarChar
+  price          Decimal   @db.Decimal(10, 2)
+  regular_price  Decimal?  @db.Decimal(10, 2)
+  sale_price     Decimal?  @db.Decimal(10, 2)
+  stock_quantity Int?      @default(0)
+  stock_status   String?   @default("instock") @db.VarChar
+  attributes     Json?
+  images         String[]
+  weight         Decimal?  @db.Decimal(8, 2)
+  dimensions     Json?
+  created_at     DateTime? @default(now()) @db.Timestamptz(6)
+  updated_at     DateTime? @default(now()) @updatedAt @db.Timestamptz(6)
+  product        Product?  @relation(fields: [product_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
 
-  // Relations
-  product         Product @relation(fields: [productId], references: [id], onDelete: Cascade)
-
+  @@index([product_id], map: "idx_product_variants_product_id")
+  @@index([sku], map: "idx_product_variants_sku")
   @@map("product_variants")
 }
 
 model ProductAttribute {
-  id          String @id @default(cuid())
-  productId   String
-  name        String // "Color", "Size", "Material"
-  value       String // "Red", "Large", "Cotton"
-  
-  // Relations
-  product     Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+  id         String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  product_id String?  @db.Uuid
+  name       String   @db.VarChar
+  value      String   @db.VarChar
+  product    Product? @relation(fields: [product_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
 
-  @@unique([productId, name, value])
+  @@unique([product_id, name, value])
+  @@index([name], map: "idx_product_attributes_name")
+  @@index([product_id], map: "idx_product_attributes_product_id")
   @@map("product_attributes")
 }
 
 model InventoryTransaction {
-  id          String   @id @default(cuid())
-  productId   String
-  type        String   // "sale", "restock", "adjustment", "return"
-  quantity    Int      // positive for stock increase, negative for decrease
-  reason      String?  // "Order #123", "Manual adjustment", "Supplier restock"
-  reference   String?  // Order ID, Purchase Order ID, etc.
-  
-  // Snapshot of stock after this transaction
-  stockAfter  Int
-  
-  // Metadata
+  id          String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  product_id  String?   @db.Uuid
+  type        String    @db.VarChar
+  quantity    Int
+  reason      String?   @db.VarChar
+  reference   String?   @db.VarChar
+  stock_after Int
   notes       String?
-  createdBy   String?  // User ID who made the change
-  
-  createdAt   DateTime @default(now())
+  created_by  String?   @db.Uuid
+  created_at  DateTime? @default(now()) @db.Timestamptz(6)
+  users       User?     @relation(fields: [created_by], references: [id], onUpdate: NoAction)
+  product     Product?  @relation(fields: [product_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
 
-  // Relations  
-  product     Product @relation(fields: [productId], references: [id], onDelete: Cascade)
-
+  @@index([created_at], map: "idx_inventory_transactions_created_at")
+  @@index([product_id], map: "idx_inventory_transactions_product_id")
+  @@index([type], map: "idx_inventory_transactions_type")
   @@map("inventory_transactions")
 }
 
-// Order Status History - Track status changes
 model OrderStatusHistory {
-  id        String   @id @default(cuid())
-  orderId   String
-  status    String   // The new status
-  notes     String?  // Optional notes about the status change
-  changedBy String?  // User ID who changed the status
-  createdAt DateTime @default(now())
+  id         String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  order_id   String?   @db.Uuid
+  status     String    @db.VarChar
+  notes      String?
+  changed_by String?   @db.Uuid
+  created_at DateTime? @default(now()) @db.Timestamptz(6)
+  users      User?     @relation(fields: [changed_by], references: [id], onUpdate: NoAction)
+  order      Order?    @relation(fields: [order_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
 
-  // Relations
-  order     Order @relation(fields: [orderId], references: [id], onDelete: Cascade)
-
+  @@index([created_at], map: "idx_order_status_history_created_at")
+  @@index([order_id], map: "idx_order_status_history_order_id")
   @@map("order_status_history")
 }
 
-// Coupon/Discount system
 model Coupon {
-  id          String   @id @default(cuid())
-  code        String   @unique
-  type        String   // "percentage", "fixed_amount"
-  value       Float    // Discount value (percentage or amount)
-  
-  // Usage restrictions
-  minimumAmount Float?  // Minimum order amount
-  usageLimit    Int?    // Total usage limit
-  usageCount    Int     @default(0)
-  userLimit     Int?    // Per-user usage limit
-  
-  // Validity
-  validFrom   DateTime
-  validUntil  DateTime?
-  isActive    Boolean  @default(true)
-  
-  // Metadata
-  description String?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id             String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  code           String    @unique @db.VarChar
+  type           String    @db.VarChar
+  value          Decimal   @db.Decimal(10, 2)
+  minimum_amount Decimal?  @db.Decimal(10, 2)
+  usage_limit    Int?
+  usage_count    Int?      @default(0)
+  user_limit     Int?
+  valid_from     DateTime  @db.Timestamptz(6)
+  valid_until    DateTime? @db.Timestamptz(6)
+  is_active      Boolean?  @default(true)
+  description    String?
+  created_at     DateTime? @default(now()) @db.Timestamptz(6)
+  updated_at     DateTime? @default(now()) @updatedAt @db.Timestamptz(6)
 
+  @@index([code], map: "idx_coupons_code")
+  @@index([is_active], map: "idx_coupons_is_active")
+  @@index([valid_from], map: "idx_coupons_valid_from")
+  @@index([valid_until], map: "idx_coupons_valid_until")
   @@map("coupons")
 }
 
-// Shipping Methods
 model ShippingMethod {
-  id          String  @id @default(cuid())
-  name        String
+  id          String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name        String    @db.VarChar
   description String?
-  cost        Float
-  
-  // Delivery estimates
-  minDays     Int?    // Minimum delivery days
-  maxDays     Int?    // Maximum delivery days
-  
-  // Availability
-  isActive    Boolean @default(true)
-  countries   String[] // List of country codes where available
-  
-  // Restrictions
-  minWeight   Float?
-  maxWeight   Float?
-  minAmount   Float?  // Minimum order amount for this method
-  
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  cost        Decimal   @db.Decimal(10, 2)
+  min_days    Int?
+  max_days    Int?
+  is_active   Boolean?  @default(true)
+  countries   String[]
+  min_weight  Decimal?  @db.Decimal(8, 2)
+  max_weight  Decimal?  @db.Decimal(8, 2)
+  min_amount  Decimal?  @db.Decimal(10, 2)
+  created_at  DateTime? @default(now()) @db.Timestamptz(6)
+  updated_at  DateTime? @default(now()) @updatedAt @db.Timestamptz(6)
 
+  @@index([cost], map: "idx_shipping_methods_cost")
+  @@index([is_active], map: "idx_shipping_methods_is_active")
   @@map("shipping_methods")
-} 
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model banners {
+  id               String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name             String    @db.VarChar
+  title            String?   @db.VarChar
+  subtitle         String?   @db.VarChar
+  description      String?
+  image_url        String    @db.VarChar
+  mobile_image_url String?   @db.VarChar
+  alt_text         String?   @db.VarChar
+  button_text      String?   @db.VarChar
+  button_url       String?   @db.VarChar
+  external_link    Boolean?  @default(false)
+  position         String?   @default("hero") @db.VarChar
+  priority         Int?      @default(0)
+  is_active        Boolean?  @default(true)
+  start_date       DateTime? @db.Timestamptz(6)
+  end_date         DateTime? @db.Timestamptz(6)
+  target_audience  String[]  @db.VarChar
+  target_pages     String[]  @db.VarChar
+  impressions      Int?      @default(0)
+  clicks           Int?      @default(0)
+  conversions      Int?      @default(0)
+  created_at       DateTime? @default(now()) @db.Timestamptz(6)
+  updated_at       DateTime? @default(now()) @db.Timestamptz(6)
+
+  @@index([end_date], map: "idx_banners_end_date")
+  @@index([is_active], map: "idx_banners_is_active")
+  @@index([position], map: "idx_banners_position")
+  @@index([start_date], map: "idx_banners_start_date")
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model campaign_recipients {
+  id              String     @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  campaign_id     String?    @db.Uuid
+  customer_email  String     @db.VarChar
+  customer_name   String?    @db.VarChar
+  status          String?    @default("pending") @db.VarChar
+  sent_at         DateTime?  @db.Timestamptz(6)
+  delivered_at    DateTime?  @db.Timestamptz(6)
+  opened_at       DateTime?  @db.Timestamptz(6)
+  clicked_at      DateTime?  @db.Timestamptz(6)
+  bounced_at      DateTime?  @db.Timestamptz(6)
+  unsubscribed_at DateTime?  @db.Timestamptz(6)
+  message_id      String?    @db.VarChar
+  open_count      Int?       @default(0)
+  click_count     Int?       @default(0)
+  bounce_reason   String?    @db.VarChar
+  created_at      DateTime?  @default(now()) @db.Timestamptz(6)
+  updated_at      DateTime?  @default(now()) @db.Timestamptz(6)
+  campaigns       campaigns? @relation(fields: [campaign_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([campaign_id], map: "idx_campaign_recipients_campaign_id")
+  @@index([customer_email], map: "idx_campaign_recipients_customer_email")
+  @@index([status], map: "idx_campaign_recipients_status")
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model campaigns {
+  id                      String                @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name                    String                @db.VarChar
+  description             String?
+  type                    String                @db.VarChar
+  status                  String?               @default("draft") @db.VarChar
+  subject                 String?               @db.VarChar
+  content                 String?
+  html_content            String?
+  target_audience         String[]              @db.VarChar
+  target_customers        String[]
+  exclude_customers       String[]
+  scheduled_at            DateTime?             @db.Timestamptz(6)
+  started_at              DateTime?             @db.Timestamptz(6)
+  completed_at            DateTime?             @db.Timestamptz(6)
+  max_sends               Int?
+  send_limit_per_customer Int?                  @default(1)
+  total_sent              Int?                  @default(0)
+  total_delivered         Int?                  @default(0)
+  total_opened            Int?                  @default(0)
+  total_clicked           Int?                  @default(0)
+  total_bounced           Int?                  @default(0)
+  total_unsubscribed      Int?                  @default(0)
+  created_at              DateTime?             @default(now()) @db.Timestamptz(6)
+  updated_at              DateTime?             @default(now()) @db.Timestamptz(6)
+  campaign_recipients     campaign_recipients[]
+
+  @@index([scheduled_at], map: "idx_campaigns_scheduled_at")
+  @@index([status], map: "idx_campaigns_status")
+  @@index([type], map: "idx_campaigns_type")
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model featured_products {
+  id                 String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  product_id         String?   @db.Uuid
+  position           String?   @default("homepage") @db.VarChar
+  priority           Int?      @default(0)
+  is_active          Boolean?  @default(true)
+  custom_title       String?   @db.VarChar
+  custom_description String?
+  custom_image_url   String?   @db.VarChar
+  start_date         DateTime? @db.Timestamptz(6)
+  end_date           DateTime? @db.Timestamptz(6)
+  target_audience    String[]  @db.VarChar
+  target_pages       String[]  @db.VarChar
+  impressions        Int?      @default(0)
+  clicks             Int?      @default(0)
+  conversions        Int?      @default(0)
+  created_at         DateTime? @default(now()) @db.Timestamptz(6)
+  updated_at         DateTime? @default(now()) @db.Timestamptz(6)
+  products           Product?  @relation(fields: [product_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([is_active], map: "idx_featured_products_is_active")
+  @@index([position], map: "idx_featured_products_position")
+  @@index([product_id], map: "idx_featured_products_product_id")
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model marketing_templates {
+  id           String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name         String    @db.VarChar
+  type         String    @db.VarChar
+  subject      String?   @db.VarChar
+  content      String?
+  html_content String?
+  is_active    Boolean?  @default(true)
+  is_default   Boolean?  @default(false)
+  variables    Json?
+  created_at   DateTime? @default(now()) @db.Timestamptz(6)
+  updated_at   DateTime? @default(now()) @db.Timestamptz(6)
+
+  @@index([is_active], map: "idx_marketing_templates_is_active")
+  @@index([type], map: "idx_marketing_templates_type")
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model newsletter_subscribers {
+  id                    String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  email                 String    @unique @db.VarChar
+  first_name            String?   @db.VarChar
+  last_name             String?   @db.VarChar
+  is_active             Boolean?  @default(true)
+  subscription_source   String?   @db.VarChar
+  email_preferences     Json?     @default("{\"news\": true, \"marketing\": true, \"promotions\": true, \"product_updates\": true}")
+  subscribed_at         DateTime? @default(now()) @db.Timestamptz(6)
+  unsubscribed_at       DateTime? @db.Timestamptz(6)
+  last_email_sent_at    DateTime? @db.Timestamptz(6)
+  total_emails_received Int?      @default(0)
+  total_emails_opened   Int?      @default(0)
+  total_emails_clicked  Int?      @default(0)
+  created_at            DateTime? @default(now()) @db.Timestamptz(6)
+  updated_at            DateTime? @default(now()) @db.Timestamptz(6)
+
+  @@index([email], map: "idx_newsletter_subscribers_email")
+  @@index([is_active], map: "idx_newsletter_subscribers_is_active")
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model return_items {
+  id                  String     @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  return_id           String?    @db.Uuid
+  order_item_id       String?    @db.Uuid
+  product_id          String?    @db.Uuid
+  product_name        String?    @db.VarChar
+  product_sku         String?    @db.VarChar
+  variant_name        String?    @db.VarChar
+  quantity_returned   Int        @default(1)
+  unit_price          Decimal?   @db.Decimal(10, 2)
+  total_refund_amount Decimal?   @db.Decimal(10, 2)
+  condition_received  String?    @db.VarChar
+  condition_notes     String?
+  restockable         Boolean?   @default(true)
+  restocked           Boolean?   @default(false)
+  restocked_at        DateTime?  @db.Timestamptz(6)
+  restocked_by        String?    @db.Uuid
+  created_at          DateTime?  @default(now()) @db.Timestamptz(6)
+  updated_at          DateTime?  @default(now()) @db.Timestamptz(6)
+  order_items         OrderItem? @relation(fields: [order_item_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  products            Product?   @relation(fields: [product_id], references: [id], onUpdate: NoAction)
+  users               User?      @relation(fields: [restocked_by], references: [id], onUpdate: NoAction)
+  returns             returns?   @relation(fields: [return_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([order_item_id], map: "idx_return_items_order_item_id")
+  @@index([product_id], map: "idx_return_items_product_id")
+  @@index([return_id], map: "idx_return_items_return_id")
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model return_policies {
+  id                          String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name                        String    @db.VarChar
+  description                 String?
+  return_window_days          Int?      @default(30)
+  exchange_window_days        Int?      @default(30)
+  original_condition_required Boolean?  @default(true)
+  original_packaging_required Boolean?  @default(false)
+  receipt_required            Boolean?  @default(true)
+  return_shipping_paid_by     String?   @default("customer") @db.VarChar
+  restocking_fee_percent      Decimal?  @default(0) @db.Decimal(5, 2)
+  applies_to_all              Boolean?  @default(true)
+  eligible_categories         String[]
+  eligible_products           String[]
+  excluded_categories         String[]
+  excluded_products           String[]
+  is_active                   Boolean?  @default(true)
+  effective_from              DateTime? @default(now()) @db.Timestamptz(6)
+  effective_until             DateTime? @db.Timestamptz(6)
+  created_at                  DateTime? @default(now()) @db.Timestamptz(6)
+  updated_at                  DateTime? @default(now()) @db.Timestamptz(6)
+
+  @@index([effective_from], map: "idx_return_policies_effective_from")
+  @@index([is_active], map: "idx_return_policies_is_active")
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model return_status_history {
+  id         String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  return_id  String?   @db.Uuid
+  status     String    @db.VarChar
+  notes      String?
+  changed_by String?   @db.Uuid
+  created_at DateTime? @default(now()) @db.Timestamptz(6)
+  users      User?     @relation(fields: [changed_by], references: [id], onUpdate: NoAction)
+  returns    returns?  @relation(fields: [return_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([created_at], map: "idx_return_status_history_created_at")
+  @@index([return_id], map: "idx_return_status_history_return_id")
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model returns {
+  id                                String                  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  return_number                     String                  @unique @db.VarChar
+  order_id                          String?                 @db.Uuid
+  customer_email                    String                  @db.VarChar
+  customer_phone                    String?                 @db.VarChar
+  return_reason                     String                  @db.VarChar
+  return_description                String?
+  status                            String?                 @default("pending") @db.VarChar
+  return_type                       String?                 @default("refund") @db.VarChar
+  refund_amount                     Decimal?                @db.Decimal(10, 2)
+  refund_method                     String?                 @db.VarChar
+  images                            String[]
+  videos                            String[]
+  return_label_url                  String?                 @db.VarChar
+  tracking_number                   String?                 @db.VarChar
+  carrier                           String?                 @db.VarChar
+  return_shipping_cost              Decimal?                @default(0) @db.Decimal(10, 2)
+  admin_notes                       String?
+  customer_notes                    String?
+  processed_by                      String?                 @db.Uuid
+  processed_at                      DateTime?               @db.Timestamptz(6)
+  qc_status                         String?                 @db.VarChar
+  qc_notes                          String?
+  qc_by                             String?                 @db.Uuid
+  qc_at                             DateTime?               @db.Timestamptz(6)
+  refund_transaction_id             String?                 @db.VarChar
+  refunded_at                       DateTime?               @db.Timestamptz(6)
+  requested_at                      DateTime?               @default(now()) @db.Timestamptz(6)
+  created_at                        DateTime?               @default(now()) @db.Timestamptz(6)
+  updated_at                        DateTime?               @default(now()) @db.Timestamptz(6)
+  return_items                      return_items[]
+  return_status_history             return_status_history[]
+  orders                            Order?                  @relation(fields: [order_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  users_returns_processed_byTousers User?                   @relation("returns_processed_byTousers", fields: [processed_by], references: [id], onUpdate: NoAction)
+  users_returns_qc_byTousers        User?                   @relation("returns_qc_byTousers", fields: [qc_by], references: [id], onUpdate: NoAction)
+
+  @@index([customer_email], map: "idx_returns_customer_email")
+  @@index([order_id], map: "idx_returns_order_id")
+  @@index([processed_at], map: "idx_returns_processed_at")
+  @@index([requested_at], map: "idx_returns_requested_at")
+  @@index([return_number], map: "idx_returns_return_number")
+  @@index([status], map: "idx_returns_status")
+}

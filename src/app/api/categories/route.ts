@@ -15,11 +15,11 @@ export async function GET(request: NextRequest) {
     const whereConditions: any = {};
     
     if (onlyVisible) {
-      whereConditions.isVisible = true;
+      whereConditions.is_visible = true;
     }
 
     if (parentId !== null) {
-      whereConditions.parentId = parentId === 'null' || parentId === '' ? null : parentId;
+      whereConditions.parent_id = parentId === 'null' || parentId === '' ? null : parentId;
     }
 
     // Fetch categories
@@ -27,15 +27,15 @@ export async function GET(request: NextRequest) {
       where: whereConditions,
       include: {
         children: onlyVisible ? {
-          where: { isVisible: true },
-          orderBy: { displayOrder: 'asc' }
+          where: { is_visible: true },
+          orderBy: { display_order: 'asc' }
         } : {
-          orderBy: { displayOrder: 'asc' }
+          orderBy: { display_order: 'asc' }
         },
         parent: true
       },
       orderBy: [
-        { displayOrder: 'asc' },
+        { display_order: 'asc' },
         { name: 'asc' }
       ]
     });

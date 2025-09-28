@@ -38,7 +38,7 @@ export default function Header() {
 
   return (
     <>
-      <header className="sticky top-0 z-40 w-full bg-white shadow-sm">
+      <header className="sticky top-0 z-40 w-full bg-morandi-white/95 backdrop-blur-sm shadow-soft">
         <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-3 md:px-6 lg:px-8">
           {/* Mobile menu */}
           <MobileMenu />
@@ -48,16 +48,19 @@ export default function Header() {
 
           {/* Desktop Navigation */}
           <nav className="hidden space-x-8 md:flex">
-            <Link href="/products" className="text-gray-700 hover:text-primary-700 transition-colors">
+            <Link href="/" className="text-deep-charcoal hover:text-clay-pink transition-colors font-medium">
+              Home
+            </Link>
+            <Link href="/products" className="text-deep-charcoal hover:text-clay-pink transition-colors font-medium">
               Shop
             </Link>
-            <Link href="/about" className="text-gray-700 hover:text-primary-700 transition-colors">
+            <Link href="/collections" className="text-deep-charcoal hover:text-clay-pink transition-colors font-medium">
+              Collections
+            </Link>
+            <Link href="/about" className="text-deep-charcoal hover:text-clay-pink transition-colors font-medium">
               About
             </Link>
-            <Link href="/blog" className="text-gray-700 hover:text-primary-700 transition-colors">
-              Blog
-            </Link>
-            <Link href="/contact" className="text-gray-700 hover:text-primary-700 transition-colors">
+            <Link href="/contact" className="text-deep-charcoal hover:text-clay-pink transition-colors font-medium">
               Contact
             </Link>
           </nav>
@@ -141,9 +144,17 @@ export default function Header() {
               )}
             </div>
 
+            {/* Shop Now CTA */}
+            <Link 
+              href="/products" 
+              className="hidden md:block bg-clay-pink text-morandi-white px-4 py-2 rounded-lg font-medium hover:bg-clay-pink/90 transition-colors text-sm"
+            >
+              Shop Now
+            </Link>
+
             {/* Currency selector */}
             <div className="relative hidden md:block">
-              <button className="flex items-center space-x-1 text-sm text-gray-700 hover:text-primary-700">
+              <button className="flex items-center space-x-1 text-sm text-deep-charcoal hover:text-clay-pink">
                 <span>₹ INR</span>
                 <ChevronDown size={16} />
               </button>
