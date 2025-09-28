@@ -300,7 +300,7 @@ export async function POST(request: NextRequest) {
         
         // Payment details
         payment_method,
-        payment_methodTitle: body.payment_methodTitle || 'Razorpay',
+        payment_method_title: body.payment_methodTitle || 'Razorpay',
         
         // Shipping details
         shippingMethod: body.shippingMethod,
