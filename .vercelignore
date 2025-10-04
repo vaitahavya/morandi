@@ -1,0 +1,64 @@
+# Dependencies
+node_modules
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# Build outputs
+.next
+out
+build
+
+# Database
+*.db
+*.sqlite
+*.sqlite3
+supabase-schema.sql
+test-data.sql
+seed-database.sql
+product-import.sql
+
+# Scripts (not needed for production)
+scripts/
+migrations/
+
+# Documentation (optional - remove if you want docs in production)
+*.md
+!README.md
+
+# Configuration files
+.vscode/
+.idea/
+.DS_Store
+*.log
+
+# Test files
+test-*.sh
+*.test.js
+*.test.ts
+
+# AI Assistant files
+.claude/
+.clinerules/
+.cursor/
+.gemini/
+.kiro/
+.roo/
+.roomodes
+.rules
+.taskmaster/
+.trae/
+.windsurf/
+.zed/
+.mcp.json
+opencode.json
+
+# Uploads directory (use cloud storage for production)
+public/uploads/
+uploads/
+
+# Prisma
+prisma/
+
