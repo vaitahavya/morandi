@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { supabase } from '@/lib/supabase';
+import { DatabaseService } from '@/lib/database';
 
 export async function GET(request: NextRequest) {
   try {
@@ -11,55 +11,29 @@ export async function GET(request: NextRequest) {
     const status = searchParams.get('status');
     const orderId = searchParams.get('orderId');
     const customerEmail = searchParams.get('customerEmail');
-    const sortBy = searchParams.get('sortBy') || 'createdAt';
+    const sortBy = searchParams.get('sortBy') || 'created_at';
     const sortOrder = searchParams.get('sortOrder') || 'desc';
 
-    // Build where conditions
-    const whereConditions: any = {};
-    if (status) whereConditions.status = status;
-    if (orderId) whereConditions.order_id = orderId;
-    if (customerEmail) whereConditions.customer_email = customerEmail;
-
-    // Calculate offset
-    const offset = (page - 1) * limit;
-
-    // Execute queries in parallel
-    const [returns, totalCount] = await Promise.all([
-      supabase
-        .from('returns')
-        .select('*')
-        .match(whereConditions)
-        .order(sortBy, { ascending: sortOrder === 'asc' })
-        .range(offset, offset + limit - 1),
-      supabase
-        .from('returns')
-        .select('*', { count: 'exact', head: true })
-        .match(whereConditions)
-    ]);
-
-    if (returns.error) {
-      console.error('Error fetching returns:', returns.error);
-      return NextResponse.json({
-        success: false,
-        error: 'Failed to fetch returns'
-      }, { status: 500 });
-    }
-
-    // Calculate pagination info
-    const totalPages = Math.ceil((totalCount.count || 0) / limit);
-    const hasNextPage = page < totalPages;
-    const hasPrevPage = page > 1;
+    const result = await DatabaseService.getReturns({
+      page,
+      limit,
+      status,
+      orderId,
+      customerEmail,
+      sortBy,
+      sortOrder: sortOrder as 'asc' | 'desc',
+    });
 
     return NextResponse.json({
       success: true,
-      data: returns.data || [],
+      data: result.returns,
       pagination: {
-        page,
-        limit,
-        totalCount: totalCount.count || 0,
-        totalPages,
-        hasNextPage,
-        hasPrevPage
+        page: result.page,
+        limit: result.limit,
+        totalCount: result.total,
+        totalPages: result.totalPages,
+        hasNextPage: result.hasNextPage,
+        hasPrevPage: result.hasPrevPage
       }
     });
 
@@ -97,24 +71,9 @@ export async function POST(request: NextRequest) {
     }
 
     // Verify order exists and belongs to customer
-    const { data: order, error: orderError } = await supabase
-      .from('orders')
-      .select(`
-        *,
-        order_items (
-          id,
-          product_id,
-          product_name,
-          quantity,
-          unit_price,
-          total_price
-        )
-      `)
-      .eq('id', orderId)
-      .eq('customer_email', customerEmail)
-      .single();
+    const order = await DatabaseService.getOrderById(orderId);
 
-    if (orderError || !order) {
+    if (!order || order.customer_email !== customerEmail) {
       return NextResponse.json({ 
         success: false, 
         error: 'Order not found or access denied' 
@@ -122,7 +81,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Check if order is eligible for returns
-    const orderDate = new Date(order.created_at);
+    const orderDate = new Date(order.created_at!);
     const daysSinceOrder = Math.floor((new Date().getTime() - orderDate.getTime()) / (1000 * 60 * 60 * 24));
     
     if (daysSinceOrder > 30) { // 30-day return policy
@@ -133,19 +92,19 @@ export async function POST(request: NextRequest) {
     }
 
     // Check if order status allows returns
-    if (!['delivered', 'completed'].includes(order.status)) {
+    if (!['delivered', 'completed'].includes(order.status || '')) {
       return NextResponse.json({ 
         success: false, 
         error: 'Order must be delivered to initiate a return' 
       }, { status: 400 });
     }
 
-    // Calculate refund amount
+    // Calculate refund amount and validate items
     let totalRefundAmount = 0;
     const validItems = [];
 
     for (const item of items) {
-      const orderItem = order.order_items.find((oi: any) => oi.id === item.orderItemId);
+      const orderItem = order.order_items.find((oi) => oi.id === item.orderItemId);
       if (!orderItem) {
         return NextResponse.json({ 
           success: false, 
@@ -160,34 +119,21 @@ export async function POST(request: NextRequest) {
         }, { status: 400 });
       }
 
-      const itemRefundAmount = orderItem.unit_price * item.quantity;
+      const itemRefundAmount = Number(orderItem.unit_price || orderItem.price) * item.quantity;
       totalRefundAmount += itemRefundAmount;
 
       validItems.push({
-        orderItemId: item.orderItemId,
-        productId: orderItem.product_id,
-        productName: orderItem.product_name,
-        quantity: item.quantity,
-        unitPrice: orderItem.unit_price,
-        totalRefundAmount: itemRefundAmount
+        order_item_id: item.orderItemId,
+        product_id: orderItem.product_id,
+        product_name: orderItem.product_name,
+        quantity_returned: item.quantity,
+        unit_price: orderItem.unit_price || orderItem.price,
+        total_refund_amount: itemRefundAmount
       });
     }
 
-    // Generate return number
-    const { data: returnNumberData, error: returnNumberError } = await supabase
-      .rpc('generate_return_number');
-
-    if (returnNumberError) {
-      console.error('Error generating return number:', returnNumberError);
-      return NextResponse.json({ 
-        success: false, 
-        error: 'Failed to generate return number' 
-      }, { status: 500 });
-    }
-
     // Create return record
-    const returnData = {
-      return_number: returnNumberData,
+    const newReturn = await DatabaseService.createReturn({
       order_id: orderId,
       customer_email: customerEmail,
       customer_phone: customerPhone,
@@ -195,51 +141,10 @@ export async function POST(request: NextRequest) {
       return_description: returnDescription,
       return_type: returnType,
       refund_amount: totalRefundAmount,
-      status: 'pending',
       images,
       videos,
-      requested_at: new Date().toISOString()
-    };
-
-    const { data: newReturn, error: returnError } = await supabase
-      .from('returns')
-      .insert(returnData)
-      .select()
-      .single();
-
-    if (returnError) {
-      console.error('Error creating return:', returnError);
-      return NextResponse.json({ 
-        success: false, 
-        error: 'Failed to create return request' 
-      }, { status: 500 });
-    }
-
-    // Create return items
-    const returnItems = validItems.map(item => ({
-      return_id: newReturn.id,
-      order_item_id: item.orderItemId,
-      product_id: item.productId,
-      product_name: item.productName,
-      quantity_returned: item.quantity,
-      unit_price: item.unitPrice,
-      total_refund_amount: item.totalRefundAmount,
-      restockable: true // Default to true, admin can update
-    }));
-
-    const { error: itemsError } = await supabase
-      .from('return_items')
-      .insert(returnItems);
-
-    if (itemsError) {
-      console.error('Error creating return items:', itemsError);
-      // Rollback the return if items creation failed
-      await supabase.from('returns').delete().eq('id', newReturn.id);
-      return NextResponse.json({ 
-        success: false, 
-        error: 'Failed to create return items' 
-      }, { status: 500 });
-    }
+      items: validItems
+    });
 
     return NextResponse.json({
       success: true,

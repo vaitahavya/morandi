@@ -38,6 +38,19 @@ const nextConfig = {
     // Warning: Don't use in production if you have lint errors
     ignoreDuringBuilds: false,
   },
+  webpack: (config, { isServer }) => {
+    if (!isServer) {
+      // Exclude nodemailer from client-side bundle
+      config.resolve.fallback = {
+        ...config.resolve.fallback,
+        fs: false,
+        net: false,
+        dns: false,
+        tls: false,
+      };
+    }
+    return config;
+  },
 };
 
 module.exports = nextConfig;

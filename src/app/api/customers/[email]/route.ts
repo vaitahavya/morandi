@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { supabase } from '@/lib/supabase';
+import { DatabaseService } from '@/lib/database';
+import { prisma } from '@/lib/db';
 
 export async function GET(
   request: NextRequest,
@@ -9,26 +10,12 @@ export async function GET(
     const customerEmail = decodeURIComponent(params.email);
 
     // Fetch customer orders
-    const { data: orders, error: ordersError } = await supabase
-      .from('orders')
-      .select(`
-        *,
-        order_items (
-          id,
-          product_id,
-          product_name,
-          quantity,
-          unit_price,
-          total_price
-        )
-      `)
-      .eq('customer_email', customerEmail)
-      .order('created_at', { ascending: false });
-
-    if (ordersError) {
-      console.error('Error fetching customer orders:', ordersError);
-      return NextResponse.json({ success: false, error: 'Failed to fetch customer data' }, { status: 500 });
-    }
+    const { orders } = await DatabaseService.getOrders({
+      customer_email: customerEmail,
+      limit: 1000,
+      sortBy: 'created_at',
+      sortOrder: 'desc',
+    });
 
     if (!orders || orders.length === 0) {
       return NextResponse.json({ success: false, error: 'Customer not found' }, { status: 404 });
@@ -36,22 +23,27 @@ export async function GET(
 
     // Fetch order status history for activity log
     const orderIds = orders.map(order => order.id);
-    const { data: statusHistory, error: historyError } = await supabase
-      .from('order_status_history')
-      .select('*')
-      .in('order_id', orderIds)
-      .order('created_at', { ascending: false })
-      .limit(20);
-
-    if (historyError) {
-      console.error('Error fetching order history:', historyError);
-    }
+    const statusHistory = await prisma.orderStatusHistory.findMany({
+      where: {
+        order_id: { in: orderIds },
+      },
+      orderBy: { created_at: 'desc' },
+      take: 20,
+      include: {
+        users: {
+          select: {
+            name: true,
+            email: true,
+          },
+        },
+      },
+    });
 
     // Process customer data
     const firstOrder = orders[orders.length - 1];
     const lastOrder = orders[0];
     
-    const totalSpent = orders.reduce((sum, order) => sum + (order.total || 0), 0);
+    const totalSpent = orders.reduce((sum, order) => sum + Number(order.total || 0), 0);
     const totalOrders = orders.length;
     const avgOrderValue = totalSpent / totalOrders;
 
@@ -68,10 +60,10 @@ export async function GET(
     }
 
     const daysSinceFirstOrder = Math.floor(
-      (new Date().getTime() - new Date(firstOrder.created_at).getTime()) / (1000 * 60 * 60 * 24)
+      (new Date().getTime() - new Date(firstOrder.created_at!).getTime()) / (1000 * 60 * 60 * 24)
     );
     const daysSinceLastOrder = Math.floor(
-      (new Date().getTime() - new Date(lastOrder.created_at).getTime()) / (1000 * 60 * 60 * 24)
+      (new Date().getTime() - new Date(lastOrder.created_at!).getTime()) / (1000 * 60 * 60 * 24)
     );
 
     // Calculate order frequency
@@ -79,12 +71,12 @@ export async function GET(
 
     // Top purchased products
     const productCounts = new Map();
-    orders.forEach((order: any) => {
-      order.order_items?.forEach((item: any) => {
+    orders.forEach((order) => {
+      order.order_items?.forEach((item) => {
         const productKey = item.product_name || `Product ${item.product_id}`;
         const existing = productCounts.get(productKey) || { name: productKey, quantity: 0, revenue: 0 };
         existing.quantity += item.quantity;
-        existing.revenue += item.total_price || (item.unit_price * item.quantity);
+        existing.revenue += Number(item.total_price || item.unit_price || item.price) * item.quantity;
         productCounts.set(productKey, existing);
       });
     });
@@ -101,8 +93,8 @@ export async function GET(
 
     // Monthly spending pattern
     const monthlySpending = orders.reduce((acc, order) => {
-      const month = new Date(order.created_at).toISOString().substring(0, 7); // YYYY-MM
-      acc[month] = (acc[month] || 0) + (order.total || 0);
+      const month = new Date(order.created_at!).toISOString().substring(0, 7); // YYYY-MM
+      acc[month] = (acc[month] || 0) + Number(order.total || 0);
       return acc;
     }, {} as Record<string, number>);
 
@@ -151,9 +143,9 @@ export async function GET(
       isActive: daysSinceLastOrder <= 180,
       
       // Dates
-      firstOrderDate: firstOrder.created_at,
-      lastOrderDate: lastOrder.created_at,
-      joinDate: firstOrder.created_at, // Assuming first order date as join date
+      firstOrderDate: firstOrder.created_at!,
+      lastOrderDate: lastOrder.created_at!,
+      joinDate: firstOrder.created_at!, // Assuming first order date as join date
 
       // Analytics
       topProducts,
@@ -174,12 +166,13 @@ export async function GET(
       })),
 
       // Activity log from order status history
-      activityLog: (statusHistory || []).map(activity => ({
+      activityLog: statusHistory.map(activity => ({
         id: activity.id,
         date: activity.created_at,
         action: activity.status,
         description: activity.notes,
-        orderId: activity.order_id
+        orderId: activity.order_id,
+        changedBy: activity.users?.name || activity.users?.email || 'System'
       }))
     };
 

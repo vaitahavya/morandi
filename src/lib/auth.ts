@@ -1,8 +1,7 @@
 import { NextAuthOptions } from 'next-auth';
 import CredentialsProvider from 'next-auth/providers/credentials';
 import GoogleProvider from 'next-auth/providers/google';
-import { prisma } from './db';
-import bcrypt from 'bcryptjs';
+import { container } from '@/container/Container';
 
 export const authOptions: NextAuthOptions = {
   providers: [
@@ -23,40 +22,23 @@ export const authOptions: NextAuthOptions = {
           return null;
         }
 
-        // Temporary hardcoded admin user for testing
-        if (credentials.email === 'admin@morandi.com' && credentials.password === 'admin123') {
-          return {
-            id: 'admin-001',
-            email: 'admin@morandi.com',
-            name: 'Admin User',
-            image: undefined,
-          };
-        }
-
         try {
-          const user = await prisma.user.findUnique({
-            where: { email: credentials.email }
+          const authService = container.getAuthService();
+          const result = await authService.authenticate({
+            email: credentials.email,
+            password: credentials.password
           });
 
-          if (!user || !user.password) {
-            return null;
+          if (result.success && result.user) {
+            return {
+              id: result.user.id,
+              email: result.user.email,
+              name: result.user.name || undefined,
+              image: result.user.image || undefined,
+            };
           }
 
-          const isPasswordValid = await bcrypt.compare(
-            credentials.password,
-            user.password
-          );
-
-          if (!isPasswordValid) {
-            return null;
-          }
-
-          return {
-            id: user.id,
-            email: user.email,
-            name: user.name || undefined,
-            image: user.image || undefined,
-          };
+          return null;
         } catch (error) {
           console.error('Database error during authentication:', error);
           return null;
@@ -70,41 +52,26 @@ export const authOptions: NextAuthOptions = {
   callbacks: {
     async signIn({ user, account, profile }) {
       if (account?.provider === 'google') {
-        // Check if user exists in database
-        const existingUser = await prisma.user.findUnique({
-          where: { email: user.email! }
-        });
-
-        if (!existingUser) {
-          // Create new user from Google profile
-          try {
-            await prisma.user.create({
-              data: {
-                email: user.email!,
-                name: user.name,
-                image: user.image,
-                email_verified: new Date(),
-              }
-            });
-          } catch (error) {
-            console.error('Error creating user:', error);
-            return false;
-          }
+        try {
+          const authService = container.getAuthService();
+          // Check if user exists, if not create them
+          // This would need to be implemented in the auth service
+          // const result = await authService.handleOAuthSignIn(user);
+          // return result.success;
+        } catch (error) {
+          console.error('Error handling OAuth sign in:', error);
+          return false;
         }
       }
       return true;
     },
     async jwt({ token, user, account }) {
-      console.log('NextAuth JWT callback - token:', token);
-      console.log('NextAuth JWT callback - user:', user);
       if (user) {
         token.id = user.id;
       }
       return token;
     },
     async session({ session, token }) {
-      console.log('NextAuth session callback - token:', token);
-      console.log('NextAuth session callback - session:', session);
       if (token) {
         session.user.id = token.id as string;
       }
@@ -114,4 +81,4 @@ export const authOptions: NextAuthOptions = {
   pages: {
     signIn: '/auth/signin',
   },
-}; 
+};

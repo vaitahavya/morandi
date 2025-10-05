@@ -1,40 +1,48 @@
 'use client';
 
-import { useEffect, useState } from 'react';
 import ProductCard from './ProductCard';
-import { Product, getProducts } from '@/lib/products-api';
+import { useProducts } from '@/hooks/useProducts';
 import { useSearchParams } from 'next/navigation';
+import { Loader2 } from 'lucide-react';
 
 export default function ProductGrid() {
-  const [products, setProducts] = useState<Product[]>([]);
-  const [loading, setLoading] = useState(true);
   const searchParams = useSearchParams();
   const categorySlug = searchParams.get('category');
+  
+  const filters = categorySlug ? { category: categorySlug } : {};
+  const { data: products = [], isLoading, error } = useProducts(filters);
 
-  useEffect(() => {
-    (async () => {
-      try {
-        // Use the new native API with improved filtering
-        const filters = categorySlug ? { category: categorySlug } : {};
-        console.log('Loading products with filters:', filters);
-        const data = await getProducts(filters);
-        console.log('Products loaded:', data);
-        setProducts(data);
-      } catch (error) {
-        console.error('Error loading products:', error);
-        setProducts([]); // Set empty array on error
-      } finally {
-        setLoading(false);
-      }
-    })();
-  }, [categorySlug]);
+  if (isLoading) {
+    return (
+      <div className="py-10 text-center">
+        <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4 text-gray-400" />
+        <p className="text-gray-600">Loading products...</p>
+      </div>
+    );
+  }
 
-  if (loading) {
-    return <div className="py-10 text-center">Loading products...</div>;
+  if (error) {
+    return (
+      <div className="py-10 text-center">
+        <p className="text-red-600 mb-4">Failed to load products</p>
+        <p className="text-gray-600 text-sm">
+          {error instanceof Error ? error.message : 'An unexpected error occurred'}
+        </p>
+      </div>
+    );
   }
 
   if (!products.length) {
-    return <div className="py-10 text-center">No products found.</div>;
+    return (
+      <div className="py-10 text-center">
+        <p className="text-gray-600">No products found.</p>
+        {categorySlug && (
+          <p className="text-gray-500 text-sm mt-2">
+            Try browsing other categories or check back later.
+          </p>
+        )}
+      </div>
+    );
   }
 
   return (

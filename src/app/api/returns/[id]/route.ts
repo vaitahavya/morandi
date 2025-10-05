@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { supabase } from '@/lib/supabase';
+import { DatabaseService } from '@/lib/database';
+import { prisma } from '@/lib/db';
 
 export async function GET(
   request: NextRequest,
@@ -9,50 +10,9 @@ export async function GET(
     const returnId = params.id;
 
     // Fetch return details with related data
-    const { data: returnData, error: returnError } = await supabase
-      .from('returns')
-      .select(`
-        *,
-        return_items (
-          id,
-          order_item_id,
-          product_id,
-          product_name,
-          product_sku,
-          variant_name,
-          quantity_returned,
-          unit_price,
-          total_refund_amount,
-          condition_received,
-          condition_notes,
-          restockable,
-          restocked,
-          restocked_at
-        ),
-        orders (
-          id,
-          order_number,
-          total,
-          created_at,
-          status,
-          billing_first_name,
-          billing_last_name,
-          billing_address1,
-          billing_city,
-          billing_country
-        ),
-        return_status_history (
-          id,
-          status,
-          notes,
-          created_at,
-          changed_by
-        )
-      `)
-      .eq('id', returnId)
-      .single();
+    const returnData = await DatabaseService.getReturnById(returnId);
 
-    if (returnError || !returnData) {
+    if (!returnData) {
       return NextResponse.json({ 
         success: false, 
         error: 'Return not found' 
@@ -61,8 +21,8 @@ export async function GET(
 
     // Sort status history by date
     if (returnData.return_status_history) {
-      returnData.return_status_history.sort((a: any, b: any) => 
-        new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+      returnData.return_status_history.sort((a, b) => 
+        new Date(b.created_at!).getTime() - new Date(a.created_at!).getTime()
       );
     }
 
@@ -114,13 +74,9 @@ export async function PUT(
     }
 
     // Fetch current return data
-    const { data: currentReturn, error: currentReturnError } = await supabase
-      .from('returns')
-      .select('*')
-      .eq('id', returnId)
-      .single();
+    const currentReturn = await DatabaseService.getReturnById(returnId);
 
-    if (currentReturnError || !currentReturn) {
+    if (!currentReturn) {
       return NextResponse.json({ 
         success: false, 
         error: 'Return not found' 
@@ -157,20 +113,10 @@ export async function PUT(
     }
 
     // Update return
-    const { data: updatedReturn, error: updateError } = await supabase
-      .from('returns')
-      .update(updateData)
-      .eq('id', returnId)
-      .select()
-      .single();
-
-    if (updateError) {
-      console.error('Error updating return:', updateError);
-      return NextResponse.json({ 
-        success: false, 
-        error: 'Failed to update return' 
-      }, { status: 500 });
-    }
+    const updatedReturn = await prisma.returns.update({
+      where: { id: returnId },
+      data: updateData,
+    });
 
     // Update return items if provided
     if (returnItems && Array.isArray(returnItems)) {
@@ -184,12 +130,12 @@ export async function PUT(
           if (item.totalRefundAmount) itemUpdateData.total_refund_amount = item.totalRefundAmount;
 
           if (Object.keys(itemUpdateData).length > 0) {
-            itemUpdateData.updated_at = new Date().toISOString();
+            itemUpdateData.updated_at = new Date();
             
-            await supabase
-              .from('return_items')
-              .update(itemUpdateData)
-              .eq('id', item.id);
+            await prisma.return_items.update({
+              where: { id: item.id },
+              data: itemUpdateData,
+            });
           }
         }
       }
@@ -204,24 +150,23 @@ export async function PUT(
     // If status changed to 'refunded', update order payment status if needed
     if (status === 'refunded' && currentReturn.status !== 'refunded') {
       // Check if this is a full refund
-      const { data: orderData } = await supabase
-        .from('orders')
-        .select('total, payment_status')
-        .eq('id', currentReturn.order_id)
-        .single();
+      const orderData = await prisma.order.findUnique({
+        where: { id: currentReturn.order_id! },
+        select: { total: true, payment_status: true },
+      });
 
-      if (orderData && updatedReturn.refund_amount >= orderData.total) {
+      if (orderData && updatedReturn.refund_amount && updatedReturn.refund_amount >= Number(orderData.total)) {
         // Full refund - update order payment status
-        await supabase
-          .from('orders')
-          .update({ payment_status: 'refunded' })
-          .eq('id', currentReturn.order_id);
-      } else if (orderData && updatedReturn.refund_amount > 0) {
+        await prisma.order.update({
+          where: { id: currentReturn.order_id! },
+          data: { payment_status: 'refunded' },
+        });
+      } else if (orderData && updatedReturn.refund_amount && updatedReturn.refund_amount > 0) {
         // Partial refund
-        await supabase
-          .from('orders')
-          .update({ payment_status: 'partially_refunded' })
-          .eq('id', currentReturn.order_id);
+        await prisma.order.update({
+          where: { id: currentReturn.order_id! },
+          data: { payment_status: 'partially_refunded' },
+        });
       }
     }
 
@@ -247,13 +192,12 @@ export async function DELETE(
     const returnId = params.id;
 
     // Check if return exists and can be deleted
-    const { data: returnData, error: returnError } = await supabase
-      .from('returns')
-      .select('status')
-      .eq('id', returnId)
-      .single();
+    const returnData = await prisma.returns.findUnique({
+      where: { id: returnId },
+      select: { status: true },
+    });
 
-    if (returnError || !returnData) {
+    if (!returnData) {
       return NextResponse.json({ 
         success: false, 
         error: 'Return not found' 
@@ -261,7 +205,7 @@ export async function DELETE(
     }
 
     // Only allow deletion of pending or rejected returns
-    if (!['pending', 'rejected'].includes(returnData.status)) {
+    if (!['pending', 'rejected'].includes(returnData.status || '')) {
       return NextResponse.json({ 
         success: false, 
         error: 'Cannot delete return with current status' 
@@ -269,18 +213,9 @@ export async function DELETE(
     }
 
     // Delete return (this will cascade to return_items and return_status_history)
-    const { error: deleteError } = await supabase
-      .from('returns')
-      .delete()
-      .eq('id', returnId);
-
-    if (deleteError) {
-      console.error('Error deleting return:', deleteError);
-      return NextResponse.json({ 
-        success: false, 
-        error: 'Failed to delete return' 
-      }, { status: 500 });
-    }
+    await prisma.returns.delete({
+      where: { id: returnId },
+    });
 
     return NextResponse.json({
       success: true,

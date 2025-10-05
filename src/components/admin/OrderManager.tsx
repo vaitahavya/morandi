@@ -38,6 +38,7 @@ import { OrderDetails } from './OrderDetails';
 import { OrderBulkActions } from './OrderBulkActions';
 import { OrderStats } from './OrderStats';
 import { OrderStatusUpdate } from './OrderStatusUpdate';
+import { useOrders } from '@/hooks/useOrders';
 
 interface OrderManagerProps {
   initialOrders?: Order[];
@@ -66,34 +67,29 @@ export default function OrderManager({ initialOrders = [] }: OrderManagerProps) 
     hasPrevPage: false
   });
 
-  // Load orders
-  const loadOrders = async (newFilters?: OrderFilters) => {
-    setLoading(true);
-    setError(null);
-    try {
-      const currentFilters = newFilters || filters;
-      const response = await fetch(`/api/orders?${new URLSearchParams(
-        Object.entries(currentFilters).reduce((acc, [key, value]) => {
-          if (value !== undefined && value !== null && value !== '') {
-            acc[key] = value.toString();
-          }
-          return acc;
-        }, {} as Record<string, string>)
-      ).toString()}`);
-      
-      const data = await response.json();
-      if (data.success) {
-        setOrders(data.data);
-        setPagination(data.pagination);
-      } else {
-        setError(data.error || 'Failed to load orders');
-      }
-    } catch (err) {
-      setError('Failed to load orders');
-    } finally {
-      setLoading(false);
+  // Load orders using TanStack Query
+  const { data: ordersData, isLoading, error: queryError } = useOrders(filters);
+  
+  // Update local state when query data changes
+  useEffect(() => {
+    if (ordersData) {
+      setOrders(ordersData.data || []);
+      setPagination(ordersData.pagination || {
+        page: 1,
+        limit: 20,
+        total: 0,
+        totalPages: 0,
+        hasNextPage: false,
+        hasPrevPage: false
+      });
     }
-  };
+  }, [ordersData]);
+  
+  // Update loading and error states
+  useEffect(() => {
+    setLoading(isLoading);
+    setError(queryError ? 'Failed to load orders' : null);
+  }, [isLoading, queryError]);
 
   // Handle order selection
   const handleOrderSelect = (orderId: string, selected: boolean) => {

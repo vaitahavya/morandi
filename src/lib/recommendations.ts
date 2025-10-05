@@ -1,4 +1,5 @@
-import { supabase } from './supabase';
+import { DatabaseService } from './database';
+import { prisma } from './db';
 
 export interface RecommendationAlgorithm {
   name: string;
@@ -30,219 +31,124 @@ export async function getProductRecommendations(
   userId?: string,
   limit: number = 5
 ) {
-  const { data: recommendations, error } = await supabase
-    .from('product_recommendations')
-    .select(`
-      *,
-      recommended_product:products!product_recommendations_recommended_product_id_fkey(*)
-    `)
-    .eq('product_id', productId)
-    .order('score', { ascending: false })
-    .limit(limit);
-
-  if (error) {
-    console.error('Error fetching recommendations:', error);
-    return [];
-  }
-
-  return (recommendations as RecommendationWithProduct[])?.map(rec => rec.recommended_product) || [];
+  return await DatabaseService.getProductRecommendations(productId, limit);
 }
 
 export async function getPersonalizedRecommendations(
   userId: string,
   limit: number = 10
 ) {
-  // Get user's purchase history
-  const { data: userOrders } = await supabase
-    .from('orders')
-    .select(`
-      *,
-      order_items(
-        *,
-        product:products(*)
-      )
-    `)
-    .eq('user_id', userId)
-    .in('status', ['delivered', 'shipped']);
-
-  // Get user's wishlist
-  const { data: userWishlist } = await supabase
-    .from('wishlist_items')
-    .select(`
-      *,
-      product:products(*)
-    `)
-    .eq('user_id', userId);
-
-  // Get user's reviews
-  const { data: userReviews } = await supabase
-    .from('reviews')
-    .select(`
-      *,
-      product:products(*)
-    `)
-    .eq('user_id', userId)
-    .gte('rating', 4);
-
-  // Collect all product IDs from user's history
-  const purchasedProductIds = (userOrders as OrderWithItems[])?.flatMap(order => 
-    order.order_items?.map((item: any) => item.product_id) || []
-  ) || [];
-  const wishlistProductIds = userWishlist?.map((item: any) => item.product_id) || [];
-  const reviewedProductIds = userReviews?.map((review: any) => review.product_id) || [];
-
-  const allUserProductIds = [
-    ...purchasedProductIds,
-    ...wishlistProductIds,
-    ...reviewedProductIds,
-  ];
-
-  if (allUserProductIds.length === 0) {
-    // If no user history, return popular products
-    return getPopularProducts(limit);
-  }
-
-  // Get recommendations based on user's products
-  const { data: recommendations, error } = await supabase
-    .from('product_recommendations')
-    .select(`
-      *,
-      recommended_product:products!product_recommendations_recommended_product_id_fkey(*)
-    `)
-    .in('product_id', allUserProductIds)
-    .not('recommended_product_id', 'in', `(${allUserProductIds.join(',')})`)
-    .order('score', { ascending: false })
-    .limit(limit);
-
-  if (error) {
-    console.error('Error fetching personalized recommendations:', error);
-    return [];
-  }
-
-  return (recommendations as RecommendationWithProduct[])?.map(rec => rec.recommended_product) || [];
+  return await DatabaseService.getPersonalizedRecommendations(userId, limit);
 }
 
 export async function getPopularProducts(limit: number = 10) {
-  // Get products with most orders
-  const { data: popularProducts, error } = await supabase
-    .from('products')
-    .select(`
-      *,
-      order_items(count),
-      reviews(count)
-    `)
-    .order('order_items(count)', { ascending: false })
-    .order('reviews(count)', { ascending: false })
-    .limit(limit);
-
-  if (error) {
-    console.error('Error fetching popular products:', error);
-    return [];
-  }
-
-  return popularProducts || [];
+  return await DatabaseService.getPopularProducts(limit);
 }
 
 export async function getSimilarProducts(
   productId: string,
   limit: number = 5
 ) {
-  const { data: product } = await supabase
-    .from('products')
-    .select('*')
-    .eq('id', productId)
-    .single();
-
+  const product = await DatabaseService.getProductById(productId);
   if (!product) return [];
 
   // Find products in the same category
-  const { data: similarProducts, error } = await supabase
-    .from('products')
-    .select('*')
-    .eq('category', product.category)
-    .neq('id', productId)
-    .limit(limit);
+  const categorySlugs = product.product_categories.map(pc => pc.categories.slug);
+  if (categorySlugs.length === 0) return [];
 
-  if (error) {
-    console.error('Error fetching similar products:', error);
-    return [];
-  }
+  const { products } = await DatabaseService.getProducts({
+    limit,
+    category: categorySlugs[0], // Use first category
+  });
 
-  return similarProducts || [];
+  // Filter out the current product
+  return products.filter(p => p.id !== productId);
 }
 
 export async function generateRecommendations() {
-  const { data: products } = await supabase
-    .from('products')
-    .select('*');
+  const { products } = await DatabaseService.getProducts({ limit: 1000 });
   
   if (!products) return;
 
   for (const product of products) {
     // Find products in the same category
-    const { data: categoryProducts } = await supabase
-      .from('products')
-      .select('*')
-      .eq('category', product.category)
-      .neq('id', product.id);
+    const categorySlugs = product.product_categories.map(pc => pc.categories.slug);
+    
+    for (const categorySlug of categorySlugs) {
+      const { products: categoryProducts } = await DatabaseService.getProducts({
+        category: categorySlug,
+        limit: 50,
+      });
 
-    // Create recommendations for category similarity
-    for (const categoryProduct of categoryProducts || []) {
-      await supabase
-        .from('product_recommendations')
-        .upsert({
-          product_id: product.id,
-          recommended_product_id: categoryProduct.id,
-          score: 0.7,
-          reason: 'category_similarity',
-        }, {
-          onConflict: 'product_id,recommended_product_id'
-        });
+      // Create recommendations for category similarity
+      for (const categoryProduct of categoryProducts) {
+        if (categoryProduct.id !== product.id) {
+          await prisma.productRecommendation.upsert({
+            where: {
+              product_id_recommended_product_id: {
+                product_id: product.id,
+                recommended_product_id: categoryProduct.id,
+              },
+            },
+            update: {
+              score: 0.7,
+              reason: 'category_similarity',
+            },
+            create: {
+              product_id: product.id,
+              recommended_product_id: categoryProduct.id,
+              score: 0.7,
+              reason: 'category_similarity',
+            },
+          });
+        }
+      }
     }
 
     // Find products with similar tags
-    const { data: tagSimilarProducts } = await supabase
-      .from('products')
-      .select('*')
-      .overlaps('tags', product.tags)
-      .neq('id', product.id);
+    if (product.tags.length > 0) {
+      const { products: allProducts } = await DatabaseService.getProducts({ limit: 1000 });
+      
+      for (const tagProduct of allProducts) {
+        if (tagProduct.id !== product.id && tagProduct.tags.length > 0) {
+          const commonTags = product.tags.filter((tag: string) => 
+            tagProduct.tags.includes(tag)
+          );
+          
+          if (commonTags.length > 0) {
+            const similarityScore = commonTags.length / Math.max(product.tags.length, tagProduct.tags.length);
 
-    for (const tagProduct of tagSimilarProducts || []) {
-      const commonTags = product.tags.filter((tag: string) => 
-        tagProduct.tags.includes(tag)
-      );
-      const similarityScore = commonTags.length / Math.max(product.tags.length, tagProduct.tags.length);
-
-      await supabase
-        .from('product_recommendations')
-        .upsert({
-          product_id: product.id,
-          recommended_product_id: tagProduct.id,
-          score: Math.max(0.5, similarityScore),
-          reason: 'tag_similarity',
-        }, {
-          onConflict: 'product_id,recommended_product_id'
-        });
+            await prisma.productRecommendation.upsert({
+              where: {
+                product_id_recommended_product_id: {
+                  product_id: product.id,
+                  recommended_product_id: tagProduct.id,
+                },
+              },
+              update: {
+                score: Math.max(0.5, similarityScore),
+                reason: 'tag_similarity',
+              },
+              create: {
+                product_id: product.id,
+                recommended_product_id: tagProduct.id,
+                score: Math.max(0.5, similarityScore),
+                reason: 'tag_similarity',
+              },
+            });
+          }
+        }
+      }
     }
   }
 }
 
 export async function updateRecommendationsForUser(userId: string) {
-  const { data: userOrders } = await supabase
-    .from('orders')
-    .select(`
-      *,
-      order_items(
-        *,
-        product:products(*)
-      )
-    `)
-    .eq('user_id', userId)
-    .in('status', ['delivered', 'shipped']);
+  const { orders } = await DatabaseService.getOrders({ user_id: userId, limit: 1000 });
 
   // Find products that are frequently bought together
-  for (const order of userOrders || []) {
-    const orderProductIds = order.order_items?.map((item: any) => item.product_id) || [];
+  for (const order of orders) {
+    const orderProductIds = order.order_items?.map((item) => item.product_id).filter(Boolean) || [];
     
     for (let i = 0; i < orderProductIds.length; i++) {
       for (let j = i + 1; j < orderProductIds.length; j++) {
@@ -250,27 +156,43 @@ export async function updateRecommendationsForUser(userId: string) {
         const product2Id = orderProductIds[j];
 
         // Create bidirectional recommendations
-        await supabase
-          .from('product_recommendations')
-          .upsert({
+        await prisma.productRecommendation.upsert({
+          where: {
+            product_id_recommended_product_id: {
+              product_id: product1Id,
+              recommended_product_id: product2Id,
+            },
+          },
+          update: {
+            score: 0.8,
+            reason: 'bought_together',
+          },
+          create: {
             product_id: product1Id,
             recommended_product_id: product2Id,
             score: 0.8,
             reason: 'bought_together',
-          }, {
-            onConflict: 'product_id,recommended_product_id'
-          });
+          },
+        });
 
-        await supabase
-          .from('product_recommendations')
-          .upsert({
+        await prisma.productRecommendation.upsert({
+          where: {
+            product_id_recommended_product_id: {
+              product_id: product2Id,
+              recommended_product_id: product1Id,
+            },
+          },
+          update: {
+            score: 0.8,
+            reason: 'bought_together',
+          },
+          create: {
             product_id: product2Id,
             recommended_product_id: product1Id,
             score: 0.8,
             reason: 'bought_together',
-          }, {
-            onConflict: 'product_id,recommended_product_id'
-          });
+          },
+        });
       }
     }
   }

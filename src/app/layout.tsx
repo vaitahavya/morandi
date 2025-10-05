@@ -6,6 +6,7 @@ import Header from '@/components/layout/Header';
 import Footer from '@/components/layout/Footer';
 import { Toaster } from 'react-hot-toast';
 import SessionProvider from '@/components/providers/SessionProvider';
+import QueryProvider from '@/components/providers/QueryProvider';
 
 const inter = Inter({ subsets: ['latin'], variable: '--font-sans' });
 const playfair = Playfair_Display({ subsets: ['latin'], variable: '--font-serif' });
@@ -23,13 +24,15 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={`${inter.variable} ${playfair.variable} font-sans`}>
-        <SessionProvider>
-          <PromoBar />
-          <Header />
-          <main className="min-h-screen">{children}</main>
-          <Footer />
-          <Toaster position="bottom-right" />
-        </SessionProvider>
+        <QueryProvider>
+          <SessionProvider>
+            <PromoBar />
+            <Header />
+            <main className="min-h-screen">{children}</main>
+            <Footer />
+            <Toaster position="bottom-right" />
+          </SessionProvider>
+        </QueryProvider>
       </body>
     </html>
   );

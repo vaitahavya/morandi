@@ -12,7 +12,7 @@ interface SyncStatus {
   syncedCount?: number;
   totalProducts?: number;
   woocommerceProducts?: number;
-  supabaseProducts?: number;
+  databaseProducts?: number;
   sampleProduct?: {
     id: string;
     name: string;
@@ -129,7 +129,7 @@ export default function WooCommerceSync() {
                       WooCommerce: {connectionStatus.woocommerceProducts || 0} products
                     </Badge>
                     <Badge variant="secondary">
-                      Supabase: {connectionStatus.supabaseProducts || 0} products
+                      Database: {connectionStatus.databaseProducts || 0} products
                     </Badge>
                   </div>
                   {connectionStatus.sampleProduct && (

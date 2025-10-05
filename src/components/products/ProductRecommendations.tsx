@@ -1,9 +1,10 @@
 'use client';
 
-import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useSession } from 'next-auth/react';
+import { useRecommendations } from '@/hooks/useRecommendations';
+import { Loader2 } from 'lucide-react';
 
 interface Product {
   id: string;
@@ -26,42 +27,14 @@ export default function ProductRecommendations({
   limit = 4,
   title = 'Recommended for you'
 }: ProductRecommendationsProps) {
-  const [recommendations, setRecommendations] = useState<Product[]>([]);
-  const [loading, setLoading] = useState(true);
   const { data: session } = useSession();
+  const { data: recommendations = [], isLoading, error } = useRecommendations({
+    productId,
+    type,
+    limit,
+  });
 
-  useEffect(() => {
-    const fetchRecommendations = async () => {
-      try {
-        setLoading(true);
-        const params = new URLSearchParams({
-          type,
-          limit: limit.toString(),
-        });
-
-        if (productId) {
-          params.append('productId', productId);
-        }
-
-        const response = await fetch(`/api/recommendations?${params}`);
-        const data = await response.json();
-
-        if (response.ok) {
-          setRecommendations(data.recommendations);
-        } else {
-          console.error('Failed to fetch recommendations:', data.error);
-        }
-      } catch (error) {
-        console.error('Error fetching recommendations:', error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchRecommendations();
-  }, [productId, type, limit, session]);
-
-  if (loading) {
+  if (isLoading) {
     return (
       <div className="py-8">
         <h3 className="text-xl font-semibold mb-4">{title}</h3>
@@ -76,6 +49,11 @@ export default function ProductRecommendations({
         </div>
       </div>
     );
+  }
+
+  if (error) {
+    console.error('Failed to fetch recommendations:', error);
+    return null; // Silently fail for recommendations
   }
 
   if (recommendations.length === 0) {

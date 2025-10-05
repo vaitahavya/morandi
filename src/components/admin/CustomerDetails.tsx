@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useCustomerDetails } from '@/hooks/useCustomers';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -80,28 +81,23 @@ export function CustomerDetails({ customer, onClose }: CustomerDetailsProps) {
   const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<'overview' | 'orders' | 'activity'>('overview');
 
-  useEffect(() => {
-    loadCustomerDetails();
-  }, [customer.email]);
+  // Remove the old useEffect since we're using TanStack Query
 
-  const loadCustomerDetails = async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const response = await fetch(`/api/customers/${encodeURIComponent(customer.email)}`);
-      const data = await response.json();
-      
-      if (data.success) {
-        setCustomerData(data.data);
-      } else {
-        setError(data.error || 'Failed to load customer details');
-      }
-    } catch (err) {
-      setError('Failed to load customer details');
-    } finally {
-      setLoading(false);
+  // Use TanStack Query for customer details
+  const { data: customerDetails, isLoading, error: queryError } = useCustomerDetails(customer.email);
+  
+  // Update local state when query data changes
+  useEffect(() => {
+    if (customerDetails) {
+      setCustomerData(customerDetails);
     }
-  };
+  }, [customerDetails]);
+  
+  // Update loading and error states
+  useEffect(() => {
+    setLoading(isLoading);
+    setError(queryError ? 'Failed to load customer details' : null);
+  }, [isLoading, queryError]);
 
   const formatCurrency = (amount: number, currency: string = 'INR') => {
     return new Intl.NumberFormat('en-IN', {

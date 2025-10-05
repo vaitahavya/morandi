@@ -142,3 +142,7 @@ seed-database.sql
 .zed/
 .mcp.json
 opencode.json 
+
+
+bun.lock
+package-lock.json

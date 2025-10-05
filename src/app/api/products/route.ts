@@ -1,184 +1,41 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { prisma } from '@/lib/db';
+import { container } from '@/container/Container';
+import { ProductFilters } from '@/interfaces/IProductRepository';
 
 // GET /api/products - List products with filtering, search, and pagination
 export async function GET(request: NextRequest) {
   try {
+    const productService = container.getProductService();
     const { searchParams } = new URL(request.url);
     
     // Parse query parameters
-    const page = parseInt(searchParams.get('page') || '1');
-    const limit = Math.min(parseInt(searchParams.get('limit') || '20'), 100); // Max 100 items
-    const search = searchParams.get('search') || '';
-    const category = searchParams.get('category') || '';
-    const status = searchParams.get('status') || 'published';
-    const featured = searchParams.get('featured');
-    const inStock = searchParams.get('inStock');
-    const sortBy = searchParams.get('sortBy') || 'created_at';
-    const sortOrder = searchParams.get('sortOrder') || 'desc';
-    const minPrice = searchParams.get('minPrice');
-    const maxPrice = searchParams.get('maxPrice');
-
-    // Calculate offset for pagination
-    const offset = (page - 1) * limit;
-
-    // Build where conditions
-    const whereConditions: any = {
-      status: status
+    const filters: ProductFilters = {
+      page: parseInt(searchParams.get('page') || '1'),
+      limit: Math.min(parseInt(searchParams.get('limit') || '20'), 100),
+      search: searchParams.get('search') || undefined,
+      category: searchParams.get('category') || undefined,
+      status: searchParams.get('status') || 'published',
+      featured: searchParams.get('featured') ? searchParams.get('featured') === 'true' : undefined,
+      inStock: searchParams.get('inStock') ? searchParams.get('inStock') === 'true' : undefined,
+      sortBy: searchParams.get('sortBy') || 'created_at',
+      sortOrder: (searchParams.get('sortOrder') as 'asc' | 'desc') || 'desc',
+      minPrice: searchParams.get('minPrice') ? parseFloat(searchParams.get('minPrice')!) : undefined,
+      maxPrice: searchParams.get('maxPrice') ? parseFloat(searchParams.get('maxPrice')!) : undefined
     };
 
-    // Search in name, description, and short description
-    if (search) {
-      whereConditions.OR = [
-        { name: { contains: search, mode: 'insensitive' } },
-        { description: { contains: search, mode: 'insensitive' } },
-        { short_description: { contains: search, mode: 'insensitive' } },
-        { sku: { contains: search, mode: 'insensitive' } }
-      ];
-    }
-
-    // Category filter (legacy string category for now)
-    if (category) {
-      whereConditions.category = { contains: category, mode: 'insensitive' };
-    }
-
-    // Featured filter
-    if (featured !== null) {
-      whereConditions.featured = featured === 'true';
-    }
-
-    // Stock filter
-    if (inStock !== null) {
-      whereConditions.stock_status = inStock === 'true' ? 'instock' : { not: 'instock' };
-    }
-
-    // Price range filter
-    if (minPrice || maxPrice) {
-      whereConditions.price = {};
-      if (minPrice) whereConditions.price.gte = parseFloat(minPrice);
-      if (maxPrice) whereConditions.price.lte = parseFloat(maxPrice);
-    }
-
-    // Validate sort field
-    const validSortFields = ['name', 'price', 'created_at', 'updated_at', 'stock_quantity', 'featured'];
-    const orderBy: any = {};
-    if (validSortFields.includes(sortBy)) {
-      orderBy[sortBy] = sortOrder === 'asc' ? 'asc' : 'desc';
-    } else {
-      orderBy.created_at = 'desc';
-    }
-
-    // Execute queries in parallel
-    const [products, totalCount] = await Promise.all([
-      prisma.product.findMany({
-        where: whereConditions,
-        orderBy,
-        skip: offset,
-        take: limit,
-        include: {
-          product_categories: {
-            include: {
-              categories: true
-            }
-          },
-          variants: {
-            orderBy: { price: 'asc' }
-          },
-          attributes: true,
-          reviews: {
-            select: {
-              rating: true
-            }
-          }
-        }
-      }),
-      prisma.product.count({ where: whereConditions })
-    ]);
-
-    // Calculate pagination info
-    const totalPages = Math.ceil(totalCount / limit);
-    const hasNextPage = page < totalPages;
-    const hasPrevPage = page > 1;
-
-    // Transform data to include calculated fields
-    const transformedProducts = products.map(product => {
-      // Calculate average rating
-      const avgRating = product.reviews.length > 0
-        ? product.reviews.reduce((sum, review) => sum + review.rating, 0) / product.reviews.length
-        : 0;
-
-      // Get effective price (sale price if available, otherwise regular price)
-      const effectivePrice = product.sale_price || product.price;
-
-      // Transform images from string array to object array
-      const transformedImages = product.images.map((imageUrl, index) => ({
-        id: index + 1,
-        src: imageUrl,
-        alt: `${product.name} ${index + 1}`
-      }));
-
-      return {
-        id: product.id,
-        name: product.name,
-        slug: product.slug,
-        description: product.description,
-        shortDescription: product.short_description,
-        sku: product.sku,
-        price: effectivePrice,
-        regularPrice: product.regular_price || product.price,
-        salePrice: product.sale_price,
-        images: transformedImages,
-        featuredImage: product.featured_image,
-        stockQuantity: product.stock_quantity,
-        stockStatus: product.stock_status,
-        weight: product.weight,
-        dimensions: product.dimensions,
-        status: product.status,
-        featured: product.featured,
-        metaTitle: product.meta_title,
-        metaDescription: product.meta_description,
-        categories: product.product_categories.map(pc => pc.categories),
-        variants: product.variants,
-        attributes: product.attributes,
-        avgRating: Math.round(avgRating * 10) / 10, // Round to 1 decimal
-        reviewCount: product.reviews.length,
-        createdAt: product.created_at,
-        updatedAt: product.updated_at,
-        // Legacy fields for compatibility
-        tags: product.tags,
-        inStock: product.stock_status === 'instock'
-      };
-    });
+    const result = await productService.getProducts(filters);
 
     return NextResponse.json({
       success: true,
-      data: transformedProducts,
-      pagination: {
-        page,
-        limit,
-        total: totalCount,
-        totalPages,
-        hasNextPage,
-        hasPrevPage
-      },
-      filters: {
-        search,
-        category,
-        status,
-        featured,
-        inStock,
-        minPrice,
-        maxPrice,
-        sortBy,
-        sortOrder
-      }
+      data: result.products,
+      pagination: result.pagination
     });
 
   } catch (error) {
     console.error('Error fetching products:', error);
     return NextResponse.json({
       success: false,
-      error: 'Failed to fetch products'
+      error: error instanceof Error ? error.message : 'Failed to fetch products'
     }, { status: 500 });
   }
 }
@@ -186,93 +43,29 @@ export async function GET(request: NextRequest) {
 // POST /api/products - Create new product
 export async function POST(request: NextRequest) {
   try {
+    const productService = container.getProductService();
     const body = await request.json();
-    
+
     // Validate required fields
-    const { name, price } = body;
-    if (!name || !price) {
+    if (!body.name || !body.slug || !body.price) {
       return NextResponse.json({
         success: false,
-        error: 'Name and price are required'
+        error: 'Missing required fields: name, slug, price'
       }, { status: 400 });
     }
 
-    // Generate slug if not provided
-    let slug = body.slug;
-    if (!slug) {
-      slug = name.toLowerCase()
-        .trim()
-        .replace(/[^a-zA-Z0-9\s]/g, '')
-        .replace(/\s+/g, '-');
-      
-      // Ensure slug uniqueness
-      const existingProduct = await prisma.product.findUnique({
-        where: { slug }
-      });
-      if (existingProduct) {
-        slug = `${slug}-${Date.now()}`;
-      }
-    }
-
-    // Create product
-    const product = await prisma.product.create({
-      data: {
-        name,
-        slug,
-        description: body.description,
-        short_description: body.shortDescription,
-        sku: body.sku,
-        price: parseFloat(price),
-        regular_price: body.regularPrice ? parseFloat(body.regularPrice) : parseFloat(price),
-        sale_price: body.salePrice ? parseFloat(body.salePrice) : null,
-        images: body.images || [],
-        featured_image: body.featuredImage,
-        stock_quantity: body.stockQuantity || 0,
-        stock_status: body.stockStatus || 'instock',
-        manage_stock: body.manageStock !== false,
-        low_stock_threshold: body.lowStockThreshold || 5,
-        weight: body.weight ? parseFloat(body.weight) : null,
-        dimensions: body.dimensions,
-        status: body.status || 'published',
-        featured: body.featured || false,
-        meta_title: body.metaTitle,
-        meta_description: body.metaDescription,
-        // Legacy fields for backward compatibility
-        tags: body.tags || [],
-        in_stock: (body.stockQuantity || 0) > 0
-      },
-      include: {
-        product_categories: {
-          include: {
-            categories: true
-          }
-        },
-        variants: true,
-        attributes: true
-      }
-    });
+    const product = await productService.createProduct(body);
 
     return NextResponse.json({
       success: true,
-      data: product,
-      message: 'Product created successfully'
+      data: product
     }, { status: 201 });
 
   } catch (error) {
     console.error('Error creating product:', error);
-    
-    // Handle unique constraint violations
-    if (error && typeof error === 'object' && 'code' in error && error.code === 'P2002') {
-      const field = (error as any).meta?.target?.[0];
-      return NextResponse.json({
-        success: false,
-        error: `${field} must be unique`
-      }, { status: 400 });
-    }
-
     return NextResponse.json({
       success: false,
-      error: 'Failed to create product'
+      error: error instanceof Error ? error.message : 'Failed to create product'
     }, { status: 500 });
   }
 }

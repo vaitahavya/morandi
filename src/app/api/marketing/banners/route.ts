@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { supabase } from '@/lib/supabase';
+import { DatabaseService } from '@/lib/database';
+import { prisma } from '@/lib/db';
 
 export async function GET(request: NextRequest) {
   try {
@@ -13,66 +14,46 @@ export async function GET(request: NextRequest) {
     const sortBy = searchParams.get('sortBy') || 'priority';
     const sortOrder = searchParams.get('sortOrder') || 'desc';
     
-    const offset = (page - 1) * limit;
-
-    // Build the query
-    let query = supabase
-      .from('banners')
-      .select('*')
-      .order(sortBy, { ascending: sortOrder === 'asc' })
-      .range(offset, offset + limit - 1);
+    const skip = (page - 1) * limit;
+    const where: any = {};
 
     // Apply filters
     if (position) {
-      query = query.eq('position', position);
+      where.position = position;
     }
 
     if (isActive !== '') {
-      query = query.eq('is_active', isActive === 'true');
+      where.is_active = isActive === 'true';
     }
 
-    const { data: banners, error: bannersError } = await query;
-    
-    if (bannersError) {
-      console.error('Error fetching banners:', bannersError);
-      return NextResponse.json({ success: false, error: 'Failed to fetch banners' }, { status: 500 });
-    }
+    const [banners, total] = await Promise.all([
+      prisma.banners.findMany({
+        where,
+        skip,
+        take: limit,
+        orderBy: { [sortBy]: sortOrder === 'asc' ? 'asc' : 'desc' },
+      }),
+      prisma.banners.count({ where }),
+    ]);
 
-    // Get total count for pagination
-    let countQuery = supabase
-      .from('banners')
-      .select('id', { count: 'exact', head: true });
-
-    if (position) {
-      countQuery = countQuery.eq('position', position);
-    }
-    if (isActive !== '') {
-      countQuery = countQuery.eq('is_active', isActive === 'true');
-    }
-
-    const { count, error: countError } = await countQuery;
-    
-    if (countError) {
-      console.error('Error getting banners count:', countError);
-    }
-
-    const total = count || 0;
     const totalPages = Math.ceil(total / limit);
 
     // Calculate summary stats
-    const statsQuery = supabase
-      .from('banners')
-      .select('is_active, impressions, clicks');
-
-    const { data: statsData } = await statsQuery;
+    const allBanners = await prisma.banners.findMany({
+      select: {
+        is_active: true,
+        impressions: true,
+        clicks: true,
+      },
+    });
 
     const stats = {
       totalBanners: total,
-      activeBanners: statsData?.filter(b => b.is_active).length || 0,
-      totalImpressions: statsData?.reduce((sum, b) => sum + (b.impressions || 0), 0) || 0,
-      totalClicks: statsData?.reduce((sum, b) => sum + (b.clicks || 0), 0) || 0,
-      avgClickRate: statsData && statsData.length > 0 
-        ? (statsData.reduce((sum, b) => sum + (b.clicks || 0), 0) / statsData.reduce((sum, b) => sum + (b.impressions || 0), 1)) * 100 
+      activeBanners: allBanners.filter(b => b.is_active).length,
+      totalImpressions: allBanners.reduce((sum, b) => sum + (b.impressions || 0), 0),
+      totalClicks: allBanners.reduce((sum, b) => sum + (b.clicks || 0), 0),
+      avgClickRate: allBanners.length > 0 
+        ? (allBanners.reduce((sum, b) => sum + (b.clicks || 0), 0) / Math.max(allBanners.reduce((sum, b) => sum + (b.impressions || 0), 0), 1)) * 100 
         : 0
     };
 
@@ -132,39 +113,27 @@ export async function POST(request: NextRequest) {
     }
 
     // Create banner
-    const bannerData = {
-      name,
-      title,
-      subtitle,
-      description,
-      image_url: imageUrl,
-      mobile_image_url: mobileImageUrl,
-      alt_text: altText,
-      button_text: buttonText,
-      button_url: buttonUrl,
-      external_link: externalLink,
-      position,
-      priority,
-      is_active: isActive,
-      start_date: startDate,
-      end_date: endDate,
-      target_audience: targetAudience,
-      target_pages: targetPages
-    };
-
-    const { data: newBanner, error: bannerError } = await supabase
-      .from('banners')
-      .insert(bannerData)
-      .select()
-      .single();
-
-    if (bannerError) {
-      console.error('Error creating banner:', bannerError);
-      return NextResponse.json({ 
-        success: false, 
-        error: 'Failed to create banner' 
-      }, { status: 500 });
-    }
+    const newBanner = await prisma.banners.create({
+      data: {
+        name,
+        title,
+        subtitle,
+        description,
+        image_url: imageUrl,
+        mobile_image_url: mobileImageUrl,
+        alt_text: altText,
+        button_text: buttonText,
+        button_url: buttonUrl,
+        external_link: externalLink,
+        position,
+        priority,
+        is_active: isActive,
+        start_date: startDate ? new Date(startDate) : null,
+        end_date: endDate ? new Date(endDate) : null,
+        target_audience: targetAudience,
+        target_pages: targetPages
+      },
+    });
 
     return NextResponse.json({
       success: true,

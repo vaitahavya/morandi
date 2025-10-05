@@ -23,6 +23,7 @@ import {
 } from 'lucide-react';
 import { CustomerStats } from './CustomerStats';
 import { CustomerDetails } from './CustomerDetails';
+import { useCustomers } from '@/hooks/useCustomers';
 
 interface Customer {
   email: string;
@@ -80,35 +81,30 @@ export default function CustomerManager({ initialCustomers = [] }: CustomerManag
     hasPrevPage: false
   });
 
-  // Load customers
-  const loadCustomers = async (newFilters?: CustomerFilters) => {
-    setLoading(true);
-    setError(null);
-    try {
-      const currentFilters = newFilters || filters;
-      const response = await fetch(`/api/customers?${new URLSearchParams(
-        Object.entries(currentFilters).reduce((acc, [key, value]) => {
-          if (value !== undefined && value !== null && value !== '') {
-            acc[key] = value.toString();
-          }
-          return acc;
-        }, {} as Record<string, string>)
-      ).toString()}`);
-      
-      const data = await response.json();
-      if (data.success) {
-        setCustomers(data.data);
-        setPagination(data.pagination);
-        setStats(data.stats);
-      } else {
-        setError(data.error || 'Failed to load customers');
-      }
-    } catch (err) {
-      setError('Failed to load customers');
-    } finally {
-      setLoading(false);
+  // Load customers using TanStack Query
+  const { data: customersData, isLoading, error: queryError } = useCustomers(filters);
+  
+  // Update local state when query data changes
+  useEffect(() => {
+    if (customersData) {
+      setCustomers(customersData.data || []);
+      setPagination(customersData.pagination || {
+        page: 1,
+        limit: 20,
+        total: 0,
+        totalPages: 0,
+        hasNextPage: false,
+        hasPrevPage: false
+      });
+      setStats(customersData.stats || null);
     }
-  };
+  }, [customersData]);
+  
+  // Update loading and error states
+  useEffect(() => {
+    setLoading(isLoading);
+    setError(queryError ? 'Failed to load customers' : null);
+  }, [isLoading, queryError]);
 
   // Handle filter changes
   const handleFilterChange = (newFilters: Partial<CustomerFilters>) => {
