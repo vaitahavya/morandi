@@ -1,29 +1,31 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
-import { container } from '@/container/Container';
-import { OrderFilters, OrderStatus, PaymentStatus } from '@/interfaces/IOrderRepository';
+import { orderService } from '@/services';
+import { OrderFilters, FindManyOptions } from '@/repositories';
 
 // GET /api/orders - List orders (admin view or user's own orders)
 export async function GET(request: NextRequest) {
   try {
-    const orderService = container.getOrderService();
     const session = await getServerSession(authOptions);
     const { searchParams } = new URL(request.url);
     
     // Parse query parameters
-    const statusParam = searchParams.get('status');
-    const paymentStatusParam = searchParams.get('payment_status');
-    
     const filters: OrderFilters = {
+      status: searchParams.get('status') || undefined,
+      paymentStatus: searchParams.get('payment_status') || undefined,
+      userId: searchParams.get('user_id') || undefined,
+      customerEmail: searchParams.get('customer_email') || undefined,
+      orderNumber: searchParams.get('order_number') || undefined,
+      dateFrom: searchParams.get('dateFrom') ? new Date(searchParams.get('dateFrom')!) : undefined,
+      dateTo: searchParams.get('dateTo') ? new Date(searchParams.get('dateTo')!) : undefined,
+      minTotal: searchParams.get('minTotal') ? parseFloat(searchParams.get('minTotal')!) : undefined,
+      maxTotal: searchParams.get('maxTotal') ? parseFloat(searchParams.get('maxTotal')!) : undefined,
+    };
+
+    const options: FindManyOptions = {
       page: parseInt(searchParams.get('page') || '1'),
       limit: Math.min(parseInt(searchParams.get('limit') || '20'), 100),
-      status: statusParam ? (statusParam as OrderStatus) : undefined,
-      paymentStatus: paymentStatusParam ? (paymentStatusParam as PaymentStatus) : undefined,
-      userId: searchParams.get('user_id') || undefined,
-      search: searchParams.get('search') || undefined,
-      fromDate: searchParams.get('fromDate') || undefined,
-      toDate: searchParams.get('toDate') || undefined,
       sortBy: searchParams.get('sortBy') || 'created_at',
       sortOrder: (searchParams.get('sortOrder') as 'asc' | 'desc') || 'desc'
     };
@@ -48,11 +50,11 @@ export async function GET(request: NextRequest) {
       filters.userId = session.user.id;
     }
 
-    const result = await orderService.getOrders(filters);
+    const result = await orderService.getOrders(filters, options);
 
     return NextResponse.json({
       success: true,
-      data: result.orders,
+      data: result.data,
       pagination: result.pagination
     });
 
@@ -68,17 +70,9 @@ export async function GET(request: NextRequest) {
 // POST /api/orders - Create new order
 export async function POST(request: NextRequest) {
   try {
-    const orderService = container.getOrderService();
     const body = await request.json();
 
-    // Validate required fields
-    if (!body.customerEmail || !body.billingFirstName || !body.billingLastName || !body.items) {
-      return NextResponse.json({
-        success: false,
-        error: 'Missing required fields'
-      }, { status: 400 });
-    }
-
+    // Create order using service layer (includes all validation)
     const order = await orderService.createOrder(body);
 
     return NextResponse.json({

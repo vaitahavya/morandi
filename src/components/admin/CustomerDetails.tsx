@@ -84,7 +84,7 @@ export function CustomerDetails({ customer, onClose }: CustomerDetailsProps) {
   // Remove the old useEffect since we're using TanStack Query
 
   // Use TanStack Query for customer details
-  const { data: customerDetails, isLoading, error: queryError } = useCustomerDetails(customer.email);
+  const { data: customerDetails, isLoading, error: queryError, refetch } = useCustomerDetails(customer.email);
   
   // Update local state when query data changes
   useEffect(() => {
@@ -195,7 +195,7 @@ export function CustomerDetails({ customer, onClose }: CustomerDetailsProps) {
             ) : error ? (
               <div className="text-center py-12">
                 <p className="text-red-600">{error}</p>
-                <Button onClick={loadCustomerDetails} className="mt-4">
+                <Button onClick={() => refetch()} className="mt-4">
                   Retry
                 </Button>
               </div>

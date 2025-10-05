@@ -77,7 +77,7 @@ export default function AdminLayout({ children, activeSection, onSectionChange }
       id: 'integrations',
       name: 'Integrations',
       icon: Settings,
-      description: 'WooCommerce and third-party integrations'
+      description: 'Third-party integrations and API connections'
     },
     {
       id: 'settings',

@@ -64,7 +64,7 @@ export default function ProductRecommendations({
     <div className="py-8">
       <h3 className="text-xl font-semibold mb-4">{title}</h3>
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        {recommendations.map((product) => (
+        {recommendations.map((product: Product) => (
           <Link
             key={product.id}
             href={`/products/${product.id}`}

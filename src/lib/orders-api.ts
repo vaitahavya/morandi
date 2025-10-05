@@ -1,4 +1,4 @@
-// Native Orders API - Replaces WordPress/WooCommerce order functionality
+// Orders API - Native e-commerce order management
 // This library provides functions to interact with our native order APIs
 
 export interface OrderItem {
@@ -210,7 +210,7 @@ async function apiCall<T>(endpoint: string, options?: RequestInit): Promise<T> {
 
 // Order API Functions
 
-export const getOrders = async (filters: OrderFilters = {}): Promise<Order[]> => {
+export const getOrders = async (filters: OrderFilters = {}): Promise<OrderListResponse> => {
   try {
     const params = new URLSearchParams();
     
@@ -221,7 +221,7 @@ export const getOrders = async (filters: OrderFilters = {}): Promise<Order[]> =>
     });
 
     const response = await apiCall<OrderListResponse>(`/orders?${params.toString()}`);
-    return response.data;
+    return response;
   } catch (error) {
     console.error('Error fetching orders:', error);
     throw error;
@@ -393,13 +393,13 @@ export const getPaymentStatusLabel = (status: string): string => {
   return (statusLabels as any)[status] || status;
 };
 
-// Legacy compatibility functions (for WordPress migration)
+// Legacy compatibility functions
 export const createPendingOrder = async (orderData: CreateOrderData): Promise<Order> => {
   // Create order with pending status - same as createOrder but explicitly pending
   return createOrder({ ...orderData, paymentMethod: 'razorpay' });
 };
 
-export const getWordPressCheckoutUrl = (orderId: string): string => {
+export const getLegacyCheckoutUrl = (orderId: string): string => {
   // For migration period, redirect to our own checkout success page
   return `/order-success?order=${orderId}`;
 };

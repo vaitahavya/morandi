@@ -11,7 +11,7 @@ interface Product {
 
 interface RecommendationParams {
   productId?: string;
-  type?: 'personalized' | 'similar' | 'popular';
+  type?: 'personalized' | 'similar' | 'popular' | 'product';
   limit?: number;
 }
 

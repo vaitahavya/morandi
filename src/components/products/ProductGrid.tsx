@@ -10,7 +10,8 @@ export default function ProductGrid() {
   const categorySlug = searchParams.get('category');
   
   const filters = categorySlug ? { category: categorySlug } : {};
-  const { data: products = [], isLoading, error } = useProducts(filters);
+  const { data: productsData, isLoading, error } = useProducts(filters);
+  const products = productsData?.data || [];
 
   if (isLoading) {
     return (

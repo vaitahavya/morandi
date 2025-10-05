@@ -1,5 +1,5 @@
 // Native Payment API - Direct Razorpay integration
-// This library provides functions for payment processing without WordPress dependency
+// This library provides functions for payment processing
 
 export interface PaymentIntent {
   id: string;
@@ -345,7 +345,7 @@ export const createPendingOrder = async (orderData: any): Promise<any> => {
   throw new Error('Use native order creation flow');
 };
 
-export const getWordPressCheckoutUrl = (orderId: string): string => {
-  // Redirect to our native payment flow instead of WordPress
+export const getLegacyCheckoutUrl = (orderId: string): string => {
+  // Redirect to our native payment flow
   return `/checkout/payment?order=${orderId}`;
 };

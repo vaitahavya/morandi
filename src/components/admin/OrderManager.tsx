@@ -68,7 +68,7 @@ export default function OrderManager({ initialOrders = [] }: OrderManagerProps) 
   });
 
   // Load orders using TanStack Query
-  const { data: ordersData, isLoading, error: queryError } = useOrders(filters);
+  const { data: ordersData, isLoading, error: queryError, refetch } = useOrders(filters);
   
   // Update local state when query data changes
   useEffect(() => {
@@ -109,14 +109,12 @@ export default function OrderManager({ initialOrders = [] }: OrderManagerProps) 
   const handleFilterChange = (newFilters: Partial<OrderFilters>) => {
     const updatedFilters = { ...filters, ...newFilters, page: 1 };
     setFilters(updatedFilters);
-    loadOrders(updatedFilters);
   };
 
   // Handle pagination
   const handlePageChange = (newPage: number) => {
     const updatedFilters = { ...filters, page: newPage };
     setFilters(updatedFilters);
-    loadOrders(updatedFilters);
   };
 
   // Handle order details
@@ -131,10 +129,7 @@ export default function OrderManager({ initialOrders = [] }: OrderManagerProps) 
     setShowStatusUpdate(true);
   };
 
-  // Load orders on mount
-  useEffect(() => {
-    loadOrders();
-  }, []);
+  // Load orders on mount - handled by TanStack Query automatically
 
   const formatCurrency = (amount: number, currency: string = 'INR') => {
     return new Intl.NumberFormat('en-IN', {
@@ -216,8 +211,8 @@ export default function OrderManager({ initialOrders = [] }: OrderManagerProps) 
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() => loadOrders()}
-                disabled={loading}
+                onClick={() => refetch()}
+                disabled={isLoading}
               >
                 <RefreshCw className="h-4 w-4 mr-2" />
                 Refresh
@@ -297,7 +292,7 @@ export default function OrderManager({ initialOrders = [] }: OrderManagerProps) 
               selectedOrders={selectedOrders}
               onSuccess={() => {
                 setSelectedOrders([]);
-                loadOrders();
+                refetch();
               }}
             />
           )}
@@ -516,7 +511,7 @@ export default function OrderManager({ initialOrders = [] }: OrderManagerProps) 
             setSelectedOrder(null);
           }}
           onUpdate={() => {
-            loadOrders();
+            refetch();
             setShowOrderDetails(false);
             setSelectedOrder(null);
           }}
@@ -532,7 +527,7 @@ export default function OrderManager({ initialOrders = [] }: OrderManagerProps) 
             setSelectedOrder(null);
           }}
           onUpdate={() => {
-            loadOrders();
+            refetch();
             setShowStatusUpdate(false);
             setSelectedOrder(null);
           }}

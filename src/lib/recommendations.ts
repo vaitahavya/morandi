@@ -1,4 +1,4 @@
-import { DatabaseService } from './database';
+import { productRepository } from '@/repositories';
 import { prisma } from './db';
 
 export interface RecommendationAlgorithm {
@@ -31,34 +31,120 @@ export async function getProductRecommendations(
   userId?: string,
   limit: number = 5
 ) {
-  return await DatabaseService.getProductRecommendations(productId, limit);
+  // Get product recommendations from database
+  const recommendations = await prisma.productRecommendation.findMany({
+    where: { product_id: productId },
+    take: limit,
+    include: {
+      products_product_recommendations_recommended_product_idToproducts: true,
+    },
+    orderBy: { score: 'desc' },
+  });
+
+  return recommendations.map(rec => ({
+    id: rec.products_product_recommendations_recommended_product_idToproducts?.id,
+    name: rec.products_product_recommendations_recommended_product_idToproducts?.name,
+    price: rec.products_product_recommendations_recommended_product_idToproducts?.price,
+    images: rec.products_product_recommendations_recommended_product_idToproducts?.images,
+    score: rec.score,
+    reason: rec.reason,
+  })).filter(rec => rec.id);
 }
 
 export async function getPersonalizedRecommendations(
   userId: string,
   limit: number = 10
 ) {
-  return await DatabaseService.getPersonalizedRecommendations(userId, limit);
+  // Get user's order history
+  const userOrders = await prisma.order.findMany({
+    where: { user_id: userId },
+    include: { order_items: true },
+  });
+
+  if (userOrders.length === 0) {
+    return await getPopularProducts(limit);
+  }
+
+  // Get product IDs from user's history
+  const userProductIds = userOrders.flatMap(order => 
+    order.order_items.map(item => item.product_id).filter((id): id is string => id !== null)
+  );
+
+  // Get recommendations based on user's products
+  const recommendations = await prisma.productRecommendation.findMany({
+    where: {
+      product_id: { in: userProductIds },
+      recommended_product_id: { notIn: userProductIds },
+    },
+    take: limit,
+    include: {
+      products_product_recommendations_recommended_product_idToproducts: true,
+    },
+    orderBy: { score: 'desc' },
+  });
+
+  return recommendations.map(rec => ({
+    id: rec.products_product_recommendations_recommended_product_idToproducts?.id,
+    name: rec.products_product_recommendations_recommended_product_idToproducts?.name,
+    price: rec.products_product_recommendations_recommended_product_idToproducts?.price,
+    images: rec.products_product_recommendations_recommended_product_idToproducts?.images,
+    score: rec.score,
+    reason: rec.reason,
+  })).filter(rec => rec.id);
 }
 
 export async function getPopularProducts(limit: number = 10) {
-  return await DatabaseService.getPopularProducts(limit);
+  // Get popular products based on order frequency
+  const popularProducts = await prisma.product.findMany({
+    where: { status: 'published' },
+    take: limit,
+    orderBy: { created_at: 'desc' },
+  });
+
+  return popularProducts.map(product => ({
+    id: product.id,
+    name: product.name,
+    price: Number(product.price),
+    images: product.images,
+    score: 1.0,
+    reason: 'popular',
+  }));
 }
 
 export async function getSimilarProducts(
   productId: string,
   limit: number = 5
 ) {
-  const product = await DatabaseService.getProductById(productId);
+  const product = await prisma.product.findUnique({
+    where: { id: productId },
+    include: {
+      product_categories: {
+        include: {
+          categories: true,
+        },
+      },
+    },
+  });
   if (!product) return [];
 
   // Find products in the same category
   const categorySlugs = product.product_categories.map(pc => pc.categories.slug);
   if (categorySlugs.length === 0) return [];
 
-  const { products } = await DatabaseService.getProducts({
-    limit,
-    category: categorySlugs[0], // Use first category
+  const products = await prisma.product.findMany({
+    where: {
+      status: 'published',
+      id: { not: productId },
+      product_categories: {
+        some: {
+          categories: {
+            slug: categorySlugs[0], // Use first category
+          },
+        },
+      },
+    },
+    take: limit,
+    orderBy: { created_at: 'desc' },
   });
 
   // Filter out the current product
@@ -66,7 +152,17 @@ export async function getSimilarProducts(
 }
 
 export async function generateRecommendations() {
-  const { products } = await DatabaseService.getProducts({ limit: 1000 });
+  const products = await prisma.product.findMany({
+    where: { status: 'published' },
+    take: 1000,
+    include: {
+      product_categories: {
+        include: {
+          categories: true,
+        },
+      },
+    },
+  });
   
   if (!products) return;
 
@@ -75,9 +171,18 @@ export async function generateRecommendations() {
     const categorySlugs = product.product_categories.map(pc => pc.categories.slug);
     
     for (const categorySlug of categorySlugs) {
-      const { products: categoryProducts } = await DatabaseService.getProducts({
-        category: categorySlug,
-        limit: 50,
+      const categoryProducts = await prisma.product.findMany({
+        where: {
+          status: 'published',
+          product_categories: {
+            some: {
+              categories: {
+                slug: categorySlug,
+              },
+            },
+          },
+        },
+        take: 50,
       });
 
       // Create recommendations for category similarity
@@ -107,7 +212,10 @@ export async function generateRecommendations() {
 
     // Find products with similar tags
     if (product.tags.length > 0) {
-      const { products: allProducts } = await DatabaseService.getProducts({ limit: 1000 });
+      const allProducts = await prisma.product.findMany({
+        where: { status: 'published' },
+        take: 1000,
+      });
       
       for (const tagProduct of allProducts) {
         if (tagProduct.id !== product.id && tagProduct.tags.length > 0) {
@@ -144,7 +252,11 @@ export async function generateRecommendations() {
 }
 
 export async function updateRecommendationsForUser(userId: string) {
-  const { orders } = await DatabaseService.getOrders({ user_id: userId, limit: 1000 });
+  const orders = await prisma.order.findMany({
+    where: { user_id: userId },
+    include: { order_items: true },
+    take: 1000,
+  });
 
   // Find products that are frequently bought together
   for (const order of orders) {
@@ -154,6 +266,8 @@ export async function updateRecommendationsForUser(userId: string) {
       for (let j = i + 1; j < orderProductIds.length; j++) {
         const product1Id = orderProductIds[i];
         const product2Id = orderProductIds[j];
+
+        if (!product1Id || !product2Id) continue;
 
         // Create bidirectional recommendations
         await prisma.productRecommendation.upsert({

@@ -1,303 +1,373 @@
-import { PrismaClient } from '@prisma/client';
-import { 
-  IProductRepository, 
-  Product, 
-  ProductFilters, 
-  CreateProductData, 
-  UpdateProductData,
-  PaginationInfo 
-} from '@/interfaces/IProductRepository';
+import { PrismaClient, Product } from '@prisma/client';
+import { BaseRepository, FindManyOptions, PaginatedResult } from './base/BaseRepository';
 
-export class ProductRepository implements IProductRepository {
-  constructor(private prisma: PrismaClient) {}
+/**
+ * Product creation input type
+ */
+export interface CreateProductInput {
+  name: string;
+  slug: string;
+  description?: string;
+  shortDescription?: string;
+  price: number;
+  compareAtPrice?: number;
+  costPrice?: number;
+  sku?: string;
+  barcode?: string;
+  trackQuantity: boolean;
+  quantity?: number;
+  allowBackorder: boolean;
+  weight?: number;
+  weightUnit?: string;
+  status: string;
+  featured: boolean;
+  tags?: string[];
+  metaTitle?: string;
+  metaDescription?: string;
+  images?: string[];
+  categoryIds?: string[];
+  variantIds?: string[];
+}
+
+/**
+ * Product update input type
+ */
+export interface UpdateProductInput {
+  name?: string;
+  slug?: string;
+  description?: string;
+  shortDescription?: string;
+  price?: number;
+  compareAtPrice?: number;
+  costPrice?: number;
+  sku?: string;
+  barcode?: string;
+  trackQuantity?: boolean;
+  quantity?: number;
+  allowBackorder?: boolean;
+  weight?: number;
+  weightUnit?: string;
+  status?: string;
+  featured?: boolean;
+  tags?: string[];
+  metaTitle?: string;
+  metaDescription?: string;
+  images?: string[];
+}
+
+/**
+ * Product filter input type
+ */
+export interface ProductFilters {
+  name?: string;
+  slug?: string;
+  status?: string;
+  featured?: boolean;
+  categoryId?: string;
+  minPrice?: number;
+  maxPrice?: number;
+  tags?: string[];
+  inStock?: boolean;
+}
+
+/**
+ * Product repository interface
+ */
+export interface IProductRepository {
+  create(data: CreateProductInput): Promise<Product>;
+  findById(id: string): Promise<Product | null>;
+  findBySlug(slug: string): Promise<Product | null>;
+  findMany(filters?: ProductFilters, options?: FindManyOptions): Promise<PaginatedResult<Product>>;
+  update(id: string, data: UpdateProductInput): Promise<Product>;
+  delete(id: string): Promise<void>;
+  search(query: string, filters?: ProductFilters, options?: FindManyOptions): Promise<PaginatedResult<Product>>;
+  getFeaturedProducts(limit?: number): Promise<Product[]>;
+  getProductsByCategory(categoryId: string, options?: FindManyOptions): Promise<PaginatedResult<Product>>;
+  updateInventory(id: string, quantity: number): Promise<Product>;
+}
+
+/**
+ * Product repository implementation
+ */
+export class ProductRepository extends BaseRepository<Product, CreateProductInput, UpdateProductInput, ProductFilters> 
+  implements IProductRepository {
+
+  async create(data: CreateProductInput): Promise<Product> {
+    return await this.prisma.product.create({
+      data: {
+        name: data.name,
+        slug: data.slug,
+        description: data.description,
+        short_description: data.shortDescription,
+        price: data.price,
+        regular_price: data.compareAtPrice,
+        sku: data.sku,
+        manage_stock: data.trackQuantity,
+        stock_quantity: data.quantity,
+        weight: data.weight,
+        status: data.status,
+        featured: data.featured,
+        tags: data.tags,
+        meta_title: data.metaTitle,
+        meta_description: data.metaDescription,
+        images: data.images,
+        product_categories: data.categoryIds ? {
+          create: data.categoryIds.map(categoryId => ({
+            category_id: categoryId,
+          }))
+        } : undefined,
+      },
+      include: {
+        product_categories: {
+          include: {
+            categories: true,
+          },
+        },
+        variants: true,
+      },
+    });
+  }
 
   async findById(id: string): Promise<Product | null> {
-    const product = await this.prisma.product.findUnique({
+    return await this.prisma.product.findUnique({
       where: { id },
       include: {
         product_categories: {
           include: {
-            categories: true
-          }
+            categories: true,
+          },
         },
         variants: true,
-        attributes: true,
-        reviews: {
-          include: {
-            users: {
-              select: {
-                id: true,
-                name: true,
-                image: true
-              }
-            }
-          }
-        }
-      }
+      },
     });
-
-    return product ? this.mapToProduct(product) : null;
   }
 
   async findBySlug(slug: string): Promise<Product | null> {
-    const product = await this.prisma.product.findUnique({
+    return await this.prisma.product.findUnique({
       where: { slug },
       include: {
         product_categories: {
           include: {
-            categories: true
-          }
+            categories: true,
+          },
         },
         variants: true,
-        attributes: true,
-        reviews: {
-          include: {
-            users: {
-              select: {
-                id: true,
-                name: true,
-                image: true
-              }
-            }
-          }
-        }
-      }
+      },
     });
-
-    return product ? this.mapToProduct(product) : null;
   }
 
-  async findMany(filters: ProductFilters): Promise<{ products: Product[]; pagination: PaginationInfo }> {
-    const page = filters.page || 1;
-    const limit = Math.min(filters.limit || 20, 100);
-    const offset = (page - 1) * limit;
+  async findMany(filters: ProductFilters = {}, options: FindManyOptions = {}): Promise<PaginatedResult<Product>> {
+    const { page, limit, skip } = this.buildPaginationOptions(options);
+    const orderBy = this.buildOrderBy(options.sortBy, options.sortOrder);
 
-    // Build where conditions
-    const whereConditions: any = {};
-
+    // Build where clause
+    const where: any = {};
+    
+    if (filters.name) {
+      where.name = { contains: filters.name, mode: 'insensitive' };
+    }
+    if (filters.slug) {
+      where.slug = { contains: filters.slug, mode: 'insensitive' };
+    }
     if (filters.status) {
-      whereConditions.status = filters.status;
+      where.status = filters.status;
     }
-
-    if (filters.search) {
-      whereConditions.OR = [
-        { name: { contains: filters.search, mode: 'insensitive' } },
-        { description: { contains: filters.search, mode: 'insensitive' } },
-        { short_description: { contains: filters.search, mode: 'insensitive' } },
-        { sku: { contains: filters.search, mode: 'insensitive' } }
-      ];
+    if (filters.featured !== undefined) {
+      where.featured = filters.featured;
     }
-
-    if (filters.category) {
-      whereConditions.product_categories = {
+    if (filters.categoryId) {
+      where.product_categories = {
         some: {
-          categories: {
-            name: { contains: filters.category, mode: 'insensitive' }
-          }
-        }
+          category_id: filters.categoryId,
+        },
       };
     }
-
-    if (filters.featured !== undefined) {
-      whereConditions.featured = filters.featured;
-    }
-
-    if (filters.inStock !== undefined) {
-      whereConditions.stock_status = filters.inStock ? 'instock' : { not: 'instock' };
-    }
-
     if (filters.minPrice !== undefined || filters.maxPrice !== undefined) {
-      whereConditions.price = {};
+      where.price = {};
       if (filters.minPrice !== undefined) {
-        whereConditions.price.gte = filters.minPrice;
+        where.price.gte = filters.minPrice;
       }
       if (filters.maxPrice !== undefined) {
-        whereConditions.price.lte = filters.maxPrice;
+        where.price.lte = filters.maxPrice;
       }
     }
-
-    // Build order by
-    const orderBy: any = {};
-    if (filters.sortBy) {
-      orderBy[filters.sortBy] = filters.sortOrder || 'desc';
-    } else {
-      orderBy.created_at = 'desc';
+    if (filters.tags && filters.tags.length > 0) {
+      where.tags = {
+        hasSome: filters.tags,
+      };
+    }
+    if (filters.inStock !== undefined) {
+      if (filters.inStock) {
+        where.OR = [
+          { track_quantity: false },
+          { AND: [{ track_quantity: true }, { quantity: { gt: 0 } }] },
+        ];
+      } else {
+        where.AND = [
+          { track_quantity: true },
+          { quantity: { lte: 0 } },
+        ];
+      }
     }
 
     const [products, total] = await Promise.all([
       this.prisma.product.findMany({
-        where: whereConditions,
+        where,
+        skip,
+        take: limit,
+        orderBy: orderBy || { created_at: 'desc' },
         include: {
           product_categories: {
             include: {
-              categories: true
-            }
+              categories: true,
+            },
           },
           variants: true,
-          attributes: true,
-          reviews: true
         },
-        orderBy,
-        skip: offset,
-        take: limit
       }),
-      this.prisma.product.count({ where: whereConditions })
+      this.prisma.product.count({ where }),
     ]);
 
-    const totalPages = Math.ceil(total / limit);
-
     return {
-      products: products.map(product => this.mapToProduct(product)),
-      pagination: {
-        page,
-        limit,
-        total,
-        totalPages,
-        hasNextPage: page < totalPages,
-        hasPrevPage: page > 1
-      }
+      data: products,
+      pagination: this.buildPaginationMeta(page, limit, total),
     };
   }
 
-  async create(productData: CreateProductData): Promise<Product> {
-    const product = await this.prisma.product.create({
-      data: {
-        name: productData.name,
-        slug: productData.slug,
-        description: productData.description,
-        short_description: productData.shortDescription,
-        sku: productData.sku,
-        price: productData.price,
-        sale_price: productData.salePrice,
-        stock_quantity: productData.stockQuantity,
-        low_stock_threshold: productData.lowStockThreshold,
-        status: productData.status,
-        featured: productData.featured || false,
-        featured_image: productData.featuredImage,
-        images: productData.images || [],
-        stock_status: productData.stockQuantity > 0 ? 'instock' : 'outofstock',
-        product_categories: productData.categoryIds ? {
-          create: productData.categoryIds.map(categoryId => ({
-            categories: {
-              connect: { id: categoryId }
-            }
-          }))
-        } : undefined
-      },
-      include: {
-        product_categories: {
-          include: {
-            categories: true
-          }
-        },
-        variants: true,
-        attributes: true,
-        reviews: true
-      }
-    });
+  async update(id: string, data: UpdateProductInput): Promise<Product> {
+    const updateData: any = { ...data };
+    
+    // Map camelCase to snake_case for database fields
+    if (data.shortDescription !== undefined) updateData.short_description = data.shortDescription;
+    if (data.compareAtPrice !== undefined) updateData.compare_at_price = data.compareAtPrice;
+    if (data.costPrice !== undefined) updateData.cost_price = data.costPrice;
+    if (data.trackQuantity !== undefined) updateData.track_quantity = data.trackQuantity;
+    if (data.allowBackorder !== undefined) updateData.allow_backorder = data.allowBackorder;
+    if (data.weightUnit !== undefined) updateData.weight_unit = data.weightUnit;
+    if (data.metaTitle !== undefined) updateData.meta_title = data.metaTitle;
+    if (data.metaDescription !== undefined) updateData.meta_description = data.metaDescription;
+    
+    // Always update the updatedAt timestamp
+    updateData.updatedAt = new Date();
 
-    return this.mapToProduct(product);
-  }
-
-  async update(id: string, productData: UpdateProductData): Promise<Product> {
-    const product = await this.prisma.product.update({
+    return await this.prisma.product.update({
       where: { id },
-      data: {
-        ...(productData.name && { name: productData.name }),
-        ...(productData.slug && { slug: productData.slug }),
-        ...(productData.description !== undefined && { description: productData.description }),
-        ...(productData.shortDescription !== undefined && { short_description: productData.shortDescription }),
-        ...(productData.sku !== undefined && { sku: productData.sku }),
-        ...(productData.price !== undefined && { price: productData.price }),
-        ...(productData.salePrice !== undefined && { sale_price: productData.salePrice }),
-        ...(productData.stockQuantity !== undefined && { 
-          stock_quantity: productData.stockQuantity,
-          stock_status: productData.stockQuantity > 0 ? 'instock' : 'outofstock'
-        }),
-        ...(productData.lowStockThreshold !== undefined && { low_stock_threshold: productData.lowStockThreshold }),
-        ...(productData.status && { status: productData.status }),
-        ...(productData.featured !== undefined && { featured: productData.featured }),
-        ...(productData.featuredImage !== undefined && { featured_image: productData.featuredImage }),
-        ...(productData.images !== undefined && { images: productData.images }),
-        updated_at: new Date()
-      },
+      data: updateData,
       include: {
         product_categories: {
           include: {
-            categories: true
-          }
+            categories: true,
+          },
         },
         variants: true,
-        attributes: true,
-        reviews: true
-      }
+      },
     });
-
-    return this.mapToProduct(product);
   }
 
   async delete(id: string): Promise<void> {
     await this.prisma.product.delete({
-      where: { id }
+      where: { id },
     });
   }
 
-  async search(query: string, filters?: ProductFilters): Promise<Product[]> {
-    const searchFilters: ProductFilters = {
-      ...filters,
-      search: query
+  async search(query: string, filters: ProductFilters = {}, options: FindManyOptions = {}): Promise<PaginatedResult<Product>> {
+    const { page, limit, skip } = this.buildPaginationOptions(options);
+    const orderBy = this.buildOrderBy(options.sortBy, options.sortOrder);
+
+    // Build search where clause
+    const where: any = {
+      OR: [
+        { name: { contains: query, mode: 'insensitive' } },
+        { description: { contains: query, mode: 'insensitive' } },
+        { short_description: { contains: query, mode: 'insensitive' } },
+        { sku: { contains: query, mode: 'insensitive' } },
+        { tags: { hasSome: [query] } },
+      ],
     };
 
-    const result = await this.findMany(searchFilters);
-    return result.products;
+    // Apply additional filters
+    if (filters.status) {
+      where.status = filters.status;
+    }
+    if (filters.featured !== undefined) {
+      where.featured = filters.featured;
+    }
+    if (filters.categoryId) {
+      where.product_categories = {
+        some: {
+          category_id: filters.categoryId,
+        },
+      };
+    }
+
+    const [products, total] = await Promise.all([
+      this.prisma.product.findMany({
+        where,
+        skip,
+        take: limit,
+        orderBy: orderBy || { created_at: 'desc' },
+        include: {
+          product_categories: {
+            include: {
+              categories: true,
+            },
+          },
+          variants: true,
+        },
+      }),
+      this.prisma.product.count({ where }),
+    ]);
+
+    return {
+      data: products,
+      pagination: this.buildPaginationMeta(page, limit, total),
+    };
   }
 
-  private mapToProduct(prismaProduct: any): Product {
-    return {
-      id: prismaProduct.id,
-      name: prismaProduct.name,
-      slug: prismaProduct.slug,
-      description: prismaProduct.description,
-      shortDescription: prismaProduct.short_description,
-      sku: prismaProduct.sku,
-      price: Number(prismaProduct.price),
-      salePrice: prismaProduct.sale_price ? Number(prismaProduct.sale_price) : undefined,
-      regularPrice: Number(prismaProduct.price),
-      stockQuantity: prismaProduct.stock_quantity || 0,
-      stockStatus: prismaProduct.stock_status,
-      lowStockThreshold: prismaProduct.low_stock_threshold,
-      status: prismaProduct.status,
-      featured: prismaProduct.featured,
-      featuredImage: prismaProduct.featured_image,
-      images: prismaProduct.images || [],
-      categories: prismaProduct.product_categories?.map((pc: any) => ({
-        id: pc.categories.id,
-        name: pc.categories.name,
-        slug: pc.categories.slug
-      })),
-      variants: prismaProduct.variants?.map((variant: any) => ({
-        id: variant.id,
-        name: variant.name,
-        sku: variant.sku,
-        price: Number(variant.price),
-        salePrice: variant.sale_price ? Number(variant.sale_price) : undefined,
-        stockQuantity: variant.stock_quantity || 0,
-        attributes: variant.attributes
-      })),
-      attributes: prismaProduct.attributes?.map((attr: any) => ({
-        id: attr.id,
-        name: attr.name,
-        value: attr.value
-      })),
-      reviews: prismaProduct.reviews?.map((review: any) => ({
-        id: review.id,
-        rating: review.rating,
-        comment: review.comment,
-        userId: review.user_id,
-        createdAt: review.created_at.toISOString()
-      })),
-      createdAt: prismaProduct.created_at.toISOString(),
-      updatedAt: prismaProduct.updated_at.toISOString()
-    };
+  async getFeaturedProducts(limit: number = 10): Promise<Product[]> {
+    return await this.prisma.product.findMany({
+      where: {
+        featured: true,
+        status: 'published',
+      },
+      take: limit,
+      orderBy: { created_at: 'desc' },
+      include: {
+        product_categories: {
+          include: {
+            categories: true,
+          },
+        },
+        variants: true,
+      },
+    });
+  }
+
+  async getProductsByCategory(categoryId: string, options: FindManyOptions = {}): Promise<PaginatedResult<Product>> {
+    return await this.findMany(
+      { categoryId },
+      options
+    );
+  }
+
+  async updateInventory(id: string, quantity: number): Promise<Product> {
+    return await this.prisma.product.update({
+      where: { id },
+      data: {
+        stock_quantity: quantity,
+        updated_at: new Date(),
+      },
+      include: {
+        product_categories: {
+          include: {
+            categories: true,
+          },
+        },
+        variants: true,
+      },
+    });
   }
 }
+
+// Export singleton instance
+export const productRepository = new ProductRepository(new PrismaClient());

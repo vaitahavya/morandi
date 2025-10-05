@@ -1,4 +1,4 @@
-// Native Products API - Replaces WordPress/WooCommerce API
+// Products API - Native e-commerce product management
 // This library provides functions to interact with our native product APIs
 
 export interface ProductImage {
@@ -136,9 +136,9 @@ async function apiCall<T>(endpoint: string, options?: RequestInit): Promise<T> {
 
 // Product API Functions
 
-export const getProducts = async (filters: ProductFilters = {}): Promise<Product[]> => {
+export const getProducts = async (filters: ProductFilters = {}): Promise<ProductListResponse> => {
   const response = await getProductsWithPagination(filters);
-  return response.data;
+  return response;
 };
 
 export const getProductsWithPagination = async (filters: ProductFilters = {}): Promise<ProductListResponse> => {

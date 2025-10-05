@@ -2,10 +2,9 @@ import { PrismaClient } from '@prisma/client';
 import { ProductRepository } from '@/repositories/ProductRepository';
 import { OrderRepository } from '@/repositories/OrderRepository';
 import { UserRepository } from '@/repositories/UserRepository';
-import { ProductService } from '@/services/ProductService';
-import { OrderService } from '@/services/OrderService';
-import { AuthService } from '@/services/AuthService';
+import { productService, orderService, userService } from '@/services';
 import { EmailService } from '@/services/EmailService';
+import { prisma } from '@/lib/db';
 
 export class Container {
   private static instance: Container;
@@ -32,23 +31,11 @@ export class Container {
     this.register('orderRepository', new OrderRepository(prisma));
     this.register('userRepository', new UserRepository(prisma));
 
-    // Services
+    // Services (using singleton instances from the new architecture)
     this.register('emailService', new EmailService());
-    this.register('productService', new ProductService(
-      this.get('productRepository'),
-      this.get('emailService')
-    ));
-    this.register('orderService', new OrderService(
-      this.get('orderRepository'),
-      this.get('productRepository'),
-      this.get('emailService')
-    ));
-    this.register('authService', new AuthService(
-      this.get('userRepository'), // This would need to be implemented
-      this.get('emailService'),
-      process.env.NEXTAUTH_SECRET || 'fallback-secret',
-      '7d'
-    ));
+    this.register('productService', productService);
+    this.register('orderService', orderService);
+    this.register('userService', userService);
   }
 
   register<T>(name: string, service: T): void {
@@ -64,16 +51,16 @@ export class Container {
   }
 
   // Convenience methods for common services
-  getProductService(): ProductService {
+  getProductService() {
     return this.get('productService');
   }
 
-  getOrderService(): OrderService {
+  getOrderService() {
     return this.get('orderService');
   }
 
-  getAuthService(): AuthService {
-    return this.get('authService');
+  getUserService() {
+    return this.get('userService');
   }
 
   getEmailService(): EmailService {

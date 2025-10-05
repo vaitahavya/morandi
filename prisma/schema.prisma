@@ -13,6 +13,7 @@ model User {
   emailVerified                       DateTime?               @map("email_verified") @db.Timestamptz(6)
   name                                String?                 @db.VarChar
   image                               String?                 @db.VarChar
+  password                            String?                 @db.VarChar
   role                                String                  @default("customer") @db.VarChar
   phone                               String?                 @db.VarChar
   createdAt                           DateTime                @default(now()) @map("created_at") @db.Timestamptz(6)
@@ -83,7 +84,6 @@ model VerificationToken {
 
 model Product {
   id                                                                               String                  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  woocommerce_id                                                                   String?                 @unique @db.VarChar
   name                                                                             String                  @db.VarChar
   description                                                                      String?
   price                                                                            Decimal                 @db.Decimal(10, 2)
@@ -125,7 +125,6 @@ model Product {
   @@index([slug], map: "idx_products_slug")
   @@index([status], map: "idx_products_status")
   @@index([stock_status], map: "idx_products_stock_status")
-  @@index([woocommerce_id], map: "idx_products_woocommerce_id")
   @@map("products")
 }
 

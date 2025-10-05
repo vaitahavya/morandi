@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { DatabaseService } from '@/lib/database';
+import { returnRepository } from '@/repositories';
+import { prisma } from '@/lib/db';
 
 export async function GET(request: NextRequest) {
   try {
@@ -14,27 +15,24 @@ export async function GET(request: NextRequest) {
     const sortBy = searchParams.get('sortBy') || 'created_at';
     const sortOrder = searchParams.get('sortOrder') || 'desc';
 
-    const result = await DatabaseService.getReturns({
-      page,
-      limit,
-      status,
-      orderId,
-      customerEmail,
-      sortBy,
-      sortOrder: sortOrder as 'asc' | 'desc',
-    });
+    const result = await returnRepository.findMany(
+      {
+        status: status || undefined,
+        orderId: orderId || undefined,
+        customerEmail: customerEmail || undefined,
+      },
+      {
+        page,
+        limit,
+        sortBy: sortBy || 'created_at',
+        sortOrder: sortOrder as 'asc' | 'desc',
+      }
+    );
 
     return NextResponse.json({
       success: true,
-      data: result.returns,
-      pagination: {
-        page: result.page,
-        limit: result.limit,
-        totalCount: result.total,
-        totalPages: result.totalPages,
-        hasNextPage: result.hasNextPage,
-        hasPrevPage: result.hasPrevPage
-      }
+      data: result.data,
+      pagination: result.pagination
     });
 
   } catch (error) {
@@ -71,7 +69,10 @@ export async function POST(request: NextRequest) {
     }
 
     // Verify order exists and belongs to customer
-    const order = await DatabaseService.getOrderById(orderId);
+    const order = await prisma.order.findUnique({
+      where: { id: orderId },
+      include: { order_items: true },
+    });
 
     if (!order || order.customer_email !== customerEmail) {
       return NextResponse.json({ 
@@ -124,26 +125,36 @@ export async function POST(request: NextRequest) {
 
       validItems.push({
         order_item_id: item.orderItemId,
-        product_id: orderItem.product_id,
-        product_name: orderItem.product_name,
+        product_id: orderItem.product_id || '',
+        product_name: orderItem.product_name || '',
         quantity_returned: item.quantity,
-        unit_price: orderItem.unit_price || orderItem.price,
+        unit_price: Number(orderItem.unit_price || orderItem.price),
         total_refund_amount: itemRefundAmount
       });
     }
 
     // Create return record
-    const newReturn = await DatabaseService.createReturn({
-      order_id: orderId,
-      customer_email: customerEmail,
-      customer_phone: customerPhone,
-      return_reason: returnReason,
-      return_description: returnDescription,
-      return_type: returnType,
-      refund_amount: totalRefundAmount,
+    const newReturn = await returnRepository.create({
+      returnNumber: `RET-${Date.now()}`,
+      orderId: orderId,
+      customerEmail: customerEmail,
+      customerPhone: customerPhone,
+      returnReason: returnReason,
+      returnDescription: returnDescription,
+      status: 'pending',
+      returnType: returnType || 'refund',
+      refundAmount: totalRefundAmount,
       images,
       videos,
-      items: validItems
+      items: validItems.map(item => ({
+        orderItemId: item.order_item_id,
+        productId: item.product_id,
+        productName: item.product_name,
+        quantity: item.quantity_returned,
+        unitPrice: item.unit_price,
+        totalRefundAmount: item.total_refund_amount,
+        restockable: true
+      }))
     });
 
     return NextResponse.json({

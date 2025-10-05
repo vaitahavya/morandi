@@ -25,7 +25,6 @@ export interface ImageUploadConfig {
     // Supabase config (for backward compatibility)
     supabaseUrl?: string;
     supabaseKey?: string;
-    bucket?: string;
   };
 }
 

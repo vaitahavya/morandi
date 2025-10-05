@@ -20,7 +20,6 @@ export default function QueryProvider({
       {process.env.NODE_ENV === 'development' && (
         <ReactQueryDevtools 
           initialIsOpen={false}
-          position="bottom-right"
         />
       )}
     </QueryClientProvider>

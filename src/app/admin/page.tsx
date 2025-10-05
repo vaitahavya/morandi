@@ -3,7 +3,6 @@
 import { useState } from 'react';
 import AdminLayout from '@/components/admin/AdminLayout';
 import AdminAuthGuard from '@/components/admin/AdminAuthGuard';
-import WooCommerceSync from '@/components/admin/WooCommerceSync';
 import ProductManager from '@/components/admin/ProductManager';
 import OrderManager from '@/components/admin/OrderManager';
 import AnalyticsDashboard from '@/components/admin/AnalyticsDashboard';
@@ -113,7 +112,10 @@ export default function AdminPage() {
       case 'integrations':
         return (
           <div className="container mx-auto px-4 py-8">
-            <WooCommerceSync />
+            <div className="bg-white rounded-lg p-6 border">
+              <h2 className="text-xl font-bold mb-4">Integrations</h2>
+              <p>Integration settings and third-party connections will be available here.</p>
+            </div>
           </div>
         );
       case 'settings':

@@ -82,7 +82,7 @@ export default function CustomerManager({ initialCustomers = [] }: CustomerManag
   });
 
   // Load customers using TanStack Query
-  const { data: customersData, isLoading, error: queryError } = useCustomers(filters);
+  const { data: customersData, isLoading, error: queryError, refetch } = useCustomers(filters);
   
   // Update local state when query data changes
   useEffect(() => {
@@ -110,14 +110,14 @@ export default function CustomerManager({ initialCustomers = [] }: CustomerManag
   const handleFilterChange = (newFilters: Partial<CustomerFilters>) => {
     const updatedFilters = { ...filters, ...newFilters, page: 1 };
     setFilters(updatedFilters);
-    loadCustomers(updatedFilters);
+    refetch();
   };
 
   // Handle pagination
   const handlePageChange = (newPage: number) => {
     const updatedFilters = { ...filters, page: newPage };
     setFilters(updatedFilters);
-    loadCustomers(updatedFilters);
+    refetch();
   };
 
   // Handle customer details view
@@ -128,7 +128,7 @@ export default function CustomerManager({ initialCustomers = [] }: CustomerManag
 
   // Load customers on mount
   useEffect(() => {
-    loadCustomers();
+    refetch();
   }, []);
 
   const formatCurrency = (amount: number, currency: string = 'INR') => {
@@ -197,7 +197,7 @@ export default function CustomerManager({ initialCustomers = [] }: CustomerManag
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() => loadCustomers()}
+                onClick={() => refetch()}
                 disabled={loading}
               >
                 <RefreshCw className="h-4 w-4 mr-2" />

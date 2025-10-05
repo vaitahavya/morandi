@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { DatabaseService } from '@/lib/database';
+import { customerRepository } from '@/repositories';
 
 export async function GET(request: NextRequest) {
   try {
@@ -13,27 +13,15 @@ export async function GET(request: NextRequest) {
     const sortBy = searchParams.get('sortBy') || 'lastOrderDate';
     const sortOrder = searchParams.get('sortOrder') || 'desc';
 
-    const result = await DatabaseService.getCustomers({
-      page,
-      limit,
-      search,
-      segment,
-      sortBy,
-      sortOrder: sortOrder as 'asc' | 'desc',
-    });
+    const result = await customerRepository.findMany(
+      { segment },
+      { page, limit, sortBy, sortOrder: sortOrder as 'asc' | 'desc' }
+    );
 
     return NextResponse.json({
       success: true,
-      data: result.customers,
-      pagination: {
-        page: result.page,
-        limit: result.limit,
-        total: result.total,
-        totalPages: result.totalPages,
-        hasNextPage: result.hasNextPage,
-        hasPrevPage: result.hasPrevPage
-      },
-      stats: result.stats
+      data: result.data,
+      pagination: result.pagination
     });
 
   } catch (error) {

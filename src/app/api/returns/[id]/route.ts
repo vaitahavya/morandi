@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { DatabaseService } from '@/lib/database';
+import { returnRepository } from '@/repositories';
 import { prisma } from '@/lib/db';
 
 export async function GET(
@@ -10,7 +10,7 @@ export async function GET(
     const returnId = params.id;
 
     // Fetch return details with related data
-    const returnData = await DatabaseService.getReturnById(returnId);
+    const returnData = await returnRepository.findById(returnId);
 
     if (!returnData) {
       return NextResponse.json({ 
@@ -74,7 +74,7 @@ export async function PUT(
     }
 
     // Fetch current return data
-    const currentReturn = await DatabaseService.getReturnById(returnId);
+    const currentReturn = await returnRepository.findById(returnId);
 
     if (!currentReturn) {
       return NextResponse.json({ 
@@ -155,13 +155,13 @@ export async function PUT(
         select: { total: true, payment_status: true },
       });
 
-      if (orderData && updatedReturn.refund_amount && updatedReturn.refund_amount >= Number(orderData.total)) {
+      if (orderData && updatedReturn.refund_amount && Number(updatedReturn.refund_amount) >= Number(orderData.total)) {
         // Full refund - update order payment status
         await prisma.order.update({
           where: { id: currentReturn.order_id! },
           data: { payment_status: 'refunded' },
         });
-      } else if (orderData && updatedReturn.refund_amount && updatedReturn.refund_amount > 0) {
+      } else if (orderData && updatedReturn.refund_amount && Number(updatedReturn.refund_amount) > 0) {
         // Partial refund
         await prisma.order.update({
           where: { id: currentReturn.order_id! },

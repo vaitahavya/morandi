@@ -24,9 +24,6 @@ const nextConfig = {
       },
     ],
   },
-  env: {
-    WORDPRESS_API_URL: process.env.WORDPRESS_API_URL,
-  },
   // Optimize for Vercel deployment
   output: 'standalone',
   // Reduce build time

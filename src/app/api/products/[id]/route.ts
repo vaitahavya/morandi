@@ -95,7 +95,6 @@ export async function GET(
       featured: product.featured,
       meta_title: product.meta_title,
       meta_description: product.meta_description,
-      woocommerce_id: product.woocommerce_id,
       categories: product.product_categories.map((pc: any) => pc.categories),
       variants: product.variants,
       attributes: product.attributes.reduce((acc: Record<string, string[]>, attr: any) => {

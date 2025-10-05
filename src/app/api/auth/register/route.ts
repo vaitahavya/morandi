@@ -1,50 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { prisma } from '@/lib/db';
-import bcrypt from 'bcryptjs';
+import { userService } from '@/services';
 import { sendEmail } from '@/lib/email';
 
 export async function POST(request: NextRequest) {
   try {
     const { name, email, password } = await request.json();
 
-    if (!name || !email || !password) {
-      return NextResponse.json(
-        { error: 'Missing required fields' },
-        { status: 400 }
-      );
-    }
-
-    if (password.length < 6) {
-      return NextResponse.json(
-        { error: 'Password must be at least 6 characters long' },
-        { status: 400 }
-      );
-    }
-
-    // Check if user already exists
-    const existingUser = await prisma.user.findUnique({
-      where: { email },
-    });
-
-    if (existingUser) {
-      return NextResponse.json(
-        { error: 'User already exists with this email' },
-        { status: 400 }
-      );
-    }
-
-    // Hash password
-    const hashedPassword = await bcrypt.hash(password, 12);
-
-    // Create user
-    const user = await prisma.user.create({
-      data: {
-        name,
-        email,
-        password: hashedPassword,
-        role: 'customer',
-        emailVerified: null, // Will be verified when they sign in
-      },
+    // Create user using service layer (includes all validation)
+    const user = await userService.createUser({
+      name,
+      email,
+      password,
+      role: 'customer',
     });
 
     // Send welcome email

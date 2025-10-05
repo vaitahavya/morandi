@@ -1,7 +1,5 @@
-import { useMemo } from 'react';
-import { container } from '@/container/Container';
-import { ProductService } from '@/services/ProductService';
+import { productService } from '@/services';
 
-export function useProductService(): ProductService {
-  return useMemo(() => container.getProductService(), []);
+export function useProductService() {
+  return productService;
 }

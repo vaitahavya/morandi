@@ -1,304 +1,388 @@
-import { PrismaClient } from '@prisma/client';
-import { 
-  IOrderRepository, 
-  Order, 
-  OrderFilters, 
-  CreateOrderData, 
-  UpdateOrderData,
-  OrderStatus,
-  PaginationInfo 
-} from '@/interfaces/IOrderRepository';
+import { PrismaClient, Order, OrderItem } from '@prisma/client';
+import { BaseRepository, FindManyOptions, PaginatedResult } from './base/BaseRepository';
 
-export class OrderRepository implements IOrderRepository {
-  constructor(private prisma: PrismaClient) {}
+/**
+ * Order creation input type
+ */
+export interface CreateOrderInput {
+  userId?: string;
+  status: string;
+  total: number;
+  orderNumber: string;
+  paymentStatus: string;
+  customerEmail: string;
+  customerPhone?: string;
+  billingFirstName: string;
+  billingLastName: string;
+  billingCompany?: string;
+  billingAddress1: string;
+  billingAddress2?: string;
+  billingCity: string;
+  billingState?: string;
+  billingPostcode: string;
+  billingCountry: string;
+  shippingFirstName?: string;
+  shippingLastName?: string;
+  shippingCompany?: string;
+  shippingAddress1?: string;
+  shippingAddress2?: string;
+  shippingCity?: string;
+  shippingState?: string;
+  shippingPostcode?: string;
+  shippingCountry?: string;
+  paymentMethod?: string;
+  paymentMethodTitle?: string;
+  shippingMethod?: string;
+  shippingMethodTitle?: string;
+  shippingCost?: number;
+  taxAmount?: number;
+  discountAmount?: number;
+  customerNotes?: string;
+  currency?: string;
+  items: CreateOrderItemInput[];
+}
 
-  async findById(id: string): Promise<Order | null> {
-    const order = await this.prisma.order.findUnique({
+/**
+ * Order item creation input type
+ */
+export interface CreateOrderItemInput {
+  productId: string;
+  variantId?: string;
+  quantity: number;
+  price: number;
+  productName: string;
+  productSku?: string;
+  variantName?: string;
+  unitPrice?: number;
+  totalPrice?: number;
+  attributes?: any;
+  productImage?: string;
+}
+
+/**
+ * Order update input type
+ */
+export interface UpdateOrderInput {
+  status?: string;
+  total?: number;
+  paymentStatus?: string;
+  customerEmail?: string;
+  customerPhone?: string;
+  customerNotes?: string;
+  shippingCost?: number;
+  taxAmount?: number;
+  discountAmount?: number;
+}
+
+/**
+ * Order filter input type
+ */
+export interface OrderFilters {
+  userId?: string;
+  status?: string;
+  paymentStatus?: string;
+  customerEmail?: string;
+  orderNumber?: string;
+  dateFrom?: Date;
+  dateTo?: Date;
+  minTotal?: number;
+  maxTotal?: number;
+}
+
+/**
+ * Order with items type
+ */
+export interface OrderWithItems extends Order {
+  order_items: OrderItem[];
+}
+
+/**
+ * Order repository interface
+ */
+export interface IOrderRepository {
+  create(data: CreateOrderInput): Promise<OrderWithItems>;
+  findById(id: string): Promise<OrderWithItems | null>;
+  findByOrderNumber(orderNumber: string): Promise<OrderWithItems | null>;
+  findMany(filters?: OrderFilters, options?: FindManyOptions): Promise<PaginatedResult<OrderWithItems>>;
+  update(id: string, data: UpdateOrderInput): Promise<OrderWithItems>;
+  delete(id: string): Promise<void>;
+  updateStatus(id: string, status: string, notes?: string, changedBy?: string): Promise<OrderWithItems>;
+  getOrdersByUser(userId: string, options?: FindManyOptions): Promise<PaginatedResult<OrderWithItems>>;
+  getOrderStats(filters?: OrderFilters): Promise<{
+    totalOrders: number;
+    totalRevenue: number;
+    averageOrderValue: number;
+    statusBreakdown: Record<string, number>;
+  }>;
+}
+
+/**
+ * Order repository implementation
+ */
+export class OrderRepository extends BaseRepository<OrderWithItems, CreateOrderInput, UpdateOrderInput, OrderFilters> 
+  implements IOrderRepository {
+
+  async create(data: CreateOrderInput): Promise<OrderWithItems> {
+    return await this.prisma.$transaction(async (tx) => {
+      // Create the order
+      const order = await tx.order.create({
+        data: {
+          user_id: data.userId,
+          status: data.status,
+          total: data.total,
+          order_number: data.orderNumber,
+          payment_status: data.paymentStatus,
+          customer_email: data.customerEmail,
+          customer_phone: data.customerPhone,
+          billing_first_name: data.billingFirstName,
+          billing_last_name: data.billingLastName,
+          billing_company: data.billingCompany,
+          billing_address1: data.billingAddress1,
+          billing_address2: data.billingAddress2,
+          billing_city: data.billingCity,
+          billing_state: data.billingState,
+          billing_postcode: data.billingPostcode,
+          billing_country: data.billingCountry,
+          shipping_first_name: data.shippingFirstName,
+          shipping_last_name: data.shippingLastName,
+          shipping_company: data.shippingCompany,
+          shipping_address1: data.shippingAddress1,
+          shipping_address2: data.shippingAddress2,
+          shipping_city: data.shippingCity,
+          shipping_state: data.shippingState,
+          shipping_postcode: data.shippingPostcode,
+          shipping_country: data.shippingCountry,
+          payment_method: data.paymentMethod,
+          payment_method_title: data.paymentMethodTitle,
+          shipping_method: data.shippingMethod,
+          shipping_method_title: data.shippingMethodTitle,
+          shipping_cost: data.shippingCost,
+          tax_amount: data.taxAmount,
+          discount_amount: data.discountAmount,
+          customer_notes: data.customerNotes,
+          currency: data.currency,
+        },
+      });
+
+      // Create order items
+      const orderItems = await Promise.all(
+        data.items.map(item =>
+          tx.orderItem.create({
+            data: {
+              order_id: order.id,
+              product_id: item.productId,
+              variant_id: item.variantId,
+              quantity: item.quantity,
+              price: item.price,
+              product_name: item.productName,
+              product_sku: item.productSku,
+              variant_name: item.variantName,
+              unit_price: item.unitPrice,
+              total_price: item.totalPrice,
+              attributes: item.attributes,
+              product_image: item.productImage,
+            },
+          })
+        )
+      );
+
+      // Return order with items
+      return {
+        ...order,
+        order_items: orderItems,
+      };
+    });
+  }
+
+  async findById(id: string): Promise<OrderWithItems | null> {
+    return await this.prisma.order.findUnique({
       where: { id },
       include: {
         order_items: true,
-        statusHistory: {
-          orderBy: { created_at: 'desc' }
-        }
-      }
+      },
     });
-
-    return order ? this.mapToOrder(order) : null;
   }
 
-  async findByOrderNumber(orderNumber: string): Promise<Order | null> {
-    const order = await this.prisma.order.findUnique({
+  async findByOrderNumber(orderNumber: string): Promise<OrderWithItems | null> {
+    return await this.prisma.order.findUnique({
       where: { order_number: orderNumber },
       include: {
         order_items: true,
-        statusHistory: {
-          orderBy: { created_at: 'desc' }
-        }
-      }
+      },
     });
-
-    return order ? this.mapToOrder(order) : null;
   }
 
-  async findMany(filters: OrderFilters): Promise<{ orders: Order[]; pagination: PaginationInfo }> {
-    const page = filters.page || 1;
-    const limit = Math.min(filters.limit || 20, 100);
-    const offset = (page - 1) * limit;
+  async findMany(filters: OrderFilters = {}, options: FindManyOptions = {}): Promise<PaginatedResult<OrderWithItems>> {
+    const { page, limit, skip } = this.buildPaginationOptions(options);
+    const orderBy = this.buildOrderBy(options.sortBy, options.sortOrder);
 
-    // Build where conditions
-    const whereConditions: any = {};
-
+    // Build where clause
+    const where: any = {};
+    
     if (filters.userId) {
-      whereConditions.user_id = filters.userId;
+      where.user_id = filters.userId;
     }
-
     if (filters.status) {
-      whereConditions.status = filters.status;
+      where.status = filters.status;
     }
-
     if (filters.paymentStatus) {
-      whereConditions.payment_status = filters.paymentStatus;
+      where.payment_status = filters.paymentStatus;
     }
-
-    if (filters.search) {
-      whereConditions.OR = [
-        { order_number: { contains: filters.search, mode: 'insensitive' } },
-        { customer_email: { contains: filters.search, mode: 'insensitive' } },
-        { billing_first_name: { contains: filters.search, mode: 'insensitive' } },
-        { billing_last_name: { contains: filters.search, mode: 'insensitive' } }
-      ];
+    if (filters.customerEmail) {
+      where.customer_email = { contains: filters.customerEmail, mode: 'insensitive' };
     }
-
-    if (filters.fromDate || filters.toDate) {
-      whereConditions.created_at = {};
-      if (filters.fromDate) {
-        whereConditions.created_at.gte = new Date(filters.fromDate);
+    if (filters.orderNumber) {
+      where.order_number = { contains: filters.orderNumber, mode: 'insensitive' };
+    }
+    if (filters.dateFrom || filters.dateTo) {
+      where.created_at = {};
+      if (filters.dateFrom) {
+        where.created_at.gte = filters.dateFrom;
       }
-      if (filters.toDate) {
-        whereConditions.created_at.lte = new Date(filters.toDate);
+      if (filters.dateTo) {
+        where.created_at.lte = filters.dateTo;
       }
     }
-
-    // Build order by
-    const orderBy: any = {};
-    if (filters.sortBy) {
-      orderBy[filters.sortBy] = filters.sortOrder || 'desc';
-    } else {
-      orderBy.created_at = 'desc';
+    if (filters.minTotal !== undefined || filters.maxTotal !== undefined) {
+      where.total = {};
+      if (filters.minTotal !== undefined) {
+        where.total.gte = filters.minTotal;
+      }
+      if (filters.maxTotal !== undefined) {
+        where.total.lte = filters.maxTotal;
+      }
     }
 
     const [orders, total] = await Promise.all([
       this.prisma.order.findMany({
-        where: whereConditions,
+        where,
+        skip,
+        take: limit,
+        orderBy: orderBy || { created_at: 'desc' },
         include: {
           order_items: true,
-          statusHistory: {
-            orderBy: { created_at: 'desc' }
-          }
         },
-        orderBy,
-        skip: offset,
-        take: limit
       }),
-      this.prisma.order.count({ where: whereConditions })
+      this.prisma.order.count({ where }),
     ]);
 
-    const totalPages = Math.ceil(total / limit);
-
     return {
-      orders: orders.map(order => this.mapToOrder(order)),
-      pagination: {
-        page,
-        limit,
-        total,
-        totalPages,
-        hasNextPage: page < totalPages,
-        hasPrevPage: page > 1
-      }
+      data: orders,
+      pagination: this.buildPaginationMeta(page, limit, total),
     };
   }
 
-  async create(orderData: CreateOrderData): Promise<Order> {
-    // Generate order number
-    const orderNumber = await this.generateOrderNumber();
+  async update(id: string, data: UpdateOrderInput): Promise<OrderWithItems> {
+    const updateData: any = { ...data };
+    
+    // Map camelCase to snake_case for database fields
+    if (data.paymentStatus !== undefined) updateData.payment_status = data.paymentStatus;
+    if (data.customerEmail !== undefined) updateData.customer_email = data.customerEmail;
+    if (data.customerPhone !== undefined) updateData.customer_phone = data.customerPhone;
+    if (data.customerNotes !== undefined) updateData.customer_notes = data.customerNotes;
+    if (data.shippingCost !== undefined) updateData.shipping_cost = data.shippingCost;
+    if (data.taxAmount !== undefined) updateData.tax_amount = data.taxAmount;
+    if (data.discountAmount !== undefined) updateData.discount_amount = data.discountAmount;
+    
+    // Always update the updatedAt timestamp
+    updateData.updated_at = new Date();
 
-    const order = await this.prisma.order.create({
-      data: {
-        order_number: orderNumber,
-        user_id: orderData.userId,
-        customer_email: orderData.customerEmail,
-        customer_phone: orderData.customerPhone,
-        status: 'pending',
-        payment_status: 'pending',
-        billing_first_name: orderData.billingFirstName,
-        billing_last_name: orderData.billingLastName,
-        billing_address1: orderData.billingAddress.line1,
-        billing_address2: orderData.billingAddress.line2,
-        billing_city: orderData.billingAddress.city,
-        billing_state: orderData.billingAddress.state,
-        billing_postcode: orderData.billingAddress.postalCode,
-        billing_country: orderData.billingAddress.country,
-        shipping_first_name: orderData.shippingFirstName || orderData.billingFirstName,
-        shipping_last_name: orderData.shippingLastName || orderData.billingLastName,
-        shipping_address1: orderData.shippingAddress?.line1 || orderData.billingAddress.line1,
-        shipping_address2: orderData.shippingAddress?.line2 || orderData.billingAddress.line2,
-        shipping_city: orderData.shippingAddress?.city || orderData.billingAddress.city,
-        shipping_state: orderData.shippingAddress?.state || orderData.billingAddress.state,
-        shipping_postcode: orderData.shippingAddress?.postalCode || orderData.billingAddress.postalCode,
-        shipping_country: orderData.shippingAddress?.country || orderData.billingAddress.country,
-        subtotal: 0, // Will be calculated
-        shipping_cost: orderData.shippingCost || 0,
-        tax_amount: orderData.taxAmount || 0,
-        discount_amount: orderData.discountAmount || 0,
-        total: 0, // Will be calculated
-        currency: 'INR',
-        payment_method: orderData.paymentMethod,
-        payment_method_title: orderData.paymentMethodTitle,
-        customer_notes: orderData.notes,
-        order_items: {
-          create: orderData.items.map(item => ({
-            product_id: item.productId,
-            variant_id: item.variantId,
-            quantity: item.quantity,
-            price: 0, // Required field - will be calculated
-            unit_price: 0, // Will be calculated
-            total_price: 0 // Will be calculated
-          }))
-        }
-      },
-      include: {
-        order_items: true,
-        statusHistory: true
-      }
-    });
-
-    return this.mapToOrder(order);
-  }
-
-  async update(id: string, orderData: UpdateOrderData): Promise<Order> {
-    const order = await this.prisma.order.update({
+    return await this.prisma.order.update({
       where: { id },
-      data: {
-        ...(orderData.status && { status: orderData.status }),
-        ...(orderData.paymentStatus && { payment_status: orderData.paymentStatus }),
-        ...(orderData.trackingNumber !== undefined && { tracking_number: orderData.trackingNumber }),
-        ...(orderData.notes !== undefined && { notes: orderData.notes }),
-        ...(orderData.shippingCost !== undefined && { shipping_cost: orderData.shippingCost }),
-        ...(orderData.taxAmount !== undefined && { tax_amount: orderData.taxAmount }),
-        ...(orderData.discountAmount !== undefined && { discount_amount: orderData.discountAmount }),
-        updated_at: new Date()
-      },
+      data: updateData,
       include: {
         order_items: true,
-        statusHistory: true
-      }
-    });
-
-    return this.mapToOrder(order);
-  }
-
-  async updateStatus(id: string, status: OrderStatus, notes?: string): Promise<Order> {
-    const order = await this.prisma.order.update({
-      where: { id },
-      data: {
-        status,
-        admin_notes: notes,
-        updated_at: new Date(),
-        statusHistory: {
-          create: {
-            status,
-            notes,
-            created_at: new Date()
-          }
-        }
       },
-      include: {
-        order_items: true,
-        statusHistory: true
-      }
     });
-
-    return this.mapToOrder(order);
   }
 
   async delete(id: string): Promise<void> {
     await this.prisma.order.delete({
-      where: { id }
+      where: { id },
     });
   }
 
-  async findByUserId(userId: string, filters?: OrderFilters): Promise<Order[]> {
-    const result = await this.findMany({
-      ...filters,
-      userId
+  async updateStatus(id: string, status: string, notes?: string, changedBy?: string): Promise<OrderWithItems> {
+    return await this.prisma.$transaction(async (tx) => {
+      // Update the order
+      const order = await tx.order.update({
+        where: { id },
+        data: {
+          status,
+          updated_at: new Date(),
+        },
+      });
+
+      // Create status history entry
+      await tx.orderStatusHistory.create({
+        data: {
+          order_id: id,
+          status,
+          notes,
+          changed_by: changedBy,
+        },
+      });
+
+      // Return order with items
+      return await this.findById(id) as OrderWithItems;
     });
-    return result.orders;
   }
 
-  private async generateOrderNumber(): Promise<string> {
-    const prefix = 'ORD';
-    const timestamp = Date.now().toString().slice(-6);
-    const random = Math.floor(Math.random() * 1000).toString().padStart(3, '0');
-    const orderNumber = `${prefix}${timestamp}${random}`;
+  async getOrdersByUser(userId: string, options: FindManyOptions = {}): Promise<PaginatedResult<OrderWithItems>> {
+    return await this.findMany(
+      { userId },
+      options
+    );
+  }
 
-    // Check if order number already exists
-    const existingOrder = await this.prisma.order.findUnique({
-      where: { order_number: orderNumber }
-    });
-
-    if (existingOrder) {
-      // Recursively generate a new one if it exists
-      return this.generateOrderNumber();
+  async getOrderStats(filters: OrderFilters = {}): Promise<{
+    totalOrders: number;
+    totalRevenue: number;
+    averageOrderValue: number;
+    statusBreakdown: Record<string, number>;
+  }> {
+    // Build where clause
+    const where: any = {};
+    
+    if (filters.userId) where.user_id = filters.userId;
+    if (filters.status) where.status = filters.status;
+    if (filters.paymentStatus) where.payment_status = filters.paymentStatus;
+    if (filters.customerEmail) where.customer_email = { contains: filters.customerEmail, mode: 'insensitive' };
+    if (filters.dateFrom || filters.dateTo) {
+      where.created_at = {};
+      if (filters.dateFrom) where.created_at.gte = filters.dateFrom;
+      if (filters.dateTo) where.created_at.lte = filters.dateTo;
     }
 
-    return orderNumber;
-  }
+    const [totalOrders, orders, statusBreakdown] = await Promise.all([
+      this.prisma.order.count({ where }),
+      this.prisma.order.findMany({
+        where,
+        select: { total: true, status: true },
+      }),
+      this.prisma.order.groupBy({
+        by: ['status'],
+        where,
+        _count: { status: true },
+      }),
+    ]);
 
-  private mapToOrder(prismaOrder: any): Order {
+    const totalRevenue = orders.reduce((sum, order) => sum + Number(order.total), 0);
+    const averageOrderValue = totalOrders > 0 ? totalRevenue / totalOrders : 0;
+
+    const statusBreakdownMap = statusBreakdown.reduce((acc, item) => {
+      acc[item.status || 'unknown'] = item._count.status;
+      return acc;
+    }, {} as Record<string, number>);
+
     return {
-      id: prismaOrder.id,
-      orderNumber: prismaOrder.order_number,
-      userId: prismaOrder.user_id,
-      customerEmail: prismaOrder.customer_email,
-      customerPhone: prismaOrder.customer_phone,
-      status: prismaOrder.status,
-      paymentStatus: prismaOrder.payment_status,
-      paymentMethod: prismaOrder.payment_method,
-      paymentMethodTitle: prismaOrder.payment_method_title,
-      billingFirstName: prismaOrder.billing_first_name,
-      billingLastName: prismaOrder.billing_last_name,
-      billingEmail: prismaOrder.billing_email,
-      billingPhone: prismaOrder.billing_phone,
-      billingAddress: prismaOrder.billing_address,
-      shippingFirstName: prismaOrder.shipping_first_name,
-      shippingLastName: prismaOrder.shipping_last_name,
-      shippingEmail: prismaOrder.shipping_email,
-      shippingPhone: prismaOrder.shipping_phone,
-      shippingAddress: prismaOrder.shipping_address,
-      items: prismaOrder.order_items?.map((item: any) => ({
-        id: item.id,
-        productId: item.product_id,
-        variantId: item.variant_id,
-        productName: item.product_name,
-        productSku: item.product_sku,
-        variantName: item.variant_name,
-        quantity: item.quantity,
-        unitPrice: Number(item.unit_price),
-        totalPrice: Number(item.total_price),
-        attributes: item.attributes,
-        productImage: item.product_image
-      })) || [],
-      subtotal: Number(prismaOrder.subtotal),
-      shippingCost: Number(prismaOrder.shipping_cost),
-      taxAmount: Number(prismaOrder.tax_amount),
-      discountAmount: Number(prismaOrder.discount_amount),
-      total: Number(prismaOrder.total),
-      currency: prismaOrder.currency,
-      trackingNumber: prismaOrder.tracking_number,
-      notes: prismaOrder.notes,
-      createdAt: prismaOrder.created_at.toISOString(),
-      updatedAt: prismaOrder.updated_at.toISOString(),
-      deliveredAt: prismaOrder.delivered_at?.toISOString()
+      totalOrders,
+      totalRevenue,
+      averageOrderValue,
+      statusBreakdown: statusBreakdownMap,
     };
   }
 }
+
+// Export singleton instance
+export const orderRepository = new OrderRepository(new PrismaClient());
