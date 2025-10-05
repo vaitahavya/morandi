@@ -10,12 +10,19 @@ datasource db {
 model User {
   id                                  String                  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   email                               String                  @unique @db.VarChar
+  emailVerified                       DateTime?               @map("email_verified") @db.Timestamptz(6)
   name                                String?                 @db.VarChar
-  password                            String?                 @db.VarChar
   image                               String?                 @db.VarChar
-  email_verified                      DateTime?               @db.Timestamptz(6)
-  created_at                          DateTime?               @default(now()) @db.Timestamptz(6)
-  updated_at                          DateTime?               @default(now()) @db.Timestamptz(6)
+  role                                String                  @default("customer") @db.VarChar
+  phone                               String?                 @db.VarChar
+  createdAt                           DateTime                @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt                           DateTime                @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+  
+  // NextAuth.js relationships
+  accounts                            Account[]
+  sessions                            Session[]
+  
+  // Application relationships
   email_notifications                 EmailNotification[]
   inventory_transactions              InventoryTransaction[]
   order_status_history                OrderStatusHistory[]
@@ -28,7 +35,50 @@ model User {
   wishlist_items                      WishlistItem[]
 
   @@index([email], map: "idx_users_email")
+  @@index([role], map: "idx_users_role")
   @@map("users")
+}
+
+model Account {
+  id                String  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId            String  @map("user_id") @db.Uuid
+  type              String  @db.VarChar
+  provider          String  @db.VarChar
+  providerAccountId String  @map("provider_account_id") @db.VarChar
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String? @db.VarChar
+  scope             String? @db.VarChar
+  id_token          String? @db.Text
+  session_state     String? @db.VarChar
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@index([userId], map: "idx_accounts_user_id")
+  @@map("accounts")
+}
+
+model Session {
+  id           String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  sessionToken String   @unique @map("session_token") @db.VarChar
+  userId       String   @map("user_id") @db.Uuid
+  expires      DateTime @db.Timestamptz(6)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId], map: "idx_sessions_user_id")
+  @@map("sessions")
+}
+
+model VerificationToken {
+  identifier String   @db.VarChar
+  token      String   @unique @db.VarChar
+  expires    DateTime @db.Timestamptz(6)
+
+  @@unique([identifier, token])
+  @@map("verification_tokens")
 }
 
 model Product {
