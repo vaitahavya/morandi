@@ -38,7 +38,10 @@ export async function POST(request: NextRequest) {
     }
 
     return NextResponse.json(
-      { message: 'User created successfully' },
+      { 
+        message: 'User created successfully',
+        redirectUrl: '/auth/signup-success'
+      },
       { status: 201 }
     );
   } catch (error) {

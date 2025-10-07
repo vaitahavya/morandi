@@ -48,10 +48,10 @@ export default function SignUpPage() {
       const data = await response.json();
 
       if (response.ok) {
-        setSuccess('Account created successfully! Redirecting to sign in...');
+        setSuccess('Account created successfully! Redirecting...');
         setTimeout(() => {
-          router.push('/auth/signin');
-        }, 2000);
+          router.push('/auth/signup-success');
+        }, 1500);
       } else {
         setError(data.error || 'Registration failed');
       }

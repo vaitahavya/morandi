@@ -20,10 +20,36 @@ export interface EmailData {
 }
 
 export async function sendEmail(emailData: EmailData) {
+  // Skip email sending if no SMTP credentials are configured (local testing)
+  if (!process.env.EMAIL_SERVER_HOST && !process.env.EMAIL_USER) {
+    console.log('📧 Email sending skipped (no SMTP credentials configured)');
+    console.log(`   To: ${emailData.to}`);
+    console.log(`   Subject: ${emailData.subject}`);
+    
+    // Save notification to database as "sent" for local testing
+    try {
+      await prisma.emailNotification.create({
+        data: {
+          userId: emailData.userId,
+          orderId: emailData.orderId,
+          type: emailData.type,
+          subject: emailData.subject,
+          content: emailData.html,
+          sent: true,
+          sentAt: new Date(),
+        },
+      });
+    } catch (error) {
+      console.error('Error saving notification to database:', error);
+    }
+
+    return { success: true, messageId: 'local-test' };
+  }
+
   try {
     // Send email
     const info = await transporter.sendMail({
-      from: process.env.EMAIL_USER,
+      from: process.env.EMAIL_USER || process.env.EMAIL_FROM,
       to: emailData.to,
       subject: emailData.subject,
       html: emailData.html,
@@ -33,13 +59,13 @@ export async function sendEmail(emailData: EmailData) {
     try {
       await prisma.emailNotification.create({
         data: {
-          user_id: emailData.userId,
-          order_id: emailData.orderId,
+          userId: emailData.userId,
+          orderId: emailData.orderId,
           type: emailData.type,
           subject: emailData.subject,
           content: emailData.html,
           sent: true,
-          sent_at: new Date(),
+          sentAt: new Date(),
         },
       });
     } catch (error) {
@@ -55,8 +81,8 @@ export async function sendEmail(emailData: EmailData) {
     try {
       await prisma.emailNotification.create({
         data: {
-          user_id: emailData.userId,
-          order_id: emailData.orderId,
+          userId: emailData.userId,
+          orderId: emailData.orderId,
           type: emailData.type,
           subject: emailData.subject,
           content: emailData.html,
