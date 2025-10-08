@@ -15,11 +15,11 @@ export async function GET(request: NextRequest) {
     const whereConditions: any = {};
     
     if (onlyVisible) {
-      whereConditions.is_visible = true;
+      whereConditions.isVisible = true;
     }
 
     if (parentId !== null) {
-      whereConditions.parent_id = parentId === 'null' || parentId === '' ? null : parentId;
+      whereConditions.parentId = parentId === 'null' || parentId === '' ? null : parentId;
     }
 
     // Fetch categories
@@ -27,15 +27,15 @@ export async function GET(request: NextRequest) {
       where: whereConditions,
       include: {
         children: onlyVisible ? {
-          where: { is_visible: true },
-          orderBy: { display_order: 'asc' }
+          where: { isVisible: true },
+          orderBy: { displayOrder: 'asc' }
         } : {
-          orderBy: { display_order: 'asc' }
+          orderBy: { displayOrder: 'asc' }
         },
         parent: true
       },
       orderBy: [
-        { display_order: 'asc' },
+        { displayOrder: 'asc' },
         { name: 'asc' }
       ]
     });
@@ -46,9 +46,9 @@ export async function GET(request: NextRequest) {
       const categoryIds = categories.map(cat => cat.id);
       const productCountResults = await prisma.product.count({
         where: {
-          product_categories: {
+          productCategories: {
             some: {
-              category_id: {
+              categoryId: {
                 in: categoryIds
               }
             }
@@ -61,9 +61,9 @@ export async function GET(request: NextRequest) {
       for (const category of categories) {
         const count = await prisma.product.count({
           where: {
-            product_categories: {
+            productCategories: {
               some: {
-                category_id: category.id
+                categoryId: category.id
               }
             },
             status: 'published'
@@ -80,26 +80,26 @@ export async function GET(request: NextRequest) {
       slug: category.slug,
       description: category.description,
       image: category.image,
-      parentId: category.parent_id,
+      parentId: category.parentId,
       parent: category.parent,
-      metaTitle: category.meta_title,
-      metaDescription: category.meta_description,
-      displayOrder: category.display_order,
-      isVisible: category.is_visible,
+      metaTitle: category.metaTitle,
+      metaDescription: category.metaDescription,
+      displayOrder: category.displayOrder,
+      isVisible: category.isVisible,
       children: flat ? undefined : category.children.map(child => ({
         id: child.id,
         name: child.name,
         slug: child.slug,
         description: child.description,
         image: child.image,
-        displayOrder: child.display_order,
-        isVisible: child.is_visible
+        displayOrder: child.displayOrder,
+        isVisible: child.isVisible
       })),
       productCount: includeProductCount 
         ? productCounts[category.id] || 0
         : undefined,
-      createdAt: category.created_at,
-      updatedAt: category.updated_at
+      createdAt: category.createdAt,
+      updatedAt: category.updatedAt
     }));
 
     // Build hierarchy if not flat
@@ -174,11 +174,11 @@ export async function POST(request: NextRequest) {
         slug,
         description: body.description,
         image: body.image,
-        parent_id: body.parentId || null,
-        meta_title: body.metaTitle,
-        meta_description: body.metaDescription,
-        display_order: body.displayOrder || 0,
-        is_visible: body.isVisible !== false
+        parentId: body.parentId || null,
+        metaTitle: body.metaTitle,
+        metaDescription: body.metaDescription,
+        displayOrder: body.displayOrder || 0,
+        isVisible: body.isVisible !== false
       },
       include: {
         parent: true,

@@ -169,7 +169,7 @@ export class ProductService {
       throw new Error('Product not found');
     }
 
-    if (!existingProduct.manage_stock) {
+    if (!existingProduct.manageStock) {
       throw new Error('Product does not track quantity');
     }
 
@@ -198,7 +198,7 @@ export class ProductService {
     // Calculate total inventory value
     const allProducts = await productRepository.findMany({});
     const totalInventoryValue = allProducts.data.reduce((sum, product) => {
-      return sum + (Number(product.price) * (product.stock_quantity || 0));
+      return sum + (Number(product.price) * (product.stockQuantity || 0));
     }, 0);
 
     return {

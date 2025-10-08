@@ -19,8 +19,8 @@ export async function GET(
       include: {
         parent: true,
         children: {
-          where: { is_visible: true },
-          orderBy: { display_order: 'asc' }
+          where: { isVisible: true },
+          orderBy: { displayOrder: 'asc' }
         }
       }
     });
@@ -39,9 +39,9 @@ export async function GET(
     if (includeProducts) {
       const categoryProducts = await prisma.product.findMany({
         where: {
-          product_categories: {
+          productCategories: {
             some: {
-              category_id: category.id
+              categoryId: category.id
             }
           },
           status: 'published'
@@ -120,10 +120,10 @@ export async function PUT(
     }
 
     // Validate parent category if being updated
-    if (body.parent_id && body.parent_id !== existingCategory.parent_id) {
+    if (body.parentId && body.parentId !== existingCategory.parentId) {
       // Check if parent exists
       const parentCategory = await prisma.category.findUnique({
-        where: { id: body.parent_id }
+        where: { id: body.parentId }
       });
       if (!parentCategory) {
         return NextResponse.json({
@@ -133,7 +133,7 @@ export async function PUT(
       }
 
       // Prevent circular references
-      if (body.parent_id === id) {
+      if (body.parentId === id) {
         return NextResponse.json({
           success: false,
           error: 'Category cannot be its own parent'
@@ -141,7 +141,7 @@ export async function PUT(
       }
 
       // Check if the new parent is not a child of this category
-      const isChildOfCategory = await checkIfChildCategory(body.parent_id, id);
+      const isChildOfCategory = await checkIfChildCategory(body.parentId, id);
       if (isChildOfCategory) {
         return NextResponse.json({
           success: false,
@@ -153,15 +153,15 @@ export async function PUT(
     // Prepare update data
     const updateData: any = {};
     const updateableFields = [
-      'name', 'slug', 'description', 'image', 'parent_id',
-      'meta_title', 'meta_description', 'display_order', 'is_visible'
+      'name', 'slug', 'description', 'image', 'parentId',
+      'metaTitle', 'metaDescription', 'displayOrder', 'isVisible'
     ];
 
     updateableFields.forEach(field => {
       if (body[field] !== undefined) {
-        if (field === 'display_order') {
+        if (field === 'displayOrder') {
           updateData[field] = parseInt(body[field]);
-        } else if (field === 'parent_id' && body[field] === '') {
+        } else if (field === 'parentId' && body[field] === '') {
           updateData[field] = null;
         } else {
           updateData[field] = body[field];
@@ -219,9 +219,9 @@ export async function DELETE(
       where: { id },
       include: {
         children: true,
-        product_categories: {
+        productCategories: {
           include: {
-            products: true
+            product: true
           }
         }
       }
@@ -243,7 +243,7 @@ export async function DELETE(
     }
 
     // Handle products in this category
-    if (existingCategory.product_categories.length > 0) {
+    if (existingCategory.productCategories.length > 0) {
       if (moveProducts) {
         // Verify destination category exists
         const destinationCategory = await prisma.category.findUnique({
@@ -258,13 +258,13 @@ export async function DELETE(
 
         // Move products to new category
         await prisma.productCategory.updateMany({
-          where: { category_id: id },
-          data: { category_id: moveProducts }
+          where: { categoryId: id },
+          data: { categoryId: moveProducts }
         });
       } else {
         // Remove category associations from products
         await prisma.productCategory.deleteMany({
-          where: { category_id: id }
+          where: { categoryId: id }
         });
       }
     }

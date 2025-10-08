@@ -15,9 +15,9 @@ export async function GET(
     const product = await prisma.product.findFirst({
       where: isUUID ? { id } : { slug: id },
       include: {
-        product_categories: {
+        productCategories: {
           include: {
-            categories: true
+            category: true
           }
         },
         variants: {
@@ -34,7 +34,7 @@ export async function GET(
               }
             }
           },
-          orderBy: { created_at: 'desc' }
+          orderBy: { createdAt: 'desc' }
         },
         product_recommendations_product_recommendations_product_idToproducts: {
           include: {
@@ -44,10 +44,10 @@ export async function GET(
                 name: true,
                 slug: true,
                 price: true,
-                sale_price: true,
+                salePrice: true,
                 images: true,
-                featured_image: true,
-                stock_status: true
+                featuredImage: true,
+                stockStatus: true
               }
             }
           },
@@ -70,7 +70,7 @@ export async function GET(
       : 0;
 
     // Get effective price
-    const effectivePrice = product.sale_price || product.price;
+    const effectivePrice = product.salePrice || product.price;
 
     // Transform data
     const transformedProduct = {
@@ -78,24 +78,24 @@ export async function GET(
       name: product.name,
       slug: product.slug,
       description: product.description,
-      short_description: product.short_description,
+      shortDescription: product.shortDescription,
       sku: product.sku,
       price: effectivePrice,
-      regular_price: product.regular_price || product.price,
-      sale_price: product.sale_price,
+      regularPrice: product.regularPrice || product.price,
+      salePrice: product.salePrice,
       images: product.images,
-      featured_image: product.featured_image,
-      stock_quantity: product.stock_quantity,
-      stock_status: product.stock_status,
-      manage_stock: product.manage_stock,
-      low_stock_threshold: product.low_stock_threshold,
+      featuredImage: product.featuredImage,
+      stockQuantity: product.stockQuantity,
+      stockStatus: product.stockStatus,
+      manageStock: product.manageStock,
+      lowStockThreshold: product.lowStockThreshold,
       weight: product.weight,
       dimensions: product.dimensions,
       status: product.status,
       featured: product.featured,
-      meta_title: product.meta_title,
-      meta_description: product.meta_description,
-      categories: product.product_categories.map((pc: any) => pc.categories),
+      metaTitle: product.metaTitle,
+      metaDescription: product.metaDescription,
+      category: product.productCategories.map((pc: any) => pc.category),
       variants: product.variants,
       attributes: product.attributes.reduce((acc: Record<string, string[]>, attr: any) => {
         if (!acc[attr.name]) acc[attr.name] = [];
@@ -106,11 +106,11 @@ export async function GET(
       recommendations: product.product_recommendations_product_recommendations_product_idToproducts.map((rec: any) => rec.products_product_recommendations_recommended_product_idToproducts),
       avgRating: Math.round(avgRating * 10) / 10,
       reviewCount: product.reviews.length,
-      created_at: product.created_at,
-      updated_at: product.updated_at,
+      createdAt: product.createdAt,
+      updatedAt: product.updatedAt,
       // Legacy fields for compatibility
       tags: product.tags,
-      inStock: product.stock_status === 'instock'
+      inStock: product.stockStatus === 'instock'
     };
 
     return NextResponse.json({
@@ -153,18 +153,18 @@ export async function PUT(
 
     // Only update provided fields
     const updateableFields = [
-      'name', 'slug', 'description', 'short_description', 'sku',
-      'price', 'regular_price', 'sale_price', 'images', 'featured_image',
-      'stock_quantity', 'stock_status', 'manage_stock', 'low_stock_threshold',
-      'weight', 'dimensions', 'status', 'featured', 'meta_title', 'meta_description',
+      'name', 'slug', 'description', 'shortDescription', 'sku',
+      'price', 'regularPrice', 'salePrice', 'images', 'featuredImage',
+      'stockQuantity', 'stockStatus', 'manageStock', 'lowStockThreshold',
+      'weight', 'dimensions', 'status', 'featured', 'metaTitle', 'metaDescription',
       'category', 'tags'
     ];
 
     updateableFields.forEach(field => {
       if (body[field] !== undefined) {
-        if (['price', 'regular_price', 'sale_price', 'weight'].includes(field) && body[field] !== null) {
+        if (['price', 'regularPrice', 'salePrice', 'weight'].includes(field) && body[field] !== null) {
           updateData[field] = parseFloat(body[field]);
-        } else if (['stock_quantity', 'low_stock_threshold'].includes(field)) {
+        } else if (['stockQuantity', 'lowStockThreshold'].includes(field)) {
           updateData[field] = parseInt(body[field]);
         } else {
           updateData[field] = body[field];
@@ -172,10 +172,10 @@ export async function PUT(
       }
     });
 
-    // Update inStock based on stock_quantity and stock_status
-    if (updateData.stock_quantity !== undefined || updateData.stock_status !== undefined) {
-      const newStockQuantity = updateData.stock_quantity ?? existingProduct.stock_quantity;
-      const newStockStatus = updateData.stock_status ?? existingProduct.stock_status;
+    // Update inStock based on stockQuantity and stockStatus
+    if (updateData.stockQuantity !== undefined || updateData.stockStatus !== undefined) {
+      const newStockQuantity = updateData.stockQuantity ?? existingProduct.stockQuantity;
+      const newStockStatus = updateData.stockStatus ?? existingProduct.stockStatus;
       updateData.inStock = newStockQuantity > 0 && newStockStatus === 'instock';
     }
 
@@ -184,9 +184,9 @@ export async function PUT(
       where: { id },
       data: updateData,
       include: {
-        product_categories: {
+        productCategories: {
           include: {
-            categories: true
+            category: true
           }
         },
         variants: true,
@@ -195,17 +195,17 @@ export async function PUT(
     });
 
     // Create inventory transaction if stock quantity changed
-    if (updateData.stock_quantity !== undefined && updateData.stock_quantity !== existingProduct.stock_quantity) {
-      const quantityChange = updateData.stock_quantity - (existingProduct.stock_quantity || 0);
+    if (updateData.stockQuantity !== undefined && updateData.stockQuantity !== existingProduct.stockQuantity) {
+      const quantityChange = updateData.stockQuantity - (existingProduct.stockQuantity || 0);
       
       await prisma.inventoryTransaction.create({
         data: {
-          product_id: id,
+          productId: id,
           type: quantityChange > 0 ? 'restock' : 'adjustment',
           quantity: quantityChange,
           reason: 'Manual update via API',
-          stock_after: updateData.stock_quantity,
-          notes: `Stock updated from ${existingProduct.stock_quantity || 0} to ${updateData.stock_quantity}`
+          stockAfter: updateData.stockQuantity,
+          notes: `Stock updated from ${existingProduct.stockQuantity || 0} to ${updateData.stockQuantity}`
         }
       });
     }
@@ -247,8 +247,8 @@ export async function DELETE(
     const existingProduct = await prisma.product.findUnique({
       where: { id },
       include: {
-        order_items: true,
-        wishlist_items: true,
+        orderItems: true,
+        // wishlist_items: true, // This field doesn't exist in the schema
         reviews: true
       }
     });
@@ -261,7 +261,7 @@ export async function DELETE(
     }
 
     // Check if product has associated orders
-    if (existingProduct.order_items.length > 0) {
+    if (existingProduct.orderItems.length > 0) {
       return NextResponse.json({
         success: false,
         error: 'Cannot delete product that has been ordered. Consider marking it as inactive instead.'

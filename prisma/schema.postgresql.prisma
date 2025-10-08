@@ -206,6 +206,7 @@ model Order {
   
   user       User?        @relation(fields: [userId], references: [id])
   orderItems OrderItem[]
+  returns    Returns[]
   
   @@map("orders")
 }

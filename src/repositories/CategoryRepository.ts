@@ -49,7 +49,7 @@ export interface CategoryWithChildren extends Category {
   children: CategoryWithChildren[];
   _count?: {
     children: number;
-    product_categories: number;
+    productCategories: number;
   };
 }
 
@@ -80,12 +80,12 @@ export class CategoryRepository extends BaseRepository<Category, CreateCategoryI
         name: data.name,
         slug: data.slug,
         description: data.description,
-        parent_id: data.parentId,
+        parentId: data.parentId,
         image: data.image,
-        is_visible: data.isVisible,
-        display_order: data.displayOrder,
-        meta_title: data.metaTitle,
-        meta_description: data.metaDescription,
+        isVisible: data.isVisible,
+        displayOrder: data.displayOrder,
+        metaTitle: data.metaTitle,
+        metaDescription: data.metaDescription,
       },
       include: {
         children: true,
@@ -93,7 +93,7 @@ export class CategoryRepository extends BaseRepository<Category, CreateCategoryI
         _count: {
           select: {
             children: true,
-            product_categories: true,
+            productCategories: true,
           },
         },
       },
@@ -109,7 +109,7 @@ export class CategoryRepository extends BaseRepository<Category, CreateCategoryI
         _count: {
           select: {
             children: true,
-            product_categories: true,
+            productCategories: true,
           },
         },
       },
@@ -125,7 +125,7 @@ export class CategoryRepository extends BaseRepository<Category, CreateCategoryI
         _count: {
           select: {
             children: true,
-            product_categories: true,
+            productCategories: true,
           },
         },
       },
@@ -152,7 +152,7 @@ export class CategoryRepository extends BaseRepository<Category, CreateCategoryI
       where.is_visible = filters.isVisible;
     }
     if (filters.hasProducts !== undefined) {
-      where.product_categories = filters.hasProducts ? 
+      where.productCategories = filters.hasProducts ? 
         { some: {} } : { none: {} };
     }
 
@@ -168,7 +168,7 @@ export class CategoryRepository extends BaseRepository<Category, CreateCategoryI
           _count: {
             select: {
               children: true,
-              product_categories: true,
+              productCategories: true,
             },
           },
         },
@@ -185,12 +185,12 @@ export class CategoryRepository extends BaseRepository<Category, CreateCategoryI
   async update(id: string, data: UpdateCategoryInput): Promise<Category> {
     const updateData: any = { ...data };
     
-    // Map camelCase to snake_case for database fields
-    if (data.parentId !== undefined) updateData.parent_id = data.parentId;
-    if (data.isVisible !== undefined) updateData.is_visible = data.isVisible;
-    if (data.displayOrder !== undefined) updateData.display_order = data.displayOrder;
-    if (data.metaTitle !== undefined) updateData.meta_title = data.metaTitle;
-    if (data.metaDescription !== undefined) updateData.meta_description = data.metaDescription;
+    // Map camelCase to Prisma field names (no need for snake_case mapping since Prisma handles it)
+    if (data.parentId !== undefined) updateData.parentId = data.parentId;
+    if (data.isVisible !== undefined) updateData.isVisible = data.isVisible;
+    if (data.displayOrder !== undefined) updateData.displayOrder = data.displayOrder;
+    if (data.metaTitle !== undefined) updateData.metaTitle = data.metaTitle;
+    if (data.metaDescription !== undefined) updateData.metaDescription = data.metaDescription;
     
     // Always update the updatedAt timestamp
     updateData.updatedAt = new Date();
@@ -204,7 +204,7 @@ export class CategoryRepository extends BaseRepository<Category, CreateCategoryI
         _count: {
           select: {
             children: true,
-            product_categories: true,
+            productCategories: true,
           },
         },
       },
@@ -237,7 +237,7 @@ export class CategoryRepository extends BaseRepository<Category, CreateCategoryI
             _count: {
               select: {
                 children: true,
-                product_categories: true,
+                productCategories: true,
               },
             },
           },
@@ -245,7 +245,7 @@ export class CategoryRepository extends BaseRepository<Category, CreateCategoryI
         _count: {
           select: {
             children: true,
-            product_categories: true,
+            productCategories: true,
           },
         },
       },
@@ -264,7 +264,7 @@ export class CategoryRepository extends BaseRepository<Category, CreateCategoryI
         _count: {
           select: {
             children: true,
-            product_categories: true,
+            productCategories: true,
           },
         },
       },
@@ -278,9 +278,9 @@ export class CategoryRepository extends BaseRepository<Category, CreateCategoryI
       include: {
         children: true,
         parent: true,
-        product_categories: {
+        productCategories: {
           include: {
-            products: {
+            product: {
               include: {
                 variants: true,
               },
@@ -290,7 +290,7 @@ export class CategoryRepository extends BaseRepository<Category, CreateCategoryI
         _count: {
           select: {
             children: true,
-            product_categories: true,
+            productCategories: true,
           },
         },
       },

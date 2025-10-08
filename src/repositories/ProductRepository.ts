@@ -92,35 +92,98 @@ export interface IProductRepository {
 export class ProductRepository extends BaseRepository<Product, CreateProductInput, UpdateProductInput, ProductFilters> 
   implements IProductRepository {
 
+  /**
+   * Convert tags array to JSON string for database storage
+   */
+  private tagsToString(tags?: string[]): string {
+    return tags && tags.length > 0 ? JSON.stringify(tags) : '[]';
+  }
+
+  /**
+   * Convert tags JSON string to array for application use
+   */
+  private tagsToArray(tags: string): string[] {
+    try {
+      const parsed = JSON.parse(tags);
+      return Array.isArray(parsed) ? parsed : [];
+    } catch {
+      return [];
+    }
+  }
+
+  /**
+   * Convert images array to JSON string for database storage
+   */
+  private imagesToString(images?: any[]): string {
+    if (!images || images.length === 0) return '[]';
+    
+    // Convert image objects to simple URLs or keep as strings
+    const imageUrls = images.map(img => {
+      if (typeof img === 'string') return img;
+      if (img && typeof img === 'object' && img.src) return img.src;
+      return img;
+    });
+    
+    return JSON.stringify(imageUrls);
+  }
+
+  /**
+   * Convert images JSON string to array for application use
+   */
+  private imagesToArray(images: string): string[] {
+    try {
+      const parsed = JSON.parse(images);
+      return Array.isArray(parsed) ? parsed : [];
+    } catch {
+      return [];
+    }
+  }
+
   async create(data: CreateProductInput): Promise<Product> {
     return await this.prisma.product.create({
       data: {
         name: data.name,
         slug: data.slug,
         description: data.description,
-        short_description: data.shortDescription,
+        shortDescription: data.shortDescription,
         price: data.price,
-        regular_price: data.compareAtPrice,
+        regularPrice: (data as any).regularPrice || data.compareAtPrice || data.price,
+        salePrice: (data as any).salePrice,
         sku: data.sku,
-        manage_stock: data.trackQuantity,
-        stock_quantity: data.quantity,
+        manageStock: data.trackQuantity,
+        stockQuantity: data.quantity,
         weight: data.weight,
         status: data.status,
         featured: data.featured,
-        tags: data.tags,
-        meta_title: data.metaTitle,
-        meta_description: data.metaDescription,
-        images: data.images,
-        product_categories: data.categoryIds ? {
+        tags: this.tagsToString(data.tags),
+        metaTitle: data.metaTitle,
+        metaDescription: data.metaDescription,
+        images: this.imagesToString(data.images),
+        productCategories: data.categoryIds ? {
           create: data.categoryIds.map(categoryId => ({
-            category_id: categoryId,
+            categoryId: categoryId,
+          }))
+        } : undefined,
+        variants: (data as any).variants && (data as any).variants.length > 0 ? {
+          create: (data as any).variants.filter((v: any) => !v.id?.startsWith('temp-')).map((variant: any) => ({
+            name: variant.name,
+            sku: variant.sku,
+            price: variant.price,
+            regularPrice: variant.regularPrice,
+            salePrice: variant.salePrice,
+            stockQuantity: variant.stockQuantity,
+            stockStatus: variant.stockStatus,
+            attributes: typeof variant.attributes === 'string' ? variant.attributes : JSON.stringify(variant.attributes || []),
+            images: typeof variant.images === 'string' ? variant.images : JSON.stringify(variant.images || []),
+            weight: variant.weight,
+            dimensions: typeof variant.dimensions === 'string' ? variant.dimensions : JSON.stringify(variant.dimensions),
           }))
         } : undefined,
       },
       include: {
-        product_categories: {
+        productCategories: {
           include: {
-            categories: true,
+            category: true,
           },
         },
         variants: true,
@@ -129,31 +192,67 @@ export class ProductRepository extends BaseRepository<Product, CreateProductInpu
   }
 
   async findById(id: string): Promise<Product | null> {
-    return await this.prisma.product.findUnique({
+    const product = await this.prisma.product.findUnique({
       where: { id },
       include: {
-        product_categories: {
+        productCategories: {
           include: {
-            categories: true,
+            category: true,
           },
         },
         variants: true,
       },
     });
+    
+    if (product) {
+      // Convert tags from JSON string to array
+      (product as any).tags = this.tagsToArray(product.tags);
+      // Convert images from JSON string to array
+      (product as any).images = this.imagesToArray(product.images);
+      
+      // Parse variant attributes from JSON strings
+      if (product.variants) {
+        (product as any).variants = product.variants.map((variant: any) => ({
+          ...variant,
+          attributes: typeof variant.attributes === 'string' ? JSON.parse(variant.attributes || '[]') : variant.attributes,
+          images: typeof variant.images === 'string' ? JSON.parse(variant.images || '[]') : variant.images,
+        }));
+      }
+    }
+    
+    return product;
   }
 
   async findBySlug(slug: string): Promise<Product | null> {
-    return await this.prisma.product.findUnique({
+    const product = await this.prisma.product.findUnique({
       where: { slug },
       include: {
-        product_categories: {
+        productCategories: {
           include: {
-            categories: true,
+            category: true,
           },
         },
         variants: true,
       },
     });
+    
+    if (product) {
+      // Convert tags from JSON string to array
+      (product as any).tags = this.tagsToArray(product.tags);
+      // Convert images from JSON string to array
+      (product as any).images = this.imagesToArray(product.images);
+      
+      // Parse variant attributes from JSON strings
+      if (product.variants) {
+        (product as any).variants = product.variants.map((variant: any) => ({
+          ...variant,
+          attributes: typeof variant.attributes === 'string' ? JSON.parse(variant.attributes || '[]') : variant.attributes,
+          images: typeof variant.images === 'string' ? JSON.parse(variant.images || '[]') : variant.images,
+        }));
+      }
+    }
+    
+    return product;
   }
 
   async findMany(filters: ProductFilters = {}, options: FindManyOptions = {}): Promise<PaginatedResult<Product>> {
@@ -176,9 +275,9 @@ export class ProductRepository extends BaseRepository<Product, CreateProductInpu
       where.featured = filters.featured;
     }
     if (filters.categoryId) {
-      where.product_categories = {
+      where.productCategories = {
         some: {
-          category_id: filters.categoryId,
+          categoryId: filters.categoryId,
         },
       };
     }
@@ -192,20 +291,21 @@ export class ProductRepository extends BaseRepository<Product, CreateProductInpu
       }
     }
     if (filters.tags && filters.tags.length > 0) {
+      // For SQLite, we need to search within the JSON string
       where.tags = {
-        hasSome: filters.tags,
+        contains: JSON.stringify(filters.tags),
       };
     }
     if (filters.inStock !== undefined) {
       if (filters.inStock) {
         where.OR = [
-          { track_quantity: false },
-          { AND: [{ track_quantity: true }, { quantity: { gt: 0 } }] },
+          { manageStock: false },
+          { AND: [{ manageStock: true }, { stockQuantity: { gt: 0 } }] },
         ];
       } else {
         where.AND = [
-          { track_quantity: true },
-          { quantity: { lte: 0 } },
+          { manageStock: true },
+          { stockQuantity: { lte: 0 } },
         ];
       }
     }
@@ -215,11 +315,11 @@ export class ProductRepository extends BaseRepository<Product, CreateProductInpu
         where,
         skip,
         take: limit,
-        orderBy: orderBy || { created_at: 'desc' },
+        orderBy: orderBy || { createdAt: 'desc' },
         include: {
-          product_categories: {
+          productCategories: {
             include: {
-              categories: true,
+              category: true,
             },
           },
           variants: true,
@@ -228,8 +328,15 @@ export class ProductRepository extends BaseRepository<Product, CreateProductInpu
       this.prisma.product.count({ where }),
     ]);
 
+    // Convert tags and images from JSON strings to arrays for all products
+    const productsWithArrayData = products.map(product => ({
+      ...product,
+      tags: this.tagsToArray(product.tags),
+      images: this.imagesToArray(product.images)
+    }));
+
     return {
-      data: products,
+      data: productsWithArrayData,
       pagination: this.buildPaginationMeta(page, limit, total),
     };
   }
@@ -237,31 +344,67 @@ export class ProductRepository extends BaseRepository<Product, CreateProductInpu
   async update(id: string, data: UpdateProductInput): Promise<Product> {
     const updateData: any = { ...data };
     
-    // Map camelCase to snake_case for database fields
-    if (data.shortDescription !== undefined) updateData.short_description = data.shortDescription;
-    if (data.compareAtPrice !== undefined) updateData.compare_at_price = data.compareAtPrice;
-    if (data.costPrice !== undefined) updateData.cost_price = data.costPrice;
-    if (data.trackQuantity !== undefined) updateData.track_quantity = data.trackQuantity;
-    if (data.allowBackorder !== undefined) updateData.allow_backorder = data.allowBackorder;
-    if (data.weightUnit !== undefined) updateData.weight_unit = data.weightUnit;
-    if (data.metaTitle !== undefined) updateData.meta_title = data.metaTitle;
-    if (data.metaDescription !== undefined) updateData.meta_description = data.metaDescription;
+    // Map camelCase to Prisma field names (no need for snake_case mapping since Prisma handles it)
+    if (data.shortDescription !== undefined) updateData.shortDescription = data.shortDescription;
+    if (data.compareAtPrice !== undefined) updateData.regularPrice = data.compareAtPrice;
+    if (data.costPrice !== undefined) updateData.costPrice = data.costPrice;
+    if (data.trackQuantity !== undefined) updateData.manageStock = data.trackQuantity;
+    if (data.allowBackorder !== undefined) updateData.allowBackorder = data.allowBackorder;
+    if (data.weightUnit !== undefined) updateData.weightUnit = data.weightUnit;
+    if (data.metaTitle !== undefined) updateData.metaTitle = data.metaTitle;
+    if (data.metaDescription !== undefined) updateData.metaDescription = data.metaDescription;
+    if (data.tags !== undefined) updateData.tags = this.tagsToString(data.tags);
+    if (data.images !== undefined) updateData.images = this.imagesToString(data.images);
+    
+    // Handle variants if provided
+    if ((data as any).variants !== undefined) {
+      const variants = (data as any).variants;
+      
+      // Delete all existing variants and create new ones (simpler approach)
+      await this.prisma.productVariant.deleteMany({
+        where: { productId: id }
+      });
+      
+      // Create new variants (filter out temp IDs)
+      if (variants && variants.length > 0) {
+        updateData.variants = {
+          create: variants.filter((v: any) => !v.id?.startsWith('temp-')).map((variant: any) => ({
+            name: variant.name,
+            sku: variant.sku,
+            price: variant.price,
+            regularPrice: variant.regularPrice,
+            salePrice: variant.salePrice,
+            stockQuantity: variant.stockQuantity,
+            stockStatus: variant.stockStatus,
+            attributes: typeof variant.attributes === 'string' ? variant.attributes : JSON.stringify(variant.attributes || []),
+            images: typeof variant.images === 'string' ? variant.images : JSON.stringify(variant.images || []),
+            weight: variant.weight,
+            dimensions: typeof variant.dimensions === 'string' ? variant.dimensions : JSON.stringify(variant.dimensions),
+          }))
+        };
+      }
+    }
     
     // Always update the updatedAt timestamp
     updateData.updatedAt = new Date();
 
-    return await this.prisma.product.update({
+    const updatedProduct = await this.prisma.product.update({
       where: { id },
       data: updateData,
       include: {
-        product_categories: {
+        productCategories: {
           include: {
-            categories: true,
+            category: true,
           },
         },
         variants: true,
       },
     });
+
+    // Convert tags and images from JSON string to array
+    (updatedProduct as any).tags = this.tagsToArray(updatedProduct.tags);
+    (updatedProduct as any).images = this.imagesToArray(updatedProduct.images);
+    return updatedProduct;
   }
 
   async delete(id: string): Promise<void> {
@@ -279,9 +422,9 @@ export class ProductRepository extends BaseRepository<Product, CreateProductInpu
       OR: [
         { name: { contains: query, mode: 'insensitive' } },
         { description: { contains: query, mode: 'insensitive' } },
-        { short_description: { contains: query, mode: 'insensitive' } },
+        { shortDescription: { contains: query, mode: 'insensitive' } },
         { sku: { contains: query, mode: 'insensitive' } },
-        { tags: { hasSome: [query] } },
+        { tags: { contains: query } },
       ],
     };
 
@@ -293,9 +436,9 @@ export class ProductRepository extends BaseRepository<Product, CreateProductInpu
       where.featured = filters.featured;
     }
     if (filters.categoryId) {
-      where.product_categories = {
+      where.productCategories = {
         some: {
-          category_id: filters.categoryId,
+          categoryId: filters.categoryId,
         },
       };
     }
@@ -305,11 +448,11 @@ export class ProductRepository extends BaseRepository<Product, CreateProductInpu
         where,
         skip,
         take: limit,
-        orderBy: orderBy || { created_at: 'desc' },
+        orderBy: orderBy || { createdAt: 'desc' },
         include: {
-          product_categories: {
+          productCategories: {
             include: {
-              categories: true,
+              category: true,
             },
           },
           variants: true,
@@ -318,14 +461,21 @@ export class ProductRepository extends BaseRepository<Product, CreateProductInpu
       this.prisma.product.count({ where }),
     ]);
 
+    // Convert tags and images from JSON strings to arrays for all products
+    const productsWithArrayData = products.map(product => ({
+      ...product,
+      tags: this.tagsToArray(product.tags),
+      images: this.imagesToArray(product.images)
+    }));
+
     return {
-      data: products,
+      data: productsWithArrayData,
       pagination: this.buildPaginationMeta(page, limit, total),
     };
   }
 
   async getFeaturedProducts(limit: number = 10): Promise<Product[]> {
-    return await this.prisma.product.findMany({
+    const products = await this.prisma.product.findMany({
       where: {
         featured: true,
         status: 'published',
@@ -333,14 +483,21 @@ export class ProductRepository extends BaseRepository<Product, CreateProductInpu
       take: limit,
       orderBy: { created_at: 'desc' },
       include: {
-        product_categories: {
+        productCategories: {
           include: {
-            categories: true,
+            category: true,
           },
         },
         variants: true,
       },
     });
+
+    // Convert tags and images from JSON strings to arrays for all products
+    return products.map(product => ({
+      ...product,
+      tags: this.tagsToArray(product.tags),
+      images: this.imagesToArray(product.images)
+    }));
   }
 
   async getProductsByCategory(categoryId: string, options: FindManyOptions = {}): Promise<PaginatedResult<Product>> {
@@ -351,21 +508,26 @@ export class ProductRepository extends BaseRepository<Product, CreateProductInpu
   }
 
   async updateInventory(id: string, quantity: number): Promise<Product> {
-    return await this.prisma.product.update({
+    const updatedProduct = await this.prisma.product.update({
       where: { id },
       data: {
-        stock_quantity: quantity,
-        updated_at: new Date(),
+        stockQuantity: quantity,
+        updatedAt: new Date(),
       },
       include: {
-        product_categories: {
+        productCategories: {
           include: {
-            categories: true,
+            category: true,
           },
         },
         variants: true,
       },
     });
+
+    // Convert tags and images from JSON string to array
+    (updatedProduct as any).tags = this.tagsToArray(updatedProduct.tags);
+    (updatedProduct as any).images = this.imagesToArray(updatedProduct.images);
+    return updatedProduct;
   }
 }
 

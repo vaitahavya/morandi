@@ -1,9 +1,10 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import AdminLayout from '@/components/admin/AdminLayout';
 import AdminAuthGuard from '@/components/admin/AdminAuthGuard';
 import ProductManager from '@/components/admin/ProductManager';
+import CategoryManager from '@/components/admin/CategoryManager';
 import OrderManager from '@/components/admin/OrderManager';
 import AnalyticsDashboard from '@/components/admin/AnalyticsDashboard';
 import InventoryManager from '@/components/admin/InventoryManager';
@@ -67,6 +68,15 @@ function OverviewDashboard() {
 export default function AdminPage() {
   const [activeSection, setActiveSection] = useState('overview');
 
+  // Handle URL parameters for direct navigation
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const section = urlParams.get('section');
+    if (section) {
+      setActiveSection(section);
+    }
+  }, []);
+
   console.log('AdminPage - activeSection:', activeSection);
 
   const renderContent = () => {
@@ -83,6 +93,12 @@ export default function AdminPage() {
         return (
           <div className="container mx-auto px-4 py-8">
             <ProductManager />
+          </div>
+        );
+      case 'categories':
+        return (
+          <div className="container mx-auto px-4 py-8">
+            <CategoryManager />
           </div>
         );
       case 'inventory':

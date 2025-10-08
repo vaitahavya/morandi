@@ -15,7 +15,8 @@ import {
   Search,
   HelpCircle,
   LogOut,
-  RotateCcw
+  RotateCcw,
+  FolderTree
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -48,6 +49,12 @@ export default function AdminLayout({ children, activeSection, onSectionChange }
       name: 'Products',
       icon: Package,
       description: 'Product catalog management'
+    },
+    {
+      id: 'categories',
+      name: 'Categories',
+      icon: FolderTree,
+      description: 'Category management and organization'
     },
     {
       id: 'inventory',

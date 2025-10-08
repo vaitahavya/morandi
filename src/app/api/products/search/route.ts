@@ -63,7 +63,7 @@ export async function GET(request: NextRequest) {
         },
         {
           tags: {
-            hasSome: searchTerms
+            contains: q
           }
         },
         {
@@ -77,7 +77,7 @@ export async function GET(request: NextRequest) {
 
     // Category filter
     if (categoryId) {
-      whereConditions.categories = {
+      whereConditions.productCategories = {
         some: {
           categoryId: categoryId
         }
@@ -153,9 +153,9 @@ export async function GET(request: NextRequest) {
         skip: offset,
         take: limit,
         include: {
-          product_categories: {
+          productCategories: {
             include: {
-              categories: true
+              category: true
             }
           },
           variants: {
@@ -182,7 +182,7 @@ export async function GET(request: NextRequest) {
         ? product.reviews.reduce((sum, review) => sum + review.rating, 0) / product.reviews.length
         : 0;
 
-      const effectivePrice = product.sale_price || product.price;
+      const effectivePrice = product.salePrice || product.price;
 
       // Calculate search relevance score if we have a query
       let relevanceScore = 0;
@@ -191,9 +191,9 @@ export async function GET(request: NextRequest) {
         if (product.name.toLowerCase().includes(query)) relevanceScore += 10;
         if (product.sku?.toLowerCase().includes(query)) relevanceScore += 8;
         if (product.description?.toLowerCase().includes(query)) relevanceScore += 5;
-        if (product.short_description?.toLowerCase().includes(query)) relevanceScore += 5;
+        if (product.shortDescription?.toLowerCase().includes(query)) relevanceScore += 5;
         if (product.featured) relevanceScore += 3;
-        if (product.stock_status === 'instock') relevanceScore += 2;
+        if (product.stockStatus === 'instock') relevanceScore += 2;
       }
 
       return {
@@ -201,17 +201,17 @@ export async function GET(request: NextRequest) {
         name: product.name,
         slug: product.slug,
         description: product.description,
-        shortDescription: product.short_description,
+        shortDescription: product.shortDescription,
         sku: product.sku,
         price: effectivePrice,
-        regularPrice: product.regular_price || product.price,
-        salePrice: product.sale_price,
+        regularPrice: product.regularPrice || product.price,
+        salePrice: product.salePrice,
         images: product.images,
-        featuredImage: product.featured_image,
-        stockQuantity: product.stock_quantity,
-        stockStatus: product.stock_status,
+        featuredImage: product.featuredImage,
+        stockQuantity: product.stockQuantity,
+        stockStatus: product.stockStatus,
         featured: product.featured,
-        categories: product.product_categories.map(pc => pc.categories),
+        category: product.productCategories.map(pc => pc.category),
         variants: product.variants,
         attributes: product.attributes.reduce((acc, attr) => {
           if (!acc[attr.name]) acc[attr.name] = [];
@@ -221,9 +221,15 @@ export async function GET(request: NextRequest) {
         avgRating: Math.round(avgRating * 10) / 10,
         reviewCount: product.reviews.length,
         relevanceScore: relevanceScore,
-        // Legacy compatibility
-        tags: product.tags,
-        inStock: product.stock_status === 'instock'
+        // Convert tags from JSON string to array
+        tags: (() => {
+          try {
+            return JSON.parse(product.tags);
+          } catch {
+            return [];
+          }
+        })(),
+        inStock: product.stockStatus === 'instock'
       };
     });
 

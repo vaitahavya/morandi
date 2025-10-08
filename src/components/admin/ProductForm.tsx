@@ -51,22 +51,36 @@ export function ProductForm({ product, onSuccess, onCancel }: ProductFormProps) 
     images: product?.images || [],
     featuredImage: product?.featuredImage || '',
     selectedCategories: product?.categories?.map(c => c.id) || [],
+    variants: product?.variants || [],
     // Legacy fields
     category: product?.category || '',
     tags: product?.tags || []
   });
 
   // Load categories
+  const loadCategories = async () => {
+    try {
+      const cats = await getCategories({ flat: true });
+      setCategories(cats);
+    } catch (err) {
+      console.error('Failed to load categories:', err);
+    }
+  };
+
   useEffect(() => {
-    const loadCategories = async () => {
-      try {
-        const cats = await getCategories({ flat: true });
-        setCategories(cats);
-      } catch (err) {
-        console.error('Failed to load categories:', err);
+    loadCategories();
+  }, []);
+
+  // Listen for storage events to refresh categories when they're updated in another tab
+  useEffect(() => {
+    const handleStorageChange = (e: StorageEvent) => {
+      if (e.key === 'categories-updated') {
+        loadCategories();
       }
     };
-    loadCategories();
+
+    window.addEventListener('storage', handleStorageChange);
+    return () => window.removeEventListener('storage', handleStorageChange);
   }, []);
 
   // Auto-generate slug from name
@@ -107,7 +121,8 @@ export function ProductForm({ product, onSuccess, onCancel }: ProductFormProps) 
           ? formData.dimensions 
           : null,
         tags: Array.isArray(formData.tags) ? formData.tags : 
-              typeof formData.tags === 'string' ? (formData.tags as string).split(',').map(t => t.trim()).filter(Boolean) : []
+              typeof formData.tags === 'string' ? (formData.tags as string).split(',').map(t => t.trim()).filter(Boolean) : [],
+        variants: formData.variants || []
       };
 
       if (product) {
@@ -507,41 +522,359 @@ export function ProductForm({ product, onSuccess, onCancel }: ProductFormProps) 
               </CardContent>
             </Card>
 
+            {/* Product Variations */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center justify-between">
+                  Product Variations
+                  <div className="flex gap-2">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        // Generate common size/color matrix
+                        const sizes = ['S', 'M', 'L', 'XL'];
+                        const colors = ['Black', 'White', 'Red', 'Blue'];
+                        
+                        const newVariants = [];
+                        colors.forEach(color => {
+                          sizes.forEach(size => {
+                            newVariants.push({
+                              id: `temp-${Date.now()}-${color}-${size}`,
+                              name: `${color} - ${size}`,
+                              sku: formData.sku ? `${formData.sku}-${color.substring(0,2).toUpperCase()}-${size}` : '',
+                              price: formData.price,
+                              regularPrice: formData.regularPrice,
+                              salePrice: formData.salePrice || 0,
+                              stockQuantity: 0,
+                              stockStatus: 'instock',
+                              attributes: [
+                                { name: 'Color', value: color },
+                                { name: 'Size', value: size }
+                              ],
+                              images: '[]',
+                              weight: null,
+                              dimensions: null
+                            });
+                          });
+                        });
+                        
+                        setFormData(prev => ({ ...prev, variants: newVariants }));
+                      }}
+                      className="text-xs"
+                    >
+                      Generate Matrix
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setFormData(prev => ({
+                        ...prev,
+                        variants: [...(prev.variants || []), {
+                          id: `temp-${Date.now()}`,
+                          name: '',
+                          sku: '',
+                          price: formData.price,
+                          regularPrice: formData.regularPrice,
+                          salePrice: formData.salePrice || 0,
+                          stockQuantity: 0,
+                          stockStatus: 'instock',
+                          attributes: [],
+                          images: '[]',
+                          weight: null,
+                          dimensions: null
+                        }]
+                      }))}
+                      className="flex items-center gap-2"
+                    >
+                      <Plus className="h-4 w-4" />
+                      Add One
+                    </Button>
+                  </div>
+                </CardTitle>
+                <CardDescription>
+                  Create product variations like different sizes, colors, or combinations.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {formData.variants && formData.variants.length > 0 ? (
+                  <div className="space-y-4">
+                    {formData.variants.map((variant: any, index: number) => (
+                      <div key={variant.id || index} className="border rounded-lg p-4 space-y-4">
+                        <div className="flex items-center justify-between mb-2">
+                          <h4 className="font-medium text-sm">Variation {index + 1}</h4>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => setFormData(prev => ({
+                              ...prev,
+                              variants: prev.variants.filter((_: any, i: number) => i !== index)
+                            }))}
+                            className="text-red-600 hover:text-red-700"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">
+                              Variation Name
+                            </label>
+                            <input
+                              type="text"
+                              placeholder="e.g., Red - Large"
+                              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                              value={variant.name}
+                              onChange={(e) => {
+                                const newVariants = [...formData.variants];
+                                newVariants[index].name = e.target.value;
+                                setFormData(prev => ({ ...prev, variants: newVariants }));
+                              }}
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">
+                              SKU
+                            </label>
+                            <input
+                              type="text"
+                              placeholder="Variant SKU"
+                              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                              value={variant.sku || ''}
+                              onChange={(e) => {
+                                const newVariants = [...formData.variants];
+                                newVariants[index].sku = e.target.value;
+                                setFormData(prev => ({ ...prev, variants: newVariants }));
+                              }}
+                            />
+                          </div>
+                        </div>
+
+                        {/* Attributes (Color, Size, etc.) */}
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">
+                            Attributes (e.g., Color, Size)
+                          </label>
+                          <div className="space-y-2">
+                            {variant.attributes && variant.attributes.map((attr: any, attrIndex: number) => (
+                              <div key={attrIndex} className="flex gap-2">
+                                <input
+                                  type="text"
+                                  placeholder="Attribute name (e.g., Color)"
+                                  className="flex-1 px-3 py-2 border border-gray-300 rounded-lg"
+                                  value={attr.name}
+                                  onChange={(e) => {
+                                    const newVariants = [...formData.variants];
+                                    newVariants[index].attributes[attrIndex].name = e.target.value;
+                                    setFormData(prev => ({ ...prev, variants: newVariants }));
+                                  }}
+                                />
+                                <input
+                                  type="text"
+                                  placeholder="Value (e.g., Red)"
+                                  className="flex-1 px-3 py-2 border border-gray-300 rounded-lg"
+                                  value={attr.value}
+                                  onChange={(e) => {
+                                    const newVariants = [...formData.variants];
+                                    newVariants[index].attributes[attrIndex].value = e.target.value;
+                                    setFormData(prev => ({ ...prev, variants: newVariants }));
+                                  }}
+                                />
+                                <Button
+                                  type="button"
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => {
+                                    const newVariants = [...formData.variants];
+                                    newVariants[index].attributes = newVariants[index].attributes.filter((_: any, i: number) => i !== attrIndex);
+                                    setFormData(prev => ({ ...prev, variants: newVariants }));
+                                  }}
+                                >
+                                  <X className="h-4 w-4" />
+                                </Button>
+                              </div>
+                            ))}
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              onClick={() => {
+                                const newVariants = [...formData.variants];
+                                if (!newVariants[index].attributes) {
+                                  newVariants[index].attributes = [];
+                                }
+                                newVariants[index].attributes.push({ name: '', value: '' });
+                                setFormData(prev => ({ ...prev, variants: newVariants }));
+                              }}
+                              className="w-full"
+                            >
+                              <Plus className="h-4 w-4 mr-2" />
+                              Add Attribute
+                            </Button>
+                          </div>
+                        </div>
+
+                        {/* Pricing */}
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">
+                              Regular Price (₹)
+                            </label>
+                            <input
+                              type="number"
+                              step="0.01"
+                              min="0"
+                              className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                              value={variant.regularPrice || ''}
+                              onChange={(e) => {
+                                const newVariants = [...formData.variants];
+                                newVariants[index].regularPrice = parseFloat(e.target.value) || 0;
+                                newVariants[index].price = parseFloat(e.target.value) || 0;
+                                setFormData(prev => ({ ...prev, variants: newVariants }));
+                              }}
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">
+                              Sale Price (₹)
+                            </label>
+                            <input
+                              type="number"
+                              step="0.01"
+                              min="0"
+                              className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                              value={variant.salePrice || ''}
+                              onChange={(e) => {
+                                const newVariants = [...formData.variants];
+                                const salePrice = parseFloat(e.target.value) || 0;
+                                newVariants[index].salePrice = salePrice;
+                                if (salePrice > 0) {
+                                  newVariants[index].price = salePrice;
+                                } else {
+                                  newVariants[index].price = newVariants[index].regularPrice;
+                                }
+                                setFormData(prev => ({ ...prev, variants: newVariants }));
+                              }}
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">
+                              Stock Quantity
+                            </label>
+                            <input
+                              type="number"
+                              min="0"
+                              className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                              value={variant.stockQuantity || 0}
+                              onChange={(e) => {
+                                const newVariants = [...formData.variants];
+                                newVariants[index].stockQuantity = parseInt(e.target.value) || 0;
+                                setFormData(prev => ({ ...prev, variants: newVariants }));
+                              }}
+                            />
+                          </div>
+                        </div>
+
+                        {/* Stock Status */}
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">
+                            Stock Status
+                          </label>
+                          <select
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                            value={variant.stockStatus || 'instock'}
+                            onChange={(e) => {
+                              const newVariants = [...formData.variants];
+                              newVariants[index].stockStatus = e.target.value;
+                              setFormData(prev => ({ ...prev, variants: newVariants }));
+                            }}
+                          >
+                            <option value="instock">In Stock</option>
+                            <option value="outofstock">Out of Stock</option>
+                            <option value="onbackorder">On Backorder</option>
+                          </select>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-center py-8 text-gray-500">
+                    <Package className="h-12 w-12 mx-auto mb-2 text-gray-400" />
+                    <p>No variations added yet.</p>
+                    <p className="text-sm">Click "Add Variation" to create size or color options.</p>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
             {/* Categories */}
             <Card>
               <CardHeader>
-                <CardTitle>Categories & Tags</CardTitle>
+                <CardTitle className="flex items-center justify-between">
+                  Categories & Tags
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => window.open('/admin?section=categories', '_blank')}
+                    className="flex items-center gap-2"
+                  >
+                    <Plus className="h-4 w-4" />
+                    Manage Categories
+                  </Button>
+                </CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
                     Categories
                   </label>
-                  <div className="space-y-2 max-h-32 overflow-y-auto border border-gray-300 rounded-lg p-2">
-                    {categories.map((category) => (
-                      <label key={category.id} className="flex items-center gap-2">
-                        <input
-                          type="checkbox"
-                          checked={formData.selectedCategories.includes(category.id)}
-                          onChange={(e) => {
-                            if (e.target.checked) {
-                              setFormData(prev => ({
-                                ...prev,
-                                selectedCategories: [...prev.selectedCategories, category.id]
-                              }));
-                            } else {
-                              setFormData(prev => ({
-                                ...prev,
-                                selectedCategories: prev.selectedCategories.filter(id => id !== category.id)
-                              }));
-                            }
-                          }}
-                          className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                        />
-                        <span className="text-sm">{category.name}</span>
-                      </label>
-                    ))}
-                  </div>
+                  {categories.length === 0 ? (
+                    <div className="border border-gray-300 rounded-lg p-4 text-center">
+                      <Package className="h-8 w-8 text-gray-400 mx-auto mb-2" />
+                      <p className="text-sm text-gray-600 mb-3">No categories available</p>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => window.open('/admin?section=categories', '_blank')}
+                        className="flex items-center gap-2"
+                      >
+                        <Plus className="h-4 w-4" />
+                        Create Category
+                      </Button>
+                    </div>
+                  ) : (
+                    <div className="space-y-2 max-h-32 overflow-y-auto border border-gray-300 rounded-lg p-2">
+                      {categories.map((category) => (
+                        <label key={category.id} className="flex items-center gap-2">
+                          <input
+                            type="checkbox"
+                            checked={formData.selectedCategories.includes(category.id)}
+                            onChange={(e) => {
+                              if (e.target.checked) {
+                                setFormData(prev => ({
+                                  ...prev,
+                                  selectedCategories: [...prev.selectedCategories, category.id]
+                                }));
+                              } else {
+                                setFormData(prev => ({
+                                  ...prev,
+                                  selectedCategories: prev.selectedCategories.filter(id => id !== category.id)
+                                }));
+                              }
+                            }}
+                            className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                          />
+                          <span className="text-sm">{category.name}</span>
+                        </label>
+                      ))}
+                    </div>
+                  )}
                 </div>
 
                 <div>

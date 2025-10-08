@@ -118,9 +118,9 @@ export async function getSimilarProducts(
   const product = await prisma.product.findUnique({
     where: { id: productId },
     include: {
-      product_categories: {
+      productCategories: {
         include: {
-          categories: true,
+          category: true,
         },
       },
     },
@@ -128,16 +128,16 @@ export async function getSimilarProducts(
   if (!product) return [];
 
   // Find products in the same category
-  const categorySlugs = product.product_categories.map(pc => pc.categories.slug);
+  const categorySlugs = product.productCategories.map(pc => pc.category.slug);
   if (categorySlugs.length === 0) return [];
 
   const products = await prisma.product.findMany({
     where: {
       status: 'published',
       id: { not: productId },
-      product_categories: {
+      productCategories: {
         some: {
-          categories: {
+          category: {
             slug: categorySlugs[0], // Use first category
           },
         },
@@ -156,9 +156,9 @@ export async function generateRecommendations() {
     where: { status: 'published' },
     take: 1000,
     include: {
-      product_categories: {
+      productCategories: {
         include: {
-          categories: true,
+          category: true,
         },
       },
     },
@@ -168,15 +168,15 @@ export async function generateRecommendations() {
 
   for (const product of products) {
     // Find products in the same category
-    const categorySlugs = product.product_categories.map(pc => pc.categories.slug);
+    const categorySlugs = product.productCategories.map(pc => pc.category.slug);
     
     for (const categorySlug of categorySlugs) {
       const categoryProducts = await prisma.product.findMany({
         where: {
           status: 'published',
-          product_categories: {
+          productCategories: {
             some: {
-              categories: {
+              category: {
                 slug: categorySlug,
               },
             },
