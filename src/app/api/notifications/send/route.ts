@@ -158,7 +158,7 @@ export async function GET(request: NextRequest) {
 
     const notifications = await prisma.emailNotification.findMany({
       where,
-      orderBy: { created_at: 'desc' },
+      orderBy: { createdAt: 'desc' },
       take: limit,
     });
 

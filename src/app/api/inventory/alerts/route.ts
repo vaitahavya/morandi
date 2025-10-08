@@ -134,7 +134,7 @@ export async function GET(request: NextRequest) {
           }
         }
       },
-      orderBy: { created_at: 'desc' },
+      orderBy: { createdAt: 'desc' },
       take: 10
     });
 

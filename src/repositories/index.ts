@@ -35,6 +35,7 @@ export type {
   UpdateProductInput,
   ProductFilters,
   IProductRepository,
+  ProductWithArrays,
 } from './ProductRepository';
 
 export type {

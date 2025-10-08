@@ -132,37 +132,37 @@ export class CustomerRepository implements ICustomerRepository {
     // Build where clause for orders
     const orderWhere: any = {};
     if (filters.dateFrom || filters.dateTo) {
-      orderWhere.created_at = {};
-      if (filters.dateFrom) orderWhere.created_at.gte = filters.dateFrom;
-      if (filters.dateTo) orderWhere.created_at.lte = filters.dateTo;
+      orderWhere.createdAt = {};
+      if (filters.dateFrom) orderWhere.createdAt.gte = filters.dateFrom;
+      if (filters.dateTo) orderWhere.createdAt.lte = filters.dateTo;
     }
 
     // Get all orders with customer data
     const orders = await this.prisma.order.findMany({
       where: orderWhere,
       include: {
-        order_items: true,
+        orderItems: true,
       },
-      orderBy: { created_at: 'desc' },
+      orderBy: { createdAt: 'desc' },
     });
 
     // Process customer data
     const customerMap = new Map<string, Customer>();
 
     orders.forEach(order => {
-      const email = order.customer_email;
+      const email = order.customerEmail;
       if (!email) return;
 
       if (!customerMap.has(email)) {
         customerMap.set(email, {
           email,
-          phone: order.customer_phone || undefined,
-          firstName: order.billing_first_name || undefined,
-          lastName: order.billing_last_name || undefined,
-          fullName: `${order.billing_first_name || ''} ${order.billing_last_name || ''}`.trim(),
-          city: order.billing_city || undefined,
-          country: order.billing_country || undefined,
-          userId: order.user_id || undefined,
+          phone: order.customerPhone || undefined,
+          firstName: order.billingFirstName || undefined,
+          lastName: order.billingLastName || undefined,
+          fullName: `${order.billingFirstName || ''} ${order.billingLastName || ''}`.trim(),
+          city: order.billingCity || undefined,
+          country: order.billingCountry || undefined,
+          userId: order.userId || undefined,
           orders: [],
           totalSpent: 0,
           totalOrders: 0,
@@ -172,8 +172,8 @@ export class CustomerRepository implements ICustomerRepository {
           daysSinceFirstOrder: 0,
           daysSinceLastOrder: 0,
           isActive: false,
-          firstOrderDate: order.created_at?.toISOString() || '',
-          lastOrderDate: order.created_at?.toISOString() || '',
+          firstOrderDate: order.createdAt?.toISOString() || '',
+          lastOrderDate: order.createdAt?.toISOString() || '',
           statusCounts: {},
           monthlySpending: {},
         });
@@ -182,22 +182,22 @@ export class CustomerRepository implements ICustomerRepository {
       const customer = customerMap.get(email)!;
       customer.orders.push({
         id: order.id,
-        orderNumber: order.order_number || '',
-        date: order.created_at?.toISOString() || '',
+        orderNumber: order.orderNumber || '',
+        date: order.createdAt?.toISOString() || '',
         status: order.status || 'unknown',
-        paymentStatus: order.payment_status || 'unknown',
+        paymentStatus: order.paymentStatus || 'unknown',
         total: Number(order.total) || 0,
         currency: order.currency || 'INR',
-        itemCount: order.order_items?.length || 0,
-        items: order.order_items || [],
+        itemCount: order.orderItems?.length || 0,
+        items: order.orderItems || [],
       });
 
       customer.totalSpent += Number(order.total) || 0;
       customer.totalOrders += 1;
 
       // Update date ranges
-      if (order.created_at) {
-        const orderDate = order.created_at.toISOString();
+      if (order.createdAt) {
+        const orderDate = order.createdAt.toISOString();
         if (!customer.firstOrderDate || orderDate < customer.firstOrderDate) {
           customer.firstOrderDate = orderDate;
         }
@@ -296,48 +296,48 @@ export class CustomerRepository implements ICustomerRepository {
 
     // Get detailed order information
     const orders = await this.prisma.order.findMany({
-      where: { customer_email: email },
+      where: { customerEmail: email },
       include: {
-        order_items: {
+        orderItems: {
           include: {
-            products: true,
+            product: true,
           },
         },
       },
-      orderBy: { created_at: 'desc' },
+      orderBy: { createdAt: 'desc' },
     });
 
     // Get billing and shipping addresses from latest order
     const latestOrder = orders[0];
     const billingAddress = {
-      firstName: latestOrder?.billing_first_name || undefined,
-      lastName: latestOrder?.billing_last_name || undefined,
-      company: latestOrder?.billing_company || undefined,
-      address1: latestOrder?.billing_address1 || undefined,
-      address2: latestOrder?.billing_address2 || undefined,
-      city: latestOrder?.billing_city || undefined,
-      state: latestOrder?.billing_state || undefined,
-      postcode: latestOrder?.billing_postcode || undefined,
-      country: latestOrder?.billing_country || undefined,
+      firstName: latestOrder?.billingFirstName || undefined,
+      lastName: latestOrder?.billingLastName || undefined,
+      company: latestOrder?.billingCompany || undefined,
+      address1: latestOrder?.billingAddress1 || undefined,
+      address2: latestOrder?.billingAddress2 || undefined,
+      city: latestOrder?.billingCity || undefined,
+      state: latestOrder?.billingState || undefined,
+      postcode: latestOrder?.billingPostcode || undefined,
+      country: latestOrder?.billingCountry || undefined,
     };
 
     const shippingAddress = {
-      firstName: latestOrder?.shipping_first_name || undefined,
-      lastName: latestOrder?.shipping_last_name || undefined,
-      company: latestOrder?.shipping_company || undefined,
-      address1: latestOrder?.shipping_address1 || undefined,
-      address2: latestOrder?.shipping_address2 || undefined,
-      city: latestOrder?.shipping_city || undefined,
-      state: latestOrder?.shipping_state || undefined,
-      postcode: latestOrder?.shipping_postcode || undefined,
-      country: latestOrder?.shipping_country || undefined,
+      firstName: latestOrder?.shippingFirstName || undefined,
+      lastName: latestOrder?.shippingLastName || undefined,
+      company: latestOrder?.shippingCompany || undefined,
+      address1: latestOrder?.shippingAddress1 || undefined,
+      address2: latestOrder?.shippingAddress2 || undefined,
+      city: latestOrder?.shippingCity || undefined,
+      state: latestOrder?.shippingState || undefined,
+      postcode: latestOrder?.shippingPostcode || undefined,
+      country: latestOrder?.shippingCountry || undefined,
     };
 
     // Calculate top products
     const productMap = new Map<string, { name: string; quantity: number; revenue: number }>();
     orders.forEach(order => {
-      order.order_items?.forEach(item => {
-        const productName = item.product_name || 'Unknown Product';
+      order.orderItems?.forEach(item => {
+        const productName = item.productName || 'Unknown Product';
         if (!productMap.has(productName)) {
           productMap.set(productName, { name: productName, quantity: 0, revenue: 0 });
         }
@@ -354,8 +354,8 @@ export class CustomerRepository implements ICustomerRepository {
     // Calculate monthly spending
     const monthlySpending: Record<string, number> = {};
     orders.forEach(order => {
-      if (order.created_at) {
-        const month = order.created_at.toISOString().substring(0, 7); // YYYY-MM
+      if (order.createdAt) {
+        const month = order.createdAt.toISOString().substring(0, 7); // YYYY-MM
         monthlySpending[month] = (monthlySpending[month] || 0) + Number(order.total);
       }
     });
@@ -363,9 +363,9 @@ export class CustomerRepository implements ICustomerRepository {
     // Create activity log
     const activityLog = orders.map(order => ({
       id: order.id,
-      date: order.created_at?.toISOString() || '',
+      date: order.createdAt?.toISOString() || '',
       action: 'order_placed',
-      description: `Order ${order.order_number} placed`,
+      description: `Order ${order.orderNumber} placed`,
       orderId: order.id,
     }));
 

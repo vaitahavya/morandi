@@ -391,7 +391,7 @@ export async function GET(
     // Get status history
     const statusHistory = await prisma.orderStatusHistory.findMany({
       where: { order_id: id },
-      orderBy: { created_at: 'desc' },
+      orderBy: { createdAt: 'desc' },
       include: {
         order: {
           select: {

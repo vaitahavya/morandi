@@ -537,7 +537,7 @@ export function ProductForm({ product, onSuccess, onCancel }: ProductFormProps) 
                         const sizes = ['S', 'M', 'L', 'XL'];
                         const colors = ['Black', 'White', 'Red', 'Blue'];
                         
-                        const newVariants = [];
+                        const newVariants: any[] = [];
                         colors.forEach(color => {
                           sizes.forEach(size => {
                             newVariants.push({
@@ -553,7 +553,7 @@ export function ProductForm({ product, onSuccess, onCancel }: ProductFormProps) 
                                 { name: 'Color', value: color },
                                 { name: 'Size', value: size }
                               ],
-                              images: '[]',
+                              images: [],
                               weight: null,
                               dimensions: null
                             });
@@ -582,7 +582,7 @@ export function ProductForm({ product, onSuccess, onCancel }: ProductFormProps) 
                           stockQuantity: 0,
                           stockStatus: 'instock',
                           attributes: [],
-                          images: '[]',
+                          images: [],
                           weight: null,
                           dimensions: null
                         }]
@@ -755,7 +755,7 @@ export function ProductForm({ product, onSuccess, onCancel }: ProductFormProps) 
                                 if (salePrice > 0) {
                                   newVariants[index].price = salePrice;
                                 } else {
-                                  newVariants[index].price = newVariants[index].regularPrice;
+                                  newVariants[index].price = newVariants[index].regularPrice || newVariants[index].price || 0;
                                 }
                                 setFormData(prev => ({ ...prev, variants: newVariants }));
                               }}

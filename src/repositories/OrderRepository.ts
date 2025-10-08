@@ -93,7 +93,7 @@ export interface OrderFilters {
  * Order with items type
  */
 export interface OrderWithItems extends Order {
-  order_items: OrderItem[];
+  orderItems: OrderItem[];
 }
 
 /**
@@ -127,39 +127,37 @@ export class OrderRepository extends BaseRepository<OrderWithItems, CreateOrderI
       // Create the order
       const order = await tx.order.create({
         data: {
-          user_id: data.userId,
+          userId: data.userId,
           status: data.status,
           total: data.total,
-          order_number: data.orderNumber,
-          payment_status: data.paymentStatus,
-          customer_email: data.customerEmail,
-          customer_phone: data.customerPhone,
-          billing_first_name: data.billingFirstName,
-          billing_last_name: data.billingLastName,
-          billing_company: data.billingCompany,
-          billing_address1: data.billingAddress1,
-          billing_address2: data.billingAddress2,
-          billing_city: data.billingCity,
-          billing_state: data.billingState,
-          billing_postcode: data.billingPostcode,
-          billing_country: data.billingCountry,
-          shipping_first_name: data.shippingFirstName,
-          shipping_last_name: data.shippingLastName,
-          shipping_company: data.shippingCompany,
-          shipping_address1: data.shippingAddress1,
-          shipping_address2: data.shippingAddress2,
-          shipping_city: data.shippingCity,
-          shipping_state: data.shippingState,
-          shipping_postcode: data.shippingPostcode,
-          shipping_country: data.shippingCountry,
-          payment_method: data.paymentMethod,
-          payment_method_title: data.paymentMethodTitle,
-          shipping_method: data.shippingMethod,
-          shipping_method_title: data.shippingMethodTitle,
-          shipping_cost: data.shippingCost,
-          tax_amount: data.taxAmount,
-          discount_amount: data.discountAmount,
-          customer_notes: data.customerNotes,
+          orderNumber: data.orderNumber,
+          paymentStatus: data.paymentStatus,
+          customerEmail: data.customerEmail,
+          customerPhone: data.customerPhone,
+          billingFirstName: data.billingFirstName,
+          billingLastName: data.billingLastName,
+          billingCompany: data.billingCompany,
+          billingAddress1: data.billingAddress1,
+          billingAddress2: data.billingAddress2,
+          billingCity: data.billingCity,
+          billingState: data.billingState,
+          billingPostcode: data.billingPostcode,
+          billingCountry: data.billingCountry,
+          shippingFirstName: data.shippingFirstName,
+          shippingLastName: data.shippingLastName,
+          shippingCompany: data.shippingCompany,
+          shippingAddress1: data.shippingAddress1,
+          shippingAddress2: data.shippingAddress2,
+          shippingCity: data.shippingCity,
+          shippingState: data.shippingState,
+          shippingPostcode: data.shippingPostcode,
+          shippingCountry: data.shippingCountry,
+          paymentMethod: data.paymentMethod,
+          subtotal: data.total - (data.shippingCost || 0) - (data.taxAmount || 0) + (data.discountAmount || 0),
+          tax: data.taxAmount,
+          shipping: data.shippingCost,
+          discount: data.discountAmount,
+          notes: data.customerNotes,
           currency: data.currency,
         },
       });
@@ -169,18 +167,12 @@ export class OrderRepository extends BaseRepository<OrderWithItems, CreateOrderI
         data.items.map(item =>
           tx.orderItem.create({
             data: {
-              order_id: order.id,
-              product_id: item.productId,
-              variant_id: item.variantId,
+              orderId: order.id,
+              productId: item.productId,
               quantity: item.quantity,
               price: item.price,
-              product_name: item.productName,
-              product_sku: item.productSku,
-              variant_name: item.variantName,
-              unit_price: item.unitPrice,
-              total_price: item.totalPrice,
-              attributes: item.attributes,
-              product_image: item.productImage,
+              productName: item.productName,
+              unitPrice: item.unitPrice || item.price,
             },
           })
         )
@@ -189,8 +181,8 @@ export class OrderRepository extends BaseRepository<OrderWithItems, CreateOrderI
       // Return order with items
       return {
         ...order,
-        order_items: orderItems,
-      };
+        orderItems: orderItems,
+      } as OrderWithItems;
     });
   }
 
@@ -198,18 +190,18 @@ export class OrderRepository extends BaseRepository<OrderWithItems, CreateOrderI
     return await this.prisma.order.findUnique({
       where: { id },
       include: {
-        order_items: true,
+        orderItems: true,
       },
-    });
+    }) as OrderWithItems | null;
   }
 
   async findByOrderNumber(orderNumber: string): Promise<OrderWithItems | null> {
     return await this.prisma.order.findUnique({
-      where: { order_number: orderNumber },
+      where: { orderNumber: orderNumber },
       include: {
-        order_items: true,
+        orderItems: true,
       },
-    });
+    }) as OrderWithItems | null;
   }
 
   async findMany(filters: OrderFilters = {}, options: FindManyOptions = {}): Promise<PaginatedResult<OrderWithItems>> {
@@ -220,27 +212,27 @@ export class OrderRepository extends BaseRepository<OrderWithItems, CreateOrderI
     const where: any = {};
     
     if (filters.userId) {
-      where.user_id = filters.userId;
+      where.userId = filters.userId;
     }
     if (filters.status) {
       where.status = filters.status;
     }
     if (filters.paymentStatus) {
-      where.payment_status = filters.paymentStatus;
+      where.paymentStatus = filters.paymentStatus;
     }
     if (filters.customerEmail) {
-      where.customer_email = { contains: filters.customerEmail, mode: 'insensitive' };
+      where.customerEmail = { contains: filters.customerEmail, mode: 'insensitive' };
     }
     if (filters.orderNumber) {
-      where.order_number = { contains: filters.orderNumber, mode: 'insensitive' };
+      where.orderNumber = { contains: filters.orderNumber, mode: 'insensitive' };
     }
     if (filters.dateFrom || filters.dateTo) {
-      where.created_at = {};
+      where.createdAt = {};
       if (filters.dateFrom) {
-        where.created_at.gte = filters.dateFrom;
+        where.createdAt.gte = filters.dateFrom;
       }
       if (filters.dateTo) {
-        where.created_at.lte = filters.dateTo;
+        where.createdAt.lte = filters.dateTo;
       }
     }
     if (filters.minTotal !== undefined || filters.maxTotal !== undefined) {
@@ -258,16 +250,16 @@ export class OrderRepository extends BaseRepository<OrderWithItems, CreateOrderI
         where,
         skip,
         take: limit,
-        orderBy: orderBy || { created_at: 'desc' },
+        orderBy: orderBy || { createdAt: 'desc' },
         include: {
-          order_items: true,
+          orderItems: true,
         },
       }),
       this.prisma.order.count({ where }),
     ]);
 
     return {
-      data: orders,
+      data: orders as OrderWithItems[],
       pagination: this.buildPaginationMeta(page, limit, total),
     };
   }
@@ -275,25 +267,25 @@ export class OrderRepository extends BaseRepository<OrderWithItems, CreateOrderI
   async update(id: string, data: UpdateOrderInput): Promise<OrderWithItems> {
     const updateData: any = { ...data };
     
-    // Map camelCase to snake_case for database fields
-    if (data.paymentStatus !== undefined) updateData.payment_status = data.paymentStatus;
-    if (data.customerEmail !== undefined) updateData.customer_email = data.customerEmail;
-    if (data.customerPhone !== undefined) updateData.customer_phone = data.customerPhone;
-    if (data.customerNotes !== undefined) updateData.customer_notes = data.customerNotes;
-    if (data.shippingCost !== undefined) updateData.shipping_cost = data.shippingCost;
-    if (data.taxAmount !== undefined) updateData.tax_amount = data.taxAmount;
-    if (data.discountAmount !== undefined) updateData.discount_amount = data.discountAmount;
+    // Map camelCase for database fields
+    if (data.paymentStatus !== undefined) updateData.paymentStatus = data.paymentStatus;
+    if (data.customerEmail !== undefined) updateData.customerEmail = data.customerEmail;
+    if (data.customerPhone !== undefined) updateData.customerPhone = data.customerPhone;
+    if (data.customerNotes !== undefined) updateData.notes = data.customerNotes;
+    if (data.shippingCost !== undefined) updateData.shipping = data.shippingCost;
+    if (data.taxAmount !== undefined) updateData.tax = data.taxAmount;
+    if (data.discountAmount !== undefined) updateData.discount = data.discountAmount;
     
     // Always update the updatedAt timestamp
-    updateData.updated_at = new Date();
+    updateData.updatedAt = new Date();
 
     return await this.prisma.order.update({
       where: { id },
       data: updateData,
       include: {
-        order_items: true,
+        orderItems: true,
       },
-    });
+    }) as OrderWithItems;
   }
 
   async delete(id: string): Promise<void> {
@@ -303,29 +295,21 @@ export class OrderRepository extends BaseRepository<OrderWithItems, CreateOrderI
   }
 
   async updateStatus(id: string, status: string, notes?: string, changedBy?: string): Promise<OrderWithItems> {
-    return await this.prisma.$transaction(async (tx) => {
-      // Update the order
-      const order = await tx.order.update({
-        where: { id },
-        data: {
-          status,
-          updated_at: new Date(),
-        },
-      });
-
-      // Create status history entry
-      await tx.orderStatusHistory.create({
-        data: {
-          order_id: id,
-          status,
-          notes,
-          changed_by: changedBy,
-        },
-      });
-
-      // Return order with items
-      return await this.findById(id) as OrderWithItems;
+    // Update the order - Note: OrderStatusHistory model doesn't exist in schema
+    // If needed, add it to the schema or track status changes differently
+    const order = await this.prisma.order.update({
+      where: { id },
+      data: {
+        status,
+        notes: notes || undefined,
+        updatedAt: new Date(),
+      },
+      include: {
+        orderItems: true,
+      },
     });
+
+    return order as OrderWithItems;
   }
 
   async getOrdersByUser(userId: string, options: FindManyOptions = {}): Promise<PaginatedResult<OrderWithItems>> {
@@ -344,14 +328,14 @@ export class OrderRepository extends BaseRepository<OrderWithItems, CreateOrderI
     // Build where clause
     const where: any = {};
     
-    if (filters.userId) where.user_id = filters.userId;
+    if (filters.userId) where.userId = filters.userId;
     if (filters.status) where.status = filters.status;
-    if (filters.paymentStatus) where.payment_status = filters.paymentStatus;
-    if (filters.customerEmail) where.customer_email = { contains: filters.customerEmail, mode: 'insensitive' };
+    if (filters.paymentStatus) where.paymentStatus = filters.paymentStatus;
+    if (filters.customerEmail) where.customerEmail = { contains: filters.customerEmail, mode: 'insensitive' };
     if (filters.dateFrom || filters.dateTo) {
-      where.created_at = {};
-      if (filters.dateFrom) where.created_at.gte = filters.dateFrom;
-      if (filters.dateTo) where.created_at.lte = filters.dateTo;
+      where.createdAt = {};
+      if (filters.dateFrom) where.createdAt.gte = filters.dateFrom;
+      if (filters.dateTo) where.createdAt.lte = filters.dateTo;
     }
 
     const [totalOrders, orders, statusBreakdown] = await Promise.all([

@@ -4,9 +4,9 @@ import {
   UpdateProductInput, 
   ProductFilters,
   FindManyOptions,
-  PaginatedResult 
+  PaginatedResult,
+  ProductWithArrays 
 } from '@/repositories';
-import { Product } from '@prisma/client';
 
 /**
  * Product Service - Business logic layer
@@ -15,7 +15,7 @@ export class ProductService {
   /**
    * Create a new product with business validation
    */
-  async createProduct(productData: CreateProductInput): Promise<Product> {
+  async createProduct(productData: CreateProductInput): Promise<ProductWithArrays> {
     // Business validation
     if (!productData.name || !productData.slug) {
       throw new Error('Product name and slug are required');
@@ -42,7 +42,7 @@ export class ProductService {
   /**
    * Get product by ID
    */
-  async getProductById(id: string): Promise<Product | null> {
+  async getProductById(id: string): Promise<ProductWithArrays | null> {
     if (!id) {
       throw new Error('Product ID is required');
     }
@@ -53,7 +53,7 @@ export class ProductService {
   /**
    * Get product by slug
    */
-  async getProductBySlug(slug: string): Promise<Product | null> {
+  async getProductBySlug(slug: string): Promise<ProductWithArrays | null> {
     if (!slug) {
       throw new Error('Product slug is required');
     }
@@ -64,14 +64,14 @@ export class ProductService {
   /**
    * Get paginated products with filters
    */
-  async getProducts(filters?: ProductFilters, options?: FindManyOptions): Promise<PaginatedResult<Product>> {
+  async getProducts(filters?: ProductFilters, options?: FindManyOptions): Promise<PaginatedResult<ProductWithArrays>> {
     return await productRepository.findMany(filters, options);
   }
 
   /**
    * Search products
    */
-  async searchProducts(query: string, filters?: ProductFilters, options?: FindManyOptions): Promise<PaginatedResult<Product>> {
+  async searchProducts(query: string, filters?: ProductFilters, options?: FindManyOptions): Promise<PaginatedResult<ProductWithArrays>> {
     if (!query || query.trim().length < 2) {
       throw new Error('Search query must be at least 2 characters long');
     }
@@ -82,7 +82,7 @@ export class ProductService {
   /**
    * Update product with business validation
    */
-  async updateProduct(id: string, productData: UpdateProductInput): Promise<Product> {
+  async updateProduct(id: string, productData: UpdateProductInput): Promise<ProductWithArrays> {
     if (!id) {
       throw new Error('Product ID is required');
     }
@@ -132,7 +132,7 @@ export class ProductService {
   /**
    * Get featured products
    */
-  async getFeaturedProducts(limit: number = 10): Promise<Product[]> {
+  async getFeaturedProducts(limit: number = 10): Promise<ProductWithArrays[]> {
     if (limit <= 0 || limit > 100) {
       throw new Error('Limit must be between 1 and 100');
     }
@@ -143,7 +143,7 @@ export class ProductService {
   /**
    * Get products by category
    */
-  async getProductsByCategory(categoryId: string, options?: FindManyOptions): Promise<PaginatedResult<Product>> {
+  async getProductsByCategory(categoryId: string, options?: FindManyOptions): Promise<PaginatedResult<ProductWithArrays>> {
     if (!categoryId) {
       throw new Error('Category ID is required');
     }
@@ -154,7 +154,7 @@ export class ProductService {
   /**
    * Update product inventory
    */
-  async updateInventory(id: string, quantity: number): Promise<Product> {
+  async updateInventory(id: string, quantity: number): Promise<ProductWithArrays> {
     if (!id) {
       throw new Error('Product ID is required');
     }

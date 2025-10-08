@@ -25,49 +25,48 @@ import toast from 'react-hot-toast';
 
 interface Return {
   id: string;
-  return_number: string;
-  order_id: string;
-  customer_email: string;
-  customer_phone?: string;
-  return_reason: string;
-  return_description?: string;
+  returnNumber: string;
+  orderId: string;
+  customerEmail: string;
+  customerPhone?: string;
+  returnReason: string;
+  returnDescription?: string;
   status: string;
-  return_type: string;
-  refund_amount: number;
-  requested_at: string;
-  orders: {
-    order_number: string;
+  returnType: string;
+  refundAmount: number;
+  createdAt: string;
+  order: {
+    orderNumber: string;
     total: number;
-    order_date: string;
+    createdAt: string;
   };
 }
 
 interface ReturnDetailsData {
   id: string;
-  return_number: string;
-  order_id: string;
-  customer_email: string;
-  customer_phone?: string;
-  return_reason: string;
-  return_description?: string;
+  returnNumber: string;
+  orderId: string;
+  customerEmail: string;
+  customerPhone?: string;
+  returnReason: string;
+  returnDescription?: string;
   status: string;
-  return_type: string;
-  refund_amount: number;
-  refund_method?: string;
-  admin_notes?: string;
-  customer_notes?: string;
-  qc_status?: string;
-  qc_notes?: string;
-  tracking_number?: string;
+  returnType: string;
+  refundAmount: number;
+  refundMethod?: string;
+  adminNotes?: string;
+  customerNotes?: string;
+  qcStatus?: string;
+  qcNotes?: string;
+  trackingNumber?: string;
   carrier?: string;
-  images?: string[];
-  videos?: string[];
-  requested_at: string;
-  processed_at?: string;
-  refunded_at?: string;
-  return_items: any[];
-  orders: any;
-  return_status_history: any[];
+  images?: string;
+  videos?: string;
+  createdAt: string;
+  processedAt?: string;
+  refundedAt?: string;
+  returnItems: any[];
+  order: any;
 }
 
 interface ReturnDetailsProps {
@@ -108,12 +107,12 @@ export function ReturnDetails({ returnItem, onClose, onUpdate }: ReturnDetailsPr
         setReturnData(data.data);
         // Initialize form values
         setNewStatus(data.data.status);
-        setAdminNotes(data.data.admin_notes || '');
-        setRefundAmount(data.data.refund_amount || 0);
-        setRefundMethod(data.data.refund_method || '');
-        setQcStatus(data.data.qc_status || '');
-        setQcNotes(data.data.qc_notes || '');
-        setTrackingNumber(data.data.tracking_number || '');
+        setAdminNotes(data.data.adminNotes || '');
+        setRefundAmount(data.data.refundAmount || 0);
+        setRefundMethod(data.data.refundMethod || '');
+        setQcStatus(data.data.qcStatus || '');
+        setQcNotes(data.data.qcNotes || '');
+        setTrackingNumber(data.data.trackingNumber || '');
         setCarrier(data.data.carrier || '');
       } else {
         setError(data.error || 'Failed to load return details');
@@ -275,9 +274,9 @@ export function ReturnDetails({ returnItem, onClose, onUpdate }: ReturnDetailsPr
               </div>
               <div>
                 <h3 className="text-lg font-semibold text-gray-900">
-                  Return {returnItem.return_number}
+                  Return {returnItem.returnNumber}
                 </h3>
-                <p className="text-sm text-gray-500">Order: {returnItem.orders.order_number}</p>
+                <p className="text-sm text-gray-500">Order: {returnItem.order.orderNumber}</p>
               </div>
               {getStatusBadge(returnItem.status)}
             </div>
@@ -351,31 +350,31 @@ export function ReturnDetails({ returnItem, onClose, onUpdate }: ReturnDetailsPr
                           <div className="grid grid-cols-2 gap-4">
                             <div>
                               <label className="text-sm font-medium text-gray-600">Return Number</label>
-                              <p className="text-sm font-mono">{returnData.return_number}</p>
+                              <p className="text-sm font-mono">{returnData.returnNumber}</p>
                             </div>
                             <div>
                               <label className="text-sm font-medium text-gray-600">Return Type</label>
-                              <p className="text-sm">{returnData.return_type.charAt(0).toUpperCase() + returnData.return_type.slice(1)}</p>
+                              <p className="text-sm">{returnData.returnType.charAt(0).toUpperCase() + returnData.returnType.slice(1)}</p>
                             </div>
                             <div>
                               <label className="text-sm font-medium text-gray-600">Reason</label>
-                              <p className="text-sm">{returnData.return_reason.replace('_', ' ')}</p>
+                              <p className="text-sm">{returnData.returnReason.replace('_', ' ')}</p>
                             </div>
                             <div>
                               <label className="text-sm font-medium text-gray-600">Requested</label>
-                              <p className="text-sm">{formatDate(returnData.requested_at)}</p>
+                              <p className="text-sm">{formatDate(returnData.createdAt)}</p>
                             </div>
                           </div>
-                          {returnData.return_description && (
+                          {returnData.returnDescription && (
                             <div>
                               <label className="text-sm font-medium text-gray-600">Description</label>
-                              <p className="text-sm text-gray-700">{returnData.return_description}</p>
+                              <p className="text-sm text-gray-700">{returnData.returnDescription}</p>
                             </div>
                           )}
-                          {returnData.customer_notes && (
+                          {returnData.customerNotes && (
                             <div>
                               <label className="text-sm font-medium text-gray-600">Customer Notes</label>
-                              <p className="text-sm text-gray-700">{returnData.customer_notes}</p>
+                              <p className="text-sm text-gray-700">{returnData.customerNotes}</p>
                             </div>
                           )}
                         </CardContent>
@@ -392,12 +391,12 @@ export function ReturnDetails({ returnItem, onClose, onUpdate }: ReturnDetailsPr
                         <CardContent className="space-y-3">
                           <div className="flex items-center gap-2">
                             <Mail className="h-4 w-4 text-gray-400" />
-                            <span className="text-sm">{returnData.customer_email}</span>
+                            <span className="text-sm">{returnData.customerEmail}</span>
                           </div>
-                          {returnData.customer_phone && (
+                          {returnData.customerPhone && (
                             <div className="flex items-center gap-2">
                               <Phone className="h-4 w-4 text-gray-400" />
-                              <span className="text-sm">{returnData.customer_phone}</span>
+                              <span className="text-sm">{returnData.customerPhone}</span>
                             </div>
                           )}
                         </CardContent>
@@ -443,19 +442,19 @@ export function ReturnDetails({ returnItem, onClose, onUpdate }: ReturnDetailsPr
                           <div className="grid grid-cols-2 gap-4">
                             <div>
                               <label className="text-sm font-medium text-gray-600">Order Number</label>
-                              <p className="text-sm font-mono">{returnData.orders.order_number}</p>
+                              <p className="text-sm font-mono">{returnData.order.orderNumber}</p>
                             </div>
                             <div>
                               <label className="text-sm font-medium text-gray-600">Order Total</label>
-                              <p className="text-sm">{formatCurrency(returnData.orders.total)}</p>
+                              <p className="text-sm">{formatCurrency(returnData.order.total)}</p>
                             </div>
                             <div>
                               <label className="text-sm font-medium text-gray-600">Order Date</label>
-                              <p className="text-sm">{formatDate(returnData.orders.created_at)}</p>
+                              <p className="text-sm">{formatDate(returnData.order.createdAt)}</p>
                             </div>
                             <div>
                               <label className="text-sm font-medium text-gray-600">Order Status</label>
-                              <p className="text-sm">{returnData.orders.status}</p>
+                              <p className="text-sm">{returnData.order.status}</p>
                             </div>
                           </div>
                         </CardContent>
@@ -472,22 +471,22 @@ export function ReturnDetails({ returnItem, onClose, onUpdate }: ReturnDetailsPr
                           <div className="grid grid-cols-2 gap-4">
                             <div>
                               <label className="text-sm font-medium text-gray-600">Refund Amount</label>
-                              <p className="text-lg font-semibold text-green-600">{formatCurrency(returnData.refund_amount)}</p>
+                              <p className="text-lg font-semibold text-green-600">{formatCurrency(returnData.refundAmount)}</p>
                             </div>
                             <div>
                               <label className="text-sm font-medium text-gray-600">Refund Method</label>
-                              <p className="text-sm">{returnData.refund_method || 'Not set'}</p>
+                              <p className="text-sm">{returnData.refundMethod || 'Not set'}</p>
                             </div>
-                            {returnData.processed_at && (
+                            {returnData.processedAt && (
                               <div>
                                 <label className="text-sm font-medium text-gray-600">Processed Date</label>
-                                <p className="text-sm">{formatDate(returnData.processed_at)}</p>
+                                <p className="text-sm">{formatDate(returnData.processedAt)}</p>
                               </div>
                             )}
-                            {returnData.refunded_at && (
+                            {returnData.refundedAt && (
                               <div>
                                 <label className="text-sm font-medium text-gray-600">Refunded Date</label>
-                                <p className="text-sm">{formatDate(returnData.refunded_at)}</p>
+                                <p className="text-sm">{formatDate(returnData.refundedAt)}</p>
                               </div>
                             )}
                           </div>
@@ -495,7 +494,7 @@ export function ReturnDetails({ returnItem, onClose, onUpdate }: ReturnDetailsPr
                       </Card>
 
                       {/* Quality Control */}
-                      {returnData.qc_status && (
+                      {returnData.qcStatus && (
                         <Card>
                           <CardHeader>
                             <CardTitle className="flex items-center gap-2">
@@ -506,12 +505,12 @@ export function ReturnDetails({ returnItem, onClose, onUpdate }: ReturnDetailsPr
                           <CardContent className="space-y-3">
                             <div>
                               <label className="text-sm font-medium text-gray-600">QC Status</label>
-                              <p className="text-sm">{returnData.qc_status}</p>
+                              <p className="text-sm">{returnData.qcStatus}</p>
                             </div>
-                            {returnData.qc_notes && (
+                            {returnData.qcNotes && (
                               <div>
                                 <label className="text-sm font-medium text-gray-600">QC Notes</label>
-                                <p className="text-sm text-gray-700">{returnData.qc_notes}</p>
+                                <p className="text-sm text-gray-700">{returnData.qcNotes}</p>
                               </div>
                             )}
                           </CardContent>
@@ -519,7 +518,7 @@ export function ReturnDetails({ returnItem, onClose, onUpdate }: ReturnDetailsPr
                       )}
 
                       {/* Admin Notes */}
-                      {returnData.admin_notes && (
+                      {returnData.adminNotes && (
                         <Card>
                           <CardHeader>
                             <CardTitle className="flex items-center gap-2">
@@ -528,7 +527,7 @@ export function ReturnDetails({ returnItem, onClose, onUpdate }: ReturnDetailsPr
                             </CardTitle>
                           </CardHeader>
                           <CardContent>
-                            <p className="text-sm text-gray-700">{returnData.admin_notes}</p>
+                            <p className="text-sm text-gray-700">{returnData.adminNotes}</p>
                           </CardContent>
                         </Card>
                       )}
@@ -565,37 +564,37 @@ export function ReturnDetails({ returnItem, onClose, onUpdate }: ReturnDetailsPr
                           </tr>
                         </thead>
                         <tbody className="bg-white divide-y divide-gray-200">
-                          {returnData.return_items.map((item) => (
+                          {returnData.returnItems.map((item) => (
                             <tr key={item.id}>
                               <td className="px-6 py-4 whitespace-nowrap">
                                 <div>
                                   <div className="text-sm font-medium text-gray-900">
-                                    {item.product_name}
+                                    {item.productName}
                                   </div>
-                                  {item.variant_name && (
+                                  {item.variantName && (
                                     <div className="text-sm text-gray-500">
-                                      {item.variant_name}
+                                      {item.variantName}
                                     </div>
                                   )}
-                                  {item.product_sku && (
+                                  {item.productSku && (
                                     <div className="text-xs text-gray-400">
-                                      SKU: {item.product_sku}
+                                      SKU: {item.productSku}
                                     </div>
                                   )}
                                 </div>
                               </td>
                               <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                                {item.quantity_returned}
+                                {item.quantityReturned}
                               </td>
                               <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                                {formatCurrency(item.unit_price)}
+                                {formatCurrency(item.unitPrice)}
                               </td>
                               <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                                {formatCurrency(item.total_refund_amount)}
+                                {formatCurrency(item.totalRefundAmount)}
                               </td>
                               <td className="px-6 py-4 whitespace-nowrap">
-                                {item.condition_received ? (
-                                  <span className="text-sm">{item.condition_received}</span>
+                                {item.conditionReceived ? (
+                                  <span className="text-sm">{item.conditionReceived}</span>
                                 ) : (
                                   <span className="text-sm text-gray-400">Not inspected</span>
                                 )}
@@ -627,7 +626,7 @@ export function ReturnDetails({ returnItem, onClose, onUpdate }: ReturnDetailsPr
                     <h4 className="text-lg font-semibold">Status History</h4>
                     
                     <div className="space-y-4">
-                      {returnData.return_status_history.map((history) => (
+                      {returnData.returnStatusHistory && returnData.returnStatusHistory.map((history: any) => (
                         <div key={history.id} className="flex items-start gap-3 p-4 bg-gray-50 rounded-lg">
                           <div className="p-2 bg-blue-100 rounded-lg">
                             <Clock className="h-4 w-4 text-blue-600" />

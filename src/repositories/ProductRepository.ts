@@ -2,6 +2,14 @@ import { PrismaClient, Product } from '@prisma/client';
 import { BaseRepository, FindManyOptions, PaginatedResult } from './base/BaseRepository';
 
 /**
+ * Extended Product type with parsed arrays for application use
+ */
+export type ProductWithArrays = Omit<Product, 'tags' | 'images'> & {
+  tags: string[];
+  images: string[];
+};
+
+/**
  * Product creation input type
  */
 export interface CreateProductInput {
@@ -74,22 +82,22 @@ export interface ProductFilters {
  * Product repository interface
  */
 export interface IProductRepository {
-  create(data: CreateProductInput): Promise<Product>;
-  findById(id: string): Promise<Product | null>;
-  findBySlug(slug: string): Promise<Product | null>;
-  findMany(filters?: ProductFilters, options?: FindManyOptions): Promise<PaginatedResult<Product>>;
-  update(id: string, data: UpdateProductInput): Promise<Product>;
+  create(data: CreateProductInput): Promise<ProductWithArrays>;
+  findById(id: string): Promise<ProductWithArrays | null>;
+  findBySlug(slug: string): Promise<ProductWithArrays | null>;
+  findMany(filters?: ProductFilters, options?: FindManyOptions): Promise<PaginatedResult<ProductWithArrays>>;
+  update(id: string, data: UpdateProductInput): Promise<ProductWithArrays>;
   delete(id: string): Promise<void>;
-  search(query: string, filters?: ProductFilters, options?: FindManyOptions): Promise<PaginatedResult<Product>>;
-  getFeaturedProducts(limit?: number): Promise<Product[]>;
-  getProductsByCategory(categoryId: string, options?: FindManyOptions): Promise<PaginatedResult<Product>>;
-  updateInventory(id: string, quantity: number): Promise<Product>;
+  search(query: string, filters?: ProductFilters, options?: FindManyOptions): Promise<PaginatedResult<ProductWithArrays>>;
+  getFeaturedProducts(limit?: number): Promise<ProductWithArrays[]>;
+  getProductsByCategory(categoryId: string, options?: FindManyOptions): Promise<PaginatedResult<ProductWithArrays>>;
+  updateInventory(id: string, quantity: number): Promise<ProductWithArrays>;
 }
 
 /**
  * Product repository implementation
  */
-export class ProductRepository extends BaseRepository<Product, CreateProductInput, UpdateProductInput, ProductFilters> 
+export class ProductRepository extends BaseRepository<ProductWithArrays, CreateProductInput, UpdateProductInput, ProductFilters> 
   implements IProductRepository {
 
   /**
@@ -139,8 +147,8 @@ export class ProductRepository extends BaseRepository<Product, CreateProductInpu
     }
   }
 
-  async create(data: CreateProductInput): Promise<Product> {
-    return await this.prisma.product.create({
+  async create(data: CreateProductInput): Promise<ProductWithArrays> {
+    const product = await this.prisma.product.create({
       data: {
         name: data.name,
         slug: data.slug,
@@ -189,9 +197,15 @@ export class ProductRepository extends BaseRepository<Product, CreateProductInpu
         variants: true,
       },
     });
+    
+    // Transform tags and images from JSON strings to arrays
+    (product as any).tags = this.tagsToArray(product.tags);
+    (product as any).images = this.imagesToArray(product.images);
+    
+    return product as unknown as ProductWithArrays;
   }
 
-  async findById(id: string): Promise<Product | null> {
+  async findById(id: string): Promise<ProductWithArrays | null> {
     const product = await this.prisma.product.findUnique({
       where: { id },
       include: {
@@ -218,12 +232,14 @@ export class ProductRepository extends BaseRepository<Product, CreateProductInpu
           images: typeof variant.images === 'string' ? JSON.parse(variant.images || '[]') : variant.images,
         }));
       }
+      
+      return product as unknown as ProductWithArrays;
     }
     
-    return product;
+    return null;
   }
 
-  async findBySlug(slug: string): Promise<Product | null> {
+  async findBySlug(slug: string): Promise<ProductWithArrays | null> {
     const product = await this.prisma.product.findUnique({
       where: { slug },
       include: {
@@ -250,12 +266,14 @@ export class ProductRepository extends BaseRepository<Product, CreateProductInpu
           images: typeof variant.images === 'string' ? JSON.parse(variant.images || '[]') : variant.images,
         }));
       }
+      
+      return product as unknown as ProductWithArrays;
     }
     
-    return product;
+    return null;
   }
 
-  async findMany(filters: ProductFilters = {}, options: FindManyOptions = {}): Promise<PaginatedResult<Product>> {
+  async findMany(filters: ProductFilters = {}, options: FindManyOptions = {}): Promise<PaginatedResult<ProductWithArrays>> {
     const { page, limit, skip } = this.buildPaginationOptions(options);
     const orderBy = this.buildOrderBy(options.sortBy, options.sortOrder);
 
@@ -333,7 +351,7 @@ export class ProductRepository extends BaseRepository<Product, CreateProductInpu
       ...product,
       tags: this.tagsToArray(product.tags),
       images: this.imagesToArray(product.images)
-    }));
+    })) as unknown as ProductWithArrays[];
 
     return {
       data: productsWithArrayData,
@@ -341,7 +359,7 @@ export class ProductRepository extends BaseRepository<Product, CreateProductInpu
     };
   }
 
-  async update(id: string, data: UpdateProductInput): Promise<Product> {
+  async update(id: string, data: UpdateProductInput): Promise<ProductWithArrays> {
     const updateData: any = { ...data };
     
     // Map camelCase to Prisma field names (no need for snake_case mapping since Prisma handles it)
@@ -404,7 +422,7 @@ export class ProductRepository extends BaseRepository<Product, CreateProductInpu
     // Convert tags and images from JSON string to array
     (updatedProduct as any).tags = this.tagsToArray(updatedProduct.tags);
     (updatedProduct as any).images = this.imagesToArray(updatedProduct.images);
-    return updatedProduct;
+    return updatedProduct as unknown as ProductWithArrays;
   }
 
   async delete(id: string): Promise<void> {
@@ -413,7 +431,7 @@ export class ProductRepository extends BaseRepository<Product, CreateProductInpu
     });
   }
 
-  async search(query: string, filters: ProductFilters = {}, options: FindManyOptions = {}): Promise<PaginatedResult<Product>> {
+  async search(query: string, filters: ProductFilters = {}, options: FindManyOptions = {}): Promise<PaginatedResult<ProductWithArrays>> {
     const { page, limit, skip } = this.buildPaginationOptions(options);
     const orderBy = this.buildOrderBy(options.sortBy, options.sortOrder);
 
@@ -466,7 +484,7 @@ export class ProductRepository extends BaseRepository<Product, CreateProductInpu
       ...product,
       tags: this.tagsToArray(product.tags),
       images: this.imagesToArray(product.images)
-    }));
+    })) as unknown as ProductWithArrays[];
 
     return {
       data: productsWithArrayData,
@@ -474,14 +492,14 @@ export class ProductRepository extends BaseRepository<Product, CreateProductInpu
     };
   }
 
-  async getFeaturedProducts(limit: number = 10): Promise<Product[]> {
+  async getFeaturedProducts(limit: number = 10): Promise<ProductWithArrays[]> {
     const products = await this.prisma.product.findMany({
       where: {
         featured: true,
         status: 'published',
       },
       take: limit,
-      orderBy: { created_at: 'desc' },
+      orderBy: { createdAt: 'desc' },
       include: {
         productCategories: {
           include: {
@@ -497,17 +515,17 @@ export class ProductRepository extends BaseRepository<Product, CreateProductInpu
       ...product,
       tags: this.tagsToArray(product.tags),
       images: this.imagesToArray(product.images)
-    }));
+    })) as unknown as ProductWithArrays[];
   }
 
-  async getProductsByCategory(categoryId: string, options: FindManyOptions = {}): Promise<PaginatedResult<Product>> {
+  async getProductsByCategory(categoryId: string, options: FindManyOptions = {}): Promise<PaginatedResult<ProductWithArrays>> {
     return await this.findMany(
       { categoryId },
       options
     );
   }
 
-  async updateInventory(id: string, quantity: number): Promise<Product> {
+  async updateInventory(id: string, quantity: number): Promise<ProductWithArrays> {
     const updatedProduct = await this.prisma.product.update({
       where: { id },
       data: {
@@ -527,7 +545,7 @@ export class ProductRepository extends BaseRepository<Product, CreateProductInpu
     // Convert tags and images from JSON string to array
     (updatedProduct as any).tags = this.tagsToArray(updatedProduct.tags);
     (updatedProduct as any).images = this.imagesToArray(updatedProduct.images);
-    return updatedProduct;
+    return updatedProduct as unknown as ProductWithArrays;
   }
 }
 

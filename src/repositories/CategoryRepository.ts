@@ -146,10 +146,10 @@ export class CategoryRepository extends BaseRepository<Category, CreateCategoryI
       where.slug = { contains: filters.slug, mode: 'insensitive' };
     }
     if (filters.parentId !== undefined) {
-      where.parent_id = filters.parentId;
+      where.parentId = filters.parentId;
     }
     if (filters.isVisible !== undefined) {
-      where.is_visible = filters.isVisible;
+      where.isVisible = filters.isVisible;
     }
     if (filters.hasProducts !== undefined) {
       where.productCategories = filters.hasProducts ? 
@@ -161,7 +161,7 @@ export class CategoryRepository extends BaseRepository<Category, CreateCategoryI
         where,
         skip,
         take: limit,
-        orderBy: orderBy || { display_order: 'asc' },
+        orderBy: orderBy || { displayOrder: 'asc' },
         include: {
           children: true,
           parent: true,
@@ -229,7 +229,7 @@ export class CategoryRepository extends BaseRepository<Category, CreateCategoryI
 
   async getCategoryTree(): Promise<CategoryWithChildren[]> {
     const categories = await this.prisma.category.findMany({
-      where: { parent_id: null },
+      where: { parentId: null },
       include: {
         children: {
           include: {
@@ -249,7 +249,7 @@ export class CategoryRepository extends BaseRepository<Category, CreateCategoryI
           },
         },
       },
-      orderBy: { display_order: 'asc' },
+      orderBy: { displayOrder: 'asc' },
     });
 
     return categories as CategoryWithChildren[];

@@ -47,7 +47,7 @@ export async function GET(request: NextRequest) {
             }
           }
         },
-        orderBy: { created_at: 'desc' },
+        orderBy: { createdAt: 'desc' },
         skip: offset,
         take: limit
       }),

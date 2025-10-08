@@ -1,4 +1,4 @@
-import { PrismaClient, returns } from '@prisma/client';
+import { PrismaClient, Returns } from '@prisma/client';
 import { BaseRepository, FindManyOptions, PaginatedResult } from './base/BaseRepository';
 
 /**
@@ -13,9 +13,9 @@ export interface CreateReturnInput {
   returnDescription?: string;
   status: string;
   returnType: string;
-  refundAmount?: number;
-  images: string[];
-  videos: string[];
+  refundAmount: number;
+  images?: string;
+  videos?: string;
   items: CreateReturnItemInput[];
 }
 
@@ -40,8 +40,8 @@ export interface UpdateReturnInput {
   returnReason?: string;
   returnDescription?: string;
   refundAmount?: number;
-  images?: string[];
-  videos?: string[];
+  images?: string;
+  videos?: string;
   processedBy?: string;
   qcBy?: string;
 }
@@ -63,10 +63,9 @@ export interface ReturnFilters {
 /**
  * Return with items type
  */
-export interface ReturnWithItems extends returns {
-  return_items: any[];
+export interface ReturnWithItems extends Returns {
+  returnItems: any[];
   order?: any;
-  return_status_history?: any[];
 }
 
 /**
@@ -101,15 +100,15 @@ export class ReturnRepository extends BaseRepository<ReturnWithItems, CreateRetu
       // Create the return
       const returnRecord = await tx.returns.create({
         data: {
-          return_number: data.returnNumber,
-          order_id: data.orderId,
-          customer_email: data.customerEmail,
-          customer_phone: data.customerPhone,
-          return_reason: data.returnReason,
-          return_description: data.returnDescription,
+          returnNumber: data.returnNumber,
+          orderId: data.orderId,
+          customerEmail: data.customerEmail,
+          customerPhone: data.customerPhone,
+          returnReason: data.returnReason,
+          returnDescription: data.returnDescription,
           status: data.status,
-          return_type: data.returnType,
-          refund_amount: data.refundAmount,
+          returnType: data.returnType,
+          refundAmount: data.refundAmount,
           images: data.images,
           videos: data.videos,
         },
@@ -118,15 +117,15 @@ export class ReturnRepository extends BaseRepository<ReturnWithItems, CreateRetu
       // Create return items
       const returnItems = await Promise.all(
         data.items.map(item =>
-          tx.return_items.create({
+          tx.returnItem.create({
             data: {
-              return_id: returnRecord.id,
-              order_item_id: item.orderItemId,
-              product_id: item.productId,
-              product_name: item.productName,
-              quantity_returned: item.quantity,
-              unit_price: item.unitPrice,
-              total_refund_amount: item.totalRefundAmount,
+              returnId: returnRecord.id,
+              orderItemId: item.orderItemId,
+              productId: item.productId,
+              productName: item.productName,
+              quantityReturned: item.quantity,
+              unitPrice: item.unitPrice,
+              totalRefundAmount: item.totalRefundAmount,
               restockable: item.restockable,
             },
           })
@@ -136,8 +135,8 @@ export class ReturnRepository extends BaseRepository<ReturnWithItems, CreateRetu
       // Return return with items
       return {
         ...returnRecord,
-        return_items: returnItems,
-      };
+        returnItems: returnItems,
+      } as any;
     });
   }
 
@@ -145,25 +144,18 @@ export class ReturnRepository extends BaseRepository<ReturnWithItems, CreateRetu
     return await this.prisma.returns.findUnique({
       where: { id },
       include: {
-        return_items: true,
-        orders: true,
-        users_returns_processed_byTousers: true,
-        users_returns_qc_byTousers: true,
-        return_status_history: {
-          orderBy: { created_at: 'desc' },
-        },
+        returnItems: true,
+        order: true,
       },
     });
   }
 
   async findByReturnNumber(returnNumber: string): Promise<ReturnWithItems | null> {
     return await this.prisma.returns.findUnique({
-      where: { return_number: returnNumber },
+      where: { returnNumber: returnNumber },
       include: {
-        return_items: true,
-        orders: true,
-        users_returns_processed_byTousers: true,
-        users_returns_qc_byTousers: true,
+        returnItems: true,
+        order: true,
       },
     });
   }
@@ -179,28 +171,28 @@ export class ReturnRepository extends BaseRepository<ReturnWithItems, CreateRetu
       where.status = filters.status;
     }
     if (filters.orderId) {
-      where.order_id = filters.orderId;
+      where.orderId = filters.orderId;
     }
     if (filters.customerEmail) {
-      where.customer_email = { contains: filters.customerEmail, mode: 'insensitive' };
+      where.customerEmail = { contains: filters.customerEmail, mode: 'insensitive' };
     }
     if (filters.returnType) {
-      where.return_type = filters.returnType;
+      where.returnType = filters.returnType;
     }
     if (filters.dateFrom || filters.dateTo) {
-      where.created_at = {};
+      where.createdAt = {};
       if (filters.dateFrom) {
-        where.created_at.gte = filters.dateFrom;
+        where.createdAt.gte = filters.dateFrom;
       }
       if (filters.dateTo) {
-        where.created_at.lte = filters.dateTo;
+        where.createdAt.lte = filters.dateTo;
       }
     }
     if (filters.processedBy) {
-      where.processed_by = filters.processedBy;
+      where.processedBy = filters.processedBy;
     }
     if (filters.qcBy) {
-      where.qc_by = filters.qcBy;
+      where.qcBy = filters.qcBy;
     }
 
     const [returns, total] = await Promise.all([
@@ -208,12 +200,10 @@ export class ReturnRepository extends BaseRepository<ReturnWithItems, CreateRetu
         where,
         skip,
         take: limit,
-        orderBy: orderBy || { created_at: 'desc' },
+        orderBy: orderBy || { createdAt: 'desc' },
         include: {
-          return_items: true,
-          orders: true,
-          users_returns_processed_byTousers: true,
-          users_returns_qc_byTousers: true,
+          returnItems: true,
+          order: true,
         },
       }),
       this.prisma.returns.count({ where }),
@@ -226,26 +216,25 @@ export class ReturnRepository extends BaseRepository<ReturnWithItems, CreateRetu
   }
 
   async update(id: string, data: UpdateReturnInput): Promise<ReturnWithItems> {
-    const updateData: any = { ...data };
+    const updateData: any = {};
     
-    // Map camelCase to snake_case for database fields
-    if (data.returnReason !== undefined) updateData.return_reason = data.returnReason;
-    if (data.returnDescription !== undefined) updateData.return_description = data.returnDescription;
-    if (data.refundAmount !== undefined) updateData.refund_amount = data.refundAmount;
-    if (data.processedBy !== undefined) updateData.processed_by = data.processedBy;
-    if (data.qcBy !== undefined) updateData.qc_by = data.qcBy;
+    // Map camelCase fields - Prisma handles the mapping to database columns
+    if (data.status !== undefined) updateData.status = data.status;
+    if (data.returnReason !== undefined) updateData.returnReason = data.returnReason;
+    if (data.returnDescription !== undefined) updateData.returnDescription = data.returnDescription;
+    if (data.refundAmount !== undefined) updateData.refundAmount = data.refundAmount;
+    if (data.processedBy !== undefined) updateData.processedBy = data.processedBy;
+    if (data.qcBy !== undefined) updateData.qcBy = data.qcBy;
     
     // Always update the updatedAt timestamp
-    updateData.updated_at = new Date();
+    updateData.updatedAt = new Date();
 
     return await this.prisma.returns.update({
       where: { id },
       data: updateData,
       include: {
-        return_items: true,
-        orders: true,
-        users_returns_processed_byTousers: true,
-        users_returns_qc_byTousers: true,
+        returnItems: true,
+        order: true,
       },
     });
   }
@@ -258,14 +247,12 @@ export class ReturnRepository extends BaseRepository<ReturnWithItems, CreateRetu
 
   async getReturnsByOrder(orderId: string): Promise<ReturnWithItems[]> {
     return await this.prisma.returns.findMany({
-      where: { order_id: orderId },
+      where: { orderId: orderId },
       include: {
-        return_items: true,
-        orders: true,
-        users_returns_processed_byTousers: true,
-        users_returns_qc_byTousers: true,
+        returnItems: true,
+        order: true,
       },
-      orderBy: { created_at: 'desc' },
+      orderBy: { createdAt: 'desc' },
     });
   }
 
@@ -283,18 +270,17 @@ export class ReturnRepository extends BaseRepository<ReturnWithItems, CreateRetu
         where: { id },
         data: {
           status,
-          updated_at: new Date(),
+          updatedAt: new Date(),
         },
       });
 
       // Create status history entry if notes or changedBy provided
       if (notes || changedBy) {
-        await tx.return_status_history.create({
+        await tx.returnStatusHistory.create({
           data: {
-            return_id: id,
+            returnId: id,
             status,
             notes,
-            changed_by: changedBy,
           },
         });
       }
@@ -314,20 +300,20 @@ export class ReturnRepository extends BaseRepository<ReturnWithItems, CreateRetu
     const where: any = {};
     
     if (filters.status) where.status = filters.status;
-    if (filters.orderId) where.order_id = filters.orderId;
-    if (filters.customerEmail) where.customer_email = { contains: filters.customerEmail, mode: 'insensitive' };
-    if (filters.returnType) where.return_type = filters.returnType;
+    if (filters.orderId) where.orderId = filters.orderId;
+    if (filters.customerEmail) where.customerEmail = { contains: filters.customerEmail, mode: 'insensitive' };
+    if (filters.returnType) where.returnType = filters.returnType;
     if (filters.dateFrom || filters.dateTo) {
-      where.created_at = {};
-      if (filters.dateFrom) where.created_at.gte = filters.dateFrom;
-      if (filters.dateTo) where.created_at.lte = filters.dateTo;
+      where.createdAt = {};
+      if (filters.dateFrom) where.createdAt.gte = filters.dateFrom;
+      if (filters.dateTo) where.createdAt.lte = filters.dateTo;
     }
 
     const [totalReturns, returns, statusBreakdown] = await Promise.all([
       this.prisma.returns.count({ where }),
       this.prisma.returns.findMany({
         where,
-        select: { refund_amount: true, status: true },
+        select: { refundAmount: true, status: true },
       }),
       this.prisma.returns.groupBy({
         by: ['status'],
@@ -336,7 +322,7 @@ export class ReturnRepository extends BaseRepository<ReturnWithItems, CreateRetu
       }),
     ]);
 
-    const totalRefundAmount = returns.reduce((sum, returnRecord) => sum + Number(returnRecord.refund_amount || 0), 0);
+    const totalRefundAmount = returns.reduce((sum, returnRecord) => sum + Number(returnRecord.refundAmount || 0), 0);
     const averageRefundAmount = totalReturns > 0 ? totalRefundAmount / totalReturns : 0;
 
     const statusBreakdownMap = statusBreakdown.reduce((acc, item) => {

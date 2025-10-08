@@ -26,23 +26,23 @@ import { ReturnDetails } from './ReturnDetails';
 
 interface Return {
   id: string;
-  return_number: string;
-  order_id: string;
-  customer_email: string;
-  customer_phone?: string;
-  return_reason: string;
-  return_description?: string;
+  returnNumber: string;
+  orderId: string;
+  customerEmail: string;
+  customerPhone?: string;
+  returnReason: string;
+  returnDescription?: string;
   status: string;
-  return_type: string;
-  refund_amount: number;
-  requested_at: string;
-  processed_at?: string;
-  refunded_at?: string;
-  return_items: any[];
-  orders: {
-    order_number: string;
+  returnType: string;
+  refundAmount: number;
+  createdAt: string;
+  processedAt?: string;
+  refundedAt?: string;
+  returnItems: any[];
+  order: {
+    orderNumber: string;
     total: number;
-    order_date: string;
+    createdAt: string;
   };
 }
 
@@ -71,7 +71,7 @@ export default function ReturnManager({ initialReturns = [] }: ReturnManagerProp
   const [filters, setFilters] = useState<ReturnFilters>({
     page: 1,
     limit: 20,
-    sortBy: 'requested_at',
+    sortBy: 'createdAt',
     sortOrder: 'desc'
   });
   const [pagination, setPagination] = useState({
@@ -311,9 +311,9 @@ export default function ReturnManager({ initialReturns = [] }: ReturnManagerProp
                   handleFilterChange({ sortBy, sortOrder: sortOrder as 'asc' | 'desc' });
                 }}
               >
-                <option value="requested_at-desc">Recently Requested</option>
-                <option value="refund_amount-desc">Highest Refund</option>
-                <option value="return_number-asc">Return Number</option>
+                <option value="createdAt-desc">Recently Requested</option>
+                <option value="refundAmount-desc">Highest Refund</option>
+                <option value="returnNumber-asc">Return Number</option>
                 <option value="status-asc">Status</option>
               </select>
             </div>
@@ -378,13 +378,13 @@ export default function ReturnManager({ initialReturns = [] }: ReturnManagerProp
                           </div>
                           <div>
                             <div className="text-sm font-medium text-gray-900">
-                              {returnItem.return_number}
+                              {returnItem.returnNumber}
                             </div>
                             <div className="text-sm text-gray-500">
-                              Order: {returnItem.orders.order_number}
+                              Order: {returnItem.order.orderNumber}
                             </div>
                             <div className="text-sm text-gray-500">
-                              {returnItem.return_items.length} item{returnItem.return_items.length !== 1 ? 's' : ''}
+                              {returnItem.returnItems.length} item{returnItem.returnItems.length !== 1 ? 's' : ''}
                             </div>
                           </div>
                         </div>
@@ -392,41 +392,41 @@ export default function ReturnManager({ initialReturns = [] }: ReturnManagerProp
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div>
                           <div className="text-sm font-medium text-gray-900">
-                            {returnItem.customer_email}
+                            {returnItem.customerEmail}
                           </div>
-                          {returnItem.customer_phone && (
+                          {returnItem.customerPhone && (
                             <div className="text-sm text-gray-500">
-                              {returnItem.customer_phone}
+                              {returnItem.customerPhone}
                             </div>
                           )}
                         </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
-                        {getReasonBadge(returnItem.return_reason)}
-                        {returnItem.return_description && (
+                        {getReasonBadge(returnItem.returnReason)}
+                        {returnItem.returnDescription && (
                           <div className="text-xs text-gray-500 mt-1 max-w-xs truncate">
-                            {returnItem.return_description}
+                            {returnItem.returnDescription}
                           </div>
                         )}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         {getStatusBadge(returnItem.status)}
                         <div className="text-xs text-gray-500 mt-1">
-                          {returnItem.return_type.charAt(0).toUpperCase() + returnItem.return_type.slice(1)}
+                          {returnItem.returnType.charAt(0).toUpperCase() + returnItem.returnType.slice(1)}
                         </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="text-sm font-medium text-gray-900">
-                          {formatCurrency(returnItem.refund_amount)}
+                          {formatCurrency(returnItem.refundAmount)}
                         </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="text-sm text-gray-900">
-                          {formatDate(returnItem.requested_at)}
+                          {formatDate(returnItem.createdAt)}
                         </div>
-                        {returnItem.processed_at && (
+                        {returnItem.processedAt && (
                           <div className="text-xs text-gray-500">
-                            Processed: {formatDate(returnItem.processed_at)}
+                            Processed: {formatDate(returnItem.processedAt)}
                           </div>
                         )}
                       </td>

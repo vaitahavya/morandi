@@ -38,7 +38,7 @@ export async function GET(
           }
         },
         statusHistory: {
-          orderBy: { created_at: 'desc' }
+          orderBy: { createdAt: 'desc' }
         }
       }
     });
@@ -192,7 +192,7 @@ export async function PUT(
             }
           },
           statusHistory: {
-            orderBy: { created_at: 'desc' }
+            orderBy: { createdAt: 'desc' }
           }
         }
       });

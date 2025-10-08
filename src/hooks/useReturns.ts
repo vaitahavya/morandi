@@ -3,20 +3,19 @@ import { queryKeys } from '@/lib/query-client';
 
 interface Return {
   id: string;
-  return_number: string;
-  order_id: string;
-  customer_email: string;
-  customer_phone?: string;
-  return_reason: string;
-  return_description?: string;
+  returnNumber: string;
+  orderId: string;
+  customerEmail: string;
+  customerPhone?: string;
+  returnReason: string;
+  returnDescription?: string;
   status: string;
-  return_type: string;
-  refund_amount?: number;
-  images: string[];
-  videos: string[];
-  requested_at: string;
-  created_at: string;
-  updated_at: string;
+  returnType: string;
+  refundAmount?: number;
+  images?: string;
+  videos?: string;
+  createdAt: string;
+  updatedAt: string;
 }
 
 interface ReturnFilters {
