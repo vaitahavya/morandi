@@ -193,7 +193,7 @@ export const initializeRazorpayPayment = (
     name: 'Morandi Store',
     description: `Payment for Order ${paymentIntent.receipt}`,
     order_id: paymentIntent.order_id,
-    image: '/logo-placeholder.svg',
+    image: '/morandi lifestyle.png',
     prefill: paymentIntent.prefill,
     theme: paymentIntent.theme,
     notes: paymentIntent.notes,

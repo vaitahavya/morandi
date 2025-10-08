@@ -62,7 +62,7 @@ export default function ProductCard({ product }: ProductCardProps) {
       {/* Image wrapper */}
       <div className="aspect-square w-full overflow-hidden relative">
         <Image
-          src={currentImage || '/placeholder.png'}
+          src={currentImage || '/placeholder.svg'}
           alt={product.images?.[hoveredImageIndex]?.alt || product.images?.[0]?.alt || product.name}
           width={300}
           height={300}

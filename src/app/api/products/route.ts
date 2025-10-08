@@ -28,9 +28,23 @@ export async function GET(request: NextRequest) {
 
     const result = await productService.getProducts(filters, options);
 
+    // Transform images from string arrays to objects for frontend compatibility
+    const transformedData = result.data.map(product => ({
+      ...product,
+      images: Array.isArray(product.images) 
+        ? product.images.map((img: any, index: number) => ({
+            id: index + 1,
+            src: typeof img === 'string' ? img : img.src || img,
+            alt: product.name
+          }))
+        : [],
+      categories: product.productCategories?.map((pc: any) => pc.category) || [],
+      category: product.productCategories?.[0]?.category?.name || 'Uncategorized'
+    }));
+
     return NextResponse.json({
       success: true,
-      data: result.data,
+      data: transformedData,
       pagination: result.pagination
     });
 

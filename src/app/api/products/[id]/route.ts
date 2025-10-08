@@ -23,37 +23,7 @@ export async function GET(
         variants: {
           orderBy: { price: 'asc' }
         },
-        attributes: true,
-        reviews: {
-          include: {
-            users: {
-              select: {
-                id: true,
-                name: true,
-                image: true
-              }
-            }
-          },
-          orderBy: { createdAt: 'desc' }
-        },
-        product_recommendations_product_recommendations_product_idToproducts: {
-          include: {
-            products_product_recommendations_recommended_product_idToproducts: {
-              select: {
-                id: true,
-                name: true,
-                slug: true,
-                price: true,
-                salePrice: true,
-                images: true,
-                featuredImage: true,
-                stockStatus: true
-              }
-            }
-          },
-          orderBy: { score: 'desc' },
-          take: 6
-        }
+        attributes: true
       }
     });
 
@@ -64,13 +34,35 @@ export async function GET(
       }, { status: 404 });
     }
 
-    // Calculate average rating
-    const avgRating = product.reviews.length > 0
-      ? product.reviews.reduce((sum: number, review: any) => sum + review.rating, 0) / product.reviews.length
-      : 0;
-
     // Get effective price
     const effectivePrice = product.salePrice || product.price;
+    
+    // Parse images from JSON string to array
+    const parseImages = (imagesStr: string) => {
+      try {
+        const parsed = JSON.parse(imagesStr);
+        if (Array.isArray(parsed)) {
+          return parsed.map((img: any, index: number) => ({
+            id: index + 1,
+            src: typeof img === 'string' ? img : img.src || img,
+            alt: product.name
+          }));
+        }
+        return [];
+      } catch {
+        return [];
+      }
+    };
+    
+    // Parse tags from JSON string to array
+    const parseTags = (tagsStr: string) => {
+      try {
+        const parsed = JSON.parse(tagsStr);
+        return Array.isArray(parsed) ? parsed : [];
+      } catch {
+        return [];
+      }
+    };
 
     // Transform data
     const transformedProduct = {
@@ -83,7 +75,7 @@ export async function GET(
       price: effectivePrice,
       regularPrice: product.regularPrice || product.price,
       salePrice: product.salePrice,
-      images: product.images,
+      images: parseImages(product.images),
       featuredImage: product.featuredImage,
       stockQuantity: product.stockQuantity,
       stockStatus: product.stockStatus,
@@ -95,22 +87,21 @@ export async function GET(
       featured: product.featured,
       metaTitle: product.metaTitle,
       metaDescription: product.metaDescription,
-      category: product.productCategories.map((pc: any) => pc.category),
+      categories: product.productCategories.map((pc: any) => pc.category),
       variants: product.variants,
       attributes: product.attributes.reduce((acc: Record<string, string[]>, attr: any) => {
         if (!acc[attr.name]) acc[attr.name] = [];
         acc[attr.name].push(attr.value);
         return acc;
       }, {} as Record<string, string[]>),
-      reviews: product.reviews,
-      recommendations: product.product_recommendations_product_recommendations_product_idToproducts.map((rec: any) => rec.products_product_recommendations_recommended_product_idToproducts),
-      avgRating: Math.round(avgRating * 10) / 10,
-      reviewCount: product.reviews.length,
+      avgRating: 0,
+      reviewCount: 0,
       createdAt: product.createdAt,
       updatedAt: product.updatedAt,
       // Legacy fields for compatibility
-      tags: product.tags,
-      inStock: product.stockStatus === 'instock'
+      tags: parseTags(product.tags),
+      inStock: product.stockStatus === 'instock',
+      category: product.productCategories[0]?.category.name || 'Uncategorized'
     };
 
     return NextResponse.json({
@@ -247,9 +238,7 @@ export async function DELETE(
     const existingProduct = await prisma.product.findUnique({
       where: { id },
       include: {
-        orderItems: true,
-        // wishlist_items: true, // This field doesn't exist in the schema
-        reviews: true
+        orderItems: true
       }
     });
 

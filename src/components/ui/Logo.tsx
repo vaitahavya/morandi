@@ -7,7 +7,7 @@ export default function Logo() {
       {/* Logo image placeholder */}
       <div className="relative w-32 h-8 md:w-40 md:h-10">
         <Image
-          src="/logo-placeholder.svg"
+          src="/morandi lifestyle.png"
           alt="MORANDI Lifestyle"
           width={160}
           height={40}
