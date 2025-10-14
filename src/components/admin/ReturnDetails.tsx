@@ -634,28 +634,8 @@ export function ReturnDetails({ returnItem, onClose, onUpdate }: ReturnDetailsPr
                 {activeTab === 'history' && (
                   <div className="space-y-4">
                     <h4 className="text-lg font-semibold">Status History</h4>
-                    
-                    <div className="space-y-4">
-                      {returnData.returnStatusHistory && returnData.returnStatusHistory.map((history: any) => (
-                        <div key={history.id} className="flex items-start gap-3 p-4 bg-gray-50 rounded-lg">
-                          <div className="p-2 bg-blue-100 rounded-lg">
-                            <Clock className="h-4 w-4 text-blue-600" />
-                          </div>
-                          <div className="flex-1">
-                            <div className="flex items-center justify-between">
-                              <p className="text-sm font-medium">
-                                Status changed to: {getStatusBadge(history.status)}
-                              </p>
-                              <span className="text-xs text-gray-500">
-                                {formatDate(history.created_at)}
-                              </span>
-                            </div>
-                            {history.notes && (
-                              <p className="text-sm text-gray-600 mt-1">{history.notes}</p>
-                            )}
-                          </div>
-                        </div>
-                      ))}
+                    <div className="p-4 bg-gray-50 rounded-lg text-sm text-gray-600">
+                      Status history tracking not yet implemented. Current status: {getStatusBadge(returnData.status)}
                     </div>
                   </div>
                 )}

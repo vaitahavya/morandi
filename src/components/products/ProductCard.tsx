@@ -55,7 +55,7 @@ export default function ProductCard({ product }: ProductCardProps) {
 
   const currentImage = product.images?.[hoveredImageIndex]?.src || product.images?.[0]?.src || product.featuredImage;
   const hasDiscount = product.salePrice && product.regularPrice && product.salePrice < product.regularPrice;
-  const discountPercent = hasDiscount 
+  const discountPercent = hasDiscount && product.regularPrice && product.salePrice
     ? Math.round(((product.regularPrice - product.salePrice) / product.regularPrice) * 100)
     : 0;
 

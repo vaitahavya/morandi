@@ -100,12 +100,13 @@ After successful payment:
 
 ## 🔒 Security Features
 
-1. **Signature Verification**: All payments are verified using HMAC SHA256 signature
-2. **Amount Validation**: Payment amount is validated against order total
-3. **Order State Checks**: Prevents double payment and validates order status
-4. **User Authorization**: Verifies user has permission to pay for the order
-5. **Environment Variables**: Sensitive credentials stored securely
-
+1. **Signature Verification**: All payments are verified using HMAC SHA256 signature  
+2. **Amount Validation**: Payment amount is validated against order total  
+3. **Order State Checks**: Prevents double payment and validates order status  
+4. **User Authorization**: Verifies user has permission to pay for the order  
+5. **Environment Variables**: Sensitive credentials stored securely  
+6. **Idempotent Operations**: Payment creation uses idempotency keys to prevent duplicate charges  
+7. **CSRF Protection**: API endpoints validate CSRF tokens to prevent cross-site request forgery  
 ## 📊 Database Schema
 
 Your payment flow uses these tables:

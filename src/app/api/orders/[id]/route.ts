@@ -369,9 +369,3 @@ async function getProductStock(tx: any, productId: string): Promise<number> {
   });
   return product?.stockQuantity || 0;
 }
-  const product = await tx.product.findUnique({
-    where: { id: product_id },
-    select: { stockQuantity: true }
-  });
-  return product?.stockQuantity || 0;
-}
