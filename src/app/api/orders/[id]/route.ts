@@ -108,14 +108,14 @@ export async function PUT(
     // Prepare update data based on what's allowed to be updated
     const updateData: any = {};
     const allowedUpdates = [
-      'status', 'payment_status', 'customerNotes', 'admin_notes',
+      'status', 'paymentStatus', 'notes',
       'shippingMethod', 'shippingMethodTitle', 'trackingNumber',
       'shippingCarrier', 'estimatedDelivery', 'transactionId',
       'razorpayOrderId', 'razorpayPaymentId', 'razorpaySignature'
     ];
 
     // Regular users can only update limited fields
-    const userAllowedUpdates = ['customerNotes'];
+    const userAllowedUpdates = ['notes'];
     const updatesAllowed = isAdmin ? allowedUpdates : userAllowedUpdates;
 
     updatesAllowed.forEach(field => {
@@ -313,17 +313,7 @@ export async function DELETE(
         where: { id },
         data: {
           status: 'cancelled',
-          admin_notes: `Order cancelled by ${isOwner ? 'customer' : 'admin'}`
-        }
-      });
-
-      // Create status history
-      await tx.orderStatusHistory.create({
-        data: {
-          order_id: id,
-          status: 'cancelled',
-          notes: `Order cancelled by ${isOwner ? 'customer' : 'admin'}`,
-          changed_by: session?.user?.id
+          notes: `Order cancelled by ${isOwner ? 'customer' : 'admin'}`
         }
       });
 
