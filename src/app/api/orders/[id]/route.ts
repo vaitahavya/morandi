@@ -48,7 +48,7 @@ export async function GET(
     }
 
     // Check if user has permission to view this order
-    if (order.userId && order.userId !== session?.user?.id) {
+    if (!session?.user || (order.userId && order.userId !== session.user.id)) {
       return NextResponse.json({
         success: false,
         error: 'Access denied'
@@ -108,14 +108,14 @@ export async function PUT(
     // Prepare update data based on what's allowed to be updated
     const updateData: any = {};
     const allowedUpdates = [
-      'status', 'payment_status', 'customerNotes', 'admin_notes',
+      'status', 'paymentStatus', 'notes',
       'shippingMethod', 'shippingMethodTitle', 'trackingNumber',
       'shippingCarrier', 'estimatedDelivery', 'transactionId',
       'razorpayOrderId', 'razorpayPaymentId', 'razorpaySignature'
     ];
 
     // Regular users can only update limited fields
-    const userAllowedUpdates = ['customerNotes'];
+    const userAllowedUpdates = ['notes'];
     const updatesAllowed = isAdmin ? allowedUpdates : userAllowedUpdates;
 
     updatesAllowed.forEach(field => {
@@ -313,17 +313,7 @@ export async function DELETE(
         where: { id },
         data: {
           status: 'cancelled',
-          admin_notes: `Order cancelled by ${isOwner ? 'customer' : 'admin'}`
-        }
-      });
-
-      // Create status history
-      await tx.orderStatusHistory.create({
-        data: {
-          order_id: id,
-          status: 'cancelled',
-          notes: `Order cancelled by ${isOwner ? 'customer' : 'admin'}`,
-          changed_by: session?.user?.id
+          notes: `Order cancelled by ${isOwner ? 'customer' : 'admin'}`
         }
       });
 
@@ -372,9 +362,9 @@ export async function DELETE(
 }
 
 // Helper function to get current product stock
-async function getProductStock(tx: any, product_id: string): Promise<number> {
+async function getProductStock(tx: any, productId: string): Promise<number> {
   const product = await tx.product.findUnique({
-    where: { id: product_id },
+    where: { id: productId },
     select: { stockQuantity: true }
   });
   return product?.stockQuantity || 0;

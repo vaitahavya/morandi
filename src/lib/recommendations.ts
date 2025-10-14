@@ -199,20 +199,38 @@ export async function generateRecommendations() {
     }
 
     // Find products with similar tags
-    if (product.tags.length > 0) {
+    const productTags = (() => {
+      try {
+        const parsed = JSON.parse(product.tags);
+        return Array.isArray(parsed) ? parsed : [];
+      } catch {
+        return [];
+      }
+    })();
+    
+    if (productTags.length > 0) {
       const allProducts = await prisma.product.findMany({
         where: { status: 'published' },
         take: 1000,
       });
       
       for (const tagProduct of allProducts) {
-        if (tagProduct.id !== product.id && tagProduct.tags.length > 0) {
-          const commonTags = product.tags.filter((tag: string) => 
-            tagProduct.tags.includes(tag)
+        const tagProductTags = (() => {
+          try {
+            const parsed = JSON.parse(tagProduct.tags);
+            return Array.isArray(parsed) ? parsed : [];
+          } catch {
+            return [];
+          }
+        })();
+        
+        if (tagProduct.id !== product.id && tagProductTags.length > 0) {
+          const commonTags = productTags.filter((tag: string) => 
+            tagProductTags.includes(tag)
           );
           
           if (commonTags.length > 0) {
-            const similarityScore = commonTags.length / Math.max(product.tags.length, tagProduct.tags.length);
+            const similarityScore = commonTags.length / Math.max(productTags.length, tagProductTags.length);
 
             await prisma.productRecommendation.upsert({
               where: {

@@ -77,7 +77,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Verify user has permission
-    if (order.user_id && order.user_id !== session?.user?.id) {
+    if (order.userId && order.userId !== session?.user?.id) {
       return NextResponse.json({
         success: false,
         error: 'Access denied'
@@ -85,7 +85,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Check if payment is already processed
-    if (order.payment_status === 'paid') {
+    if (order.paymentStatus === 'paid') {
       return NextResponse.json({
         success: false,
         error: 'Payment already processed'
@@ -133,16 +133,15 @@ export async function POST(request: NextRequest) {
       const updatedOrder = await tx.order.update({
         where: { id: order.id },
         data: {
-          payment_status: 'paid',
+          paymentStatus: 'paid',
           status: 'confirmed', // Auto-confirm order on successful payment
-          razorpay_payment_id: razorpay_payment_id,
-          razorpay_signature: razorpay_signature,
-          transaction_id: razorpay_payment_id
+          razorpayPaymentId: razorpay_payment_id,
+          razorpaySignature: razorpay_signature
         },
         include: {
           orderItems: {
             include: {
-              products: {
+              product: {
                 select: {
                   id: true,
                   name: true,
@@ -162,19 +161,12 @@ export async function POST(request: NextRequest) {
         }
       });
 
-      // Create order status history
-      await tx.orderStatusHistory.create({
-        data: {
-          orderId: order.id,
-          status: 'confirmed',
-          notes: `Payment confirmed - Razorpay Payment ID: ${razorpay_payment_id}`,
-          changed_by: session?.user?.id
-        }
-      });
+      // Note: orderStatusHistory model doesn't exist in schema
+      // Status changes are tracked via updatedAt field
 
       // Update inventory for confirmed order
-      for (const item of order.order_items) {
-        const currentStock = item.products?.stockQuantity || 0;
+      for (const item of order.orderItems) {
+        const currentStock = item.product?.stockQuantity || 0;
         const newStock = Math.max(0, currentStock - item.quantity);
 
         // Create inventory transaction
@@ -183,15 +175,15 @@ export async function POST(request: NextRequest) {
             productId: item.productId,
             type: 'sale',
             quantity: -item.quantity,
-            reason: `Order confirmed: ${order.order_number}`,
+            reason: `Order confirmed: ${order.orderNumber}`,
             reference: order.id,
             stockAfter: newStock
           }
         });
 
         // Update product stock
-        item.product_id && await tx.product.update({
-          where: { id: item.product_id },
+        item.productId && await tx.product.update({
+          where: { id: item.productId },
           data: {
             stockQuantity: newStock,
             stockStatus: newStock <= 0 ? 'outofstock' : 
@@ -206,8 +198,8 @@ export async function POST(request: NextRequest) {
           userId: order.userId,
           orderId: order.id,
           type: 'order_confirmation',
-          subject: `Order Confirmed - ${order.order_number}`,
-          content: `Your order ${order.order_number} has been confirmed and payment received.`,
+          subject: `Order Confirmed - ${order.orderNumber}`,
+          content: `Your order ${order.orderNumber} has been confirmed and payment received.`,
           sent: false
         }
       });
@@ -281,14 +273,14 @@ export async function GET(request: NextRequest) {
       where: whereClause,
       select: {
         id: true,
-        order_number: true,
+        orderNumber: true,
         status: true,
-        payment_status: true,
+        paymentStatus: true,
         razorpayOrderId: true,
-        razorpay_payment_id: true,
+        razorpayPaymentId: true,
         total: true,
         currency: true,
-        created_at: true
+        createdAt: true
       }
     });
 
@@ -301,16 +293,16 @@ export async function GET(request: NextRequest) {
 
     // Get payment details from Razorpay if payment ID exists
     let paymentDetails = null;
-    if (order.razorpay_payment_id && razorpay) {
+    if (order.razorpayPaymentId && razorpay) {
       try {
-        const payment = await razorpay.payments.fetch(order.razorpay_payment_id);
+        const payment = await razorpay.payments.fetch(order.razorpayPaymentId);
         paymentDetails = {
           id: payment.id,
           amount: Number(payment.amount) / 100, // Convert to rupees
           currency: payment.currency,
           method: payment.method,
           status: payment.status,
-          created_at: payment.createdAt
+          created_at: payment.created_at
         };
       } catch (error) {
         console.error('Error fetching payment details:', error);

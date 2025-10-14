@@ -73,30 +73,8 @@ export async function PUT(
       const updateData: any = { status };
 
       // Update status-specific fields
-      switch (status) {
-        case 'confirmed':
-          // No specific timestamp field in schema
-          break;
-        case 'processing':
-          // No specific timestamp field in schema
-          break;
-        case 'shipped':
-          if (!existingOrder.shipped_at) {
-            updateData.shipped_at = new Date();
-          }
-          break;
-        case 'delivered':
-          if (!existingOrder.delivered_at) {
-            updateData.delivered_at = new Date();
-          }
-          break;
-        case 'cancelled':
-          // No specific timestamp field in schema
-          break;
-        case 'refunded':
-          // No specific timestamp field in schema
-          break;
-      }
+      // Note: Schema doesn't have shipped_at or delivered_at timestamp fields
+      // Status changes are tracked via updatedAt field
 
       // Update the order
       const order = await tx.order.update({
@@ -105,7 +83,7 @@ export async function PUT(
         include: {
           orderItems: {
             include: {
-              products: {
+              product: {
                 select: {
                   id: true,
                   name: true,
@@ -125,30 +103,23 @@ export async function PUT(
         }
       });
 
-      // Create status history entry
-      await tx.orderStatusHistory.create({
-        data: {
-          order_id: id,
-          status,
-          notes: notes || `Status changed to ${status}`,
-          changed_by: session?.user?.id
-        }
-      });
+      // Note: orderStatusHistory model doesn't exist in schema
+      // Status changes are tracked via updatedAt field
 
       // Handle inventory changes based on status
       await handleInventoryChanges(tx, existingOrder, status);
 
       // Handle automatic payment status updates
       if (status === 'cancelled' || status === 'failed') {
-        if (existingOrder.payment_status === 'paid') {
+        if (existingOrder.paymentStatus === 'paid') {
           await tx.order.update({
             where: { id },
-            data: { payment_status: 'refunded' }
+            data: { paymentStatus: 'refunded' }
           });
-        } else if (existingOrder.payment_status === 'pending') {
+        } else if (existingOrder.paymentStatus === 'pending') {
           await tx.order.update({
             where: { id },
-            data: { payment_status: 'failed' }
+            data: { paymentStatus: 'failed' }
           });
         }
       }
@@ -323,8 +294,8 @@ async function sendOrderStatusNotification(order: any, status: string) {
         ? {
             type: emailType,
             recipient: customerEmail,
-            order_id: order.id,
-            user_id: order.user_id,
+            orderId: order.id,
+            userId: order.userId,
             data: {
               userName: order.user?.name
             }
@@ -332,8 +303,8 @@ async function sendOrderStatusNotification(order: any, status: string) {
         : {
             type: 'custom',
             recipient: customerEmail,
-            order_id: order.id,
-            user_id: order.user_id,
+            orderId: order.id,
+            userId: order.userId,
             data: {
               subject: emailSubject,
               html: emailContent
@@ -371,7 +342,7 @@ export async function GET(
     // Verify order exists and user has permission
     const order = await prisma.order.findUnique({
       where: { id },
-      select: { user_id: true, status: true, payment_status: true }
+      select: { userId: true, status: true, paymentStatus: true, orderNumber: true, updatedAt: true }
     });
 
     if (!order) {
@@ -381,34 +352,23 @@ export async function GET(
       }, { status: 404 });
     }
 
-    if (order.user_id && order.user_id !== session?.user?.id) {
+    if (order.userId && order.userId !== session?.user?.id) {
       return NextResponse.json({
         success: false,
         error: 'Access denied'
       }, { status: 403 });
     }
 
-    // Get status history
-    const statusHistory = await prisma.orderStatusHistory.findMany({
-      where: { order_id: id },
-      orderBy: { createdAt: 'desc' },
-      include: {
-        order: {
-          select: {
-            order_number: true,
-            status: true,
-            payment_status: true
-          }
-        }
-      }
-    });
-
+    // Note: orderStatusHistory model doesn't exist in schema
+    // Return current status only
     return NextResponse.json({
       success: true,
       data: {
         currentStatus: order.status,
-        currentPaymentStatus: order.payment_status,
-        history: statusHistory
+        currentPaymentStatus: order.paymentStatus,
+        orderNumber: order.orderNumber,
+        lastUpdated: order.updatedAt,
+        history: [] // Status history not implemented
       }
     });
 

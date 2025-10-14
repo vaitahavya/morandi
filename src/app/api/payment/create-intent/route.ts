@@ -58,7 +58,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Verify user has permission to pay for this order
-    if (order.user_id && order.user_id !== session?.user?.id) {
+    if (order.userId && order.userId !== session?.user?.id) {
       return NextResponse.json({
         success: false,
         error: 'Access denied'
@@ -84,7 +84,7 @@ export async function POST(request: NextRequest) {
       }, { status: 400 });
     }
 
-    if (order.payment_status === 'paid') {
+    if (order.paymentStatus === 'paid') {
       return NextResponse.json({
         success: false,
         error: 'Order is already paid'
@@ -95,12 +95,12 @@ export async function POST(request: NextRequest) {
     const razorpayOrderOptions = {
       amount: orderAmount, // Amount in paise
       currency: currency.toUpperCase(),
-      receipt: order.order_number,
+      receipt: order.orderNumber,
       notes: {
         order_id: order.id,
-        order_number: order.order_number,
-        customer_email: order.customer_email,
-        customer_name: `${order.billing_first_name} ${order.billing_last_name}`
+        order_number: order.orderNumber,
+        customer_email: order.customerEmail,
+        customer_name: `${order.billingFirstName} ${order.billingLastName}`
       }
     };
 
@@ -133,9 +133,9 @@ export async function POST(request: NextRequest) {
       key: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID,
       order_id: razorpayOrder.id,
       prefill: {
-          name: `${order.billing_first_name} ${order.billing_last_name}`,
-        email: order.customer_email,
-        contact: order.customer_phone || ''
+          name: `${order.billingFirstName} ${order.billingLastName}`,
+        email: order.customerEmail,
+        contact: order.customerPhone || ''
       },
       theme: {
         color: '#3B82F6' // Primary blue color
@@ -184,17 +184,17 @@ export async function GET(request: NextRequest) {
     // Find order
     const whereClause = orderId 
       ? { id: orderId }
-      : { razorpay_order_id: razorpayOrderId };
+      : { razorpayOrderId: razorpayOrderId };
 
     const order = await prisma.order.findFirst({
       where: whereClause,
       select: {
         id: true,
-        order_number: true,
+        orderNumber: true,
         status: true,
-        payment_status: true,
-        razorpay_order_id: true,
-        razorpay_payment_id: true,
+        paymentStatus: true,
+        razorpayOrderId: true,
+        razorpayPaymentId: true,
         total: true,
         currency: true
       }
@@ -209,9 +209,9 @@ export async function GET(request: NextRequest) {
 
     // Get Razorpay order status if we have the ID
     let razorpayStatus = null;
-    if (order.razorpay_order_id && razorpay) {
+    if (order.razorpayOrderId && razorpay) {
       try {
-        const razorpayOrder = await razorpay.orders.fetch(order.razorpay_order_id);
+        const razorpayOrder = await razorpay.orders.fetch(order.razorpayOrderId);
         razorpayStatus = {
           id: razorpayOrder.id,
           status: razorpayOrder.status,
@@ -229,9 +229,9 @@ export async function GET(request: NextRequest) {
       data: {
         order: {
           id: order.id,
-          order_number: order.order_number,
+          orderNumber: order.orderNumber,
           status: order.status,
-          payment_status: order.payment_status,
+          paymentStatus: order.paymentStatus,
           total: order.total,
           currency: order.currency
         },

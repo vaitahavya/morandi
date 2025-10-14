@@ -1,7 +1,7 @@
-import { NextResponse } from 'next/server';
+import { NextResponse, NextRequest } from 'next/server';
 
 // Temporarily disabled middleware to fix redirect loops
-export default function middleware(req) {
+export default function middleware(req: NextRequest) {
   // Just pass through for now - no redirects
   return NextResponse.next();
 }

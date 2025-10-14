@@ -40,7 +40,7 @@ async function resetAdminPassword() {
       
       console.log('✅ Admin user created!');
       console.log('📧 Email:', adminEmail);
-      console.log('🔑 Password:', newPassword);
+      console.log('⚠️  Password has been set – store it securely and do not share');
       console.log('🆔 User ID:', newUser.id);
     } else {
       // Hash new password
