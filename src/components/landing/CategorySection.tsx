@@ -1,35 +1,133 @@
 'use client';
 
+import { useState, useEffect } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
-import { ArrowRight } from 'lucide-react';
+import { ArrowRight, Loader2 } from 'lucide-react';
+import { normalizeImagePath } from '@/lib/utils';
+
+interface Category {
+  id: string;
+  name: string;
+  slug: string;
+  description?: string;
+  image?: string;
+  productCount?: number;
+  isVisible: boolean;
+}
 
 export default function CategorySection() {
-  const categories = [
-    {
-      id: 1,
-      name: "Baby Products",
-      description: "Comfortable baby clothing and essentials",
-      image: "/images/banners/hero-main.jpg",
-      href: "/products?category=baby"
-    },
-    {
-      id: 2,
-      name: "Home Bedding",
-      description: "Neutral and cozy bedding sets",
-      image: "/images/banners/hero-main.jpg",
-      href: "/products?category=bedding"
-    },
-    {
-      id: 3,
-      name: "Feeding Aprons",
-      description: "Practical and stylish feeding essentials",
-      image: "/images/banners/hero-main.jpg",
-      href: "/products?category=feeding"
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const fetchCategories = async () => {
+      try {
+        setLoading(true);
+        const response = await fetch('/api/categories?onlyVisible=true&includeProductCount=true&flat=true');
+        const data = await response.json();
+        
+        if (data.success) {
+          // Filter categories with products and limit to 6 for display
+          const categoriesWithProducts = data.data
+            .filter((cat: Category) => cat.productCount && cat.productCount > 0)
+            .slice(0, 6);
+          setCategories(categoriesWithProducts);
+        } else {
+          setError('Failed to load categories');
+        }
+      } catch (err) {
+        setError('Failed to load categories');
+        console.error('Error fetching categories:', err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchCategories();
+  }, []);
+
+  const getCategoryImage = (category: Category) => {
+    if (category.image) {
+      return normalizeImagePath(category.image);
     }
-  ];
+    
+    // Use category-specific images if available
+    const categoryImages: Record<string, string> = {
+      'baby': '/images/categories/category-baby.svg',
+      'baby-products': '/images/categories/category-baby.svg',
+      'bedding': '/images/categories/category-bedding.svg',
+      'home-bedding': '/images/categories/category-bedding.svg',
+      'feeding': '/images/categories/category-feeding.svg',
+      'feeding-essentials': '/images/categories/category-feeding.svg',
+      'maternity': '/images/categories/category-maternity.svg',
+      'maternity-wear': '/images/categories/category-maternity.svg',
+      'postpartum': '/images/categories/category-postpartum.svg',
+      'postpartum-care': '/images/categories/category-postpartum.svg',
+      'women': '/images/categories/category-women.svg',
+      'lounge-wear': '/images/categories/category-women.svg',
+    };
+    
+    return categoryImages[category.slug] || '/images/banners/hero-main.jpg';
+  };
+
+  if (loading) {
+    return (
+      <section className="py-24 bg-background relative overflow-hidden">
+        <div className="absolute inset-0 bg-gradient-to-br from-muted/30 via-background to-accent/20" />
+        
+        <div className="section-container relative z-10">
+          <div className="text-center mb-16 space-y-4">
+            <h2 className="heading-lg text-foreground">
+              Our Products
+            </h2>
+            <p className="text-lg text-muted-foreground max-w-2xl mx-auto leading-relaxed">
+              Discover our carefully curated collections designed for every stage of motherhood
+            </p>
+          </div>
+          
+          <div className="flex justify-center items-center py-16">
+            <Loader2 className="w-8 h-8 animate-spin text-primary" />
+          </div>
+        </div>
+      </section>
+    );
+  }
+
+  if (error || categories.length === 0) {
+    return (
+      <section className="py-24 bg-background relative overflow-hidden">
+        <div className="absolute inset-0 bg-gradient-to-br from-muted/30 via-background to-accent/20" />
+        
+        <div className="section-container relative z-10">
+          <div className="text-center mb-16 space-y-4">
+            <h2 className="heading-lg text-foreground">
+              Our Products
+            </h2>
+            <p className="text-lg text-muted-foreground max-w-2xl mx-auto leading-relaxed">
+              {error || 'No categories available at the moment'}
+            </p>
+          </div>
+          
+          <div className="text-center">
+            <Button 
+              asChild 
+              variant="outline" 
+              size="lg"
+              className="border-2 border-primary/30 hover:bg-primary hover:text-primary-foreground transition-all duration-300 px-12 py-6 text-lg rounded-xl"
+            >
+              <Link href="/products">
+                View All Categories
+              </Link>
+            </Button>
+          </div>
+        </div>
+      </section>
+    );
+  }
 
   return (
     <section className="py-24 bg-background relative overflow-hidden">
@@ -53,7 +151,7 @@ export default function CategorySection() {
           {categories.map((category, index) => (
             <Link 
               key={category.id}
-              href={category.href}
+              href={`/products?category=${category.slug}`}
               className="group block"
               style={{ animationDelay: `${index * 150}ms` }}
             >
@@ -61,7 +159,7 @@ export default function CategorySection() {
                 {/* Category Image */}
                 <div className="relative h-80 overflow-hidden">
                   <Image
-                    src={category.image}
+                    src={getCategoryImage(category)}
                     alt={category.name}
                     fill
                     className="object-cover group-hover:scale-110 transition-transform duration-700"
@@ -74,9 +172,16 @@ export default function CategorySection() {
                     <h3 className="text-3xl font-serif font-bold text-white mb-2 transform group-hover:translate-y-0 transition-transform">
                       {category.name}
                     </h3>
-                    <p className="text-white/90 font-sans mb-4 opacity-90 group-hover:opacity-100 transition-opacity">
-                      {category.description}
+                    <p className="text-white/90 font-sans mb-2 opacity-90 group-hover:opacity-100 transition-opacity">
+                      {category.description || `Explore ${category.name.toLowerCase()} for every stage of motherhood`}
                     </p>
+                    
+                    {/* Product Count */}
+                    {category.productCount && (
+                      <p className="text-white/70 text-sm mb-4">
+                        {category.productCount} {category.productCount === 1 ? 'product' : 'products'}
+                      </p>
+                    )}
                     
                     {/* Shop Now Button */}
                     <div className="flex items-center text-white font-medium group-hover:text-clay-pink transition-colors">

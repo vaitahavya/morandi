@@ -1,51 +1,125 @@
 'use client';
 
+import { useState, useEffect } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Heart, ShoppingCart, Star } from 'lucide-react';
+import { Heart, ShoppingCart, Star, Loader2 } from 'lucide-react';
+import { normalizeImagePath } from '@/lib/utils';
+
+interface FeaturedProduct {
+  id: string;
+  name: string;
+  price: number;
+  salePrice?: number;
+  images: Array<{ id: number; src: string; alt: string }>;
+  category: string;
+  slug?: string;
+  featuredImage?: string;
+  stockStatus?: string;
+}
 
 export default function FeaturedProductsSection() {
-  const featuredProducts = [
-    {
-      id: 1,
-      name: "Maternity Kurta Set",
-      price: "₹2,499",
-      image: "/images/banners/hero-main.jpg",
-      category: "Maternity Wear",
-      rating: 4.8,
-      reviews: 124
-    },
-    {
-      id: 2,
-      name: "Feeding Aprons",
-      price: "₹1,299",
-      image: "/images/banners/hero-main.jpg",
-      category: "Feeding Essentials",
-      rating: 4.9,
-      reviews: 89
-    },
-    {
-      id: 3,
-      name: "Baby Sleeping Bag",
-      price: "₹1,899",
-      image: "/images/banners/hero-main.jpg",
-      category: "Baby Products",
-      rating: 4.7,
-      reviews: 156
-    },
-    {
-      id: 4,
-      name: "Co-ord Lounge Set",
-      price: "₹3,299",
-      image: "/images/banners/hero-main.jpg",
-      category: "Lounge Wear",
-      rating: 4.9,
-      reviews: 203
+  const [featuredProducts, setFeaturedProducts] = useState<FeaturedProduct[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const fetchFeaturedProducts = async () => {
+      try {
+        setLoading(true);
+        const response = await fetch('/api/products/featured?limit=8');
+        const data = await response.json();
+        
+        if (data.success) {
+          setFeaturedProducts(data.data);
+        } else {
+          setError('Failed to load featured products');
+        }
+      } catch (err) {
+        setError('Failed to load featured products');
+        console.error('Error fetching featured products:', err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchFeaturedProducts();
+  }, []);
+
+  const formatPrice = (price: number) => {
+    return new Intl.NumberFormat('en-IN', {
+      style: 'currency',
+      currency: 'INR',
+      maximumFractionDigits: 0,
+    }).format(price);
+  };
+
+  const getProductImage = (product: FeaturedProduct) => {
+    if (product.featuredImage) {
+      return normalizeImagePath(product.featuredImage);
     }
-  ];
+    
+    if (product.images && product.images.length > 0) {
+      return normalizeImagePath(product.images[0].src);
+    }
+    
+    return '/images/banners/hero-main.jpg'; // Fallback image
+  };
+
+  if (loading) {
+    return (
+      <section className="py-24 bg-gradient-to-br from-muted/50 via-background to-accent/20 relative overflow-hidden">
+        <div className="section-container relative z-10">
+          <div className="text-center mb-16 space-y-4">
+            <Badge variant="secondary" className="mb-4">
+              Bestsellers
+            </Badge>
+            <h2 className="heading-lg text-foreground">
+              Our Handpicked Favorites
+            </h2>
+            <p className="text-lg text-muted-foreground max-w-2xl mx-auto leading-relaxed">
+              Carefully curated pieces that blend comfort, style, and sustainability for every stage of motherhood
+            </p>
+          </div>
+          
+          <div className="flex justify-center items-center py-16">
+            <Loader2 className="w-8 h-8 animate-spin text-primary" />
+          </div>
+        </div>
+      </section>
+    );
+  }
+
+  if (error || featuredProducts.length === 0) {
+    return (
+      <section className="py-24 bg-gradient-to-br from-muted/50 via-background to-accent/20 relative overflow-hidden">
+        <div className="section-container relative z-10">
+          <div className="text-center mb-16 space-y-4">
+            <Badge variant="secondary" className="mb-4">
+              Bestsellers
+            </Badge>
+            <h2 className="heading-lg text-foreground">
+              Our Handpicked Favorites
+            </h2>
+            <p className="text-lg text-muted-foreground max-w-2xl mx-auto leading-relaxed">
+              {error || 'No featured products available at the moment'}
+            </p>
+          </div>
+          
+          <div className="text-center">
+            <Button asChild size="lg" className="bg-clay-pink hover:bg-clay-pink/90 text-white shadow-lg px-12 py-6 text-lg rounded-xl">
+              <Link href="/products">
+                Shop All Products
+              </Link>
+            </Button>
+          </div>
+        </div>
+      </section>
+    );
+  }
 
   return (
     <section className="py-24 bg-gradient-to-br from-muted/50 via-background to-accent/20 relative overflow-hidden">
@@ -81,7 +155,7 @@ export default function FeaturedProductsSection() {
               {/* Product Image */}
               <div className="relative h-80 overflow-hidden bg-muted/30">
                 <Image
-                  src={product.image}
+                  src={getProductImage(product)}
                   alt={product.name}
                   fill
                   className="object-cover group-hover:scale-110 transition-transform duration-700"
@@ -90,9 +164,15 @@ export default function FeaturedProductsSection() {
                 {/* Overlay Actions */}
                 <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300">
                   <div className="absolute bottom-4 left-4 right-4 flex gap-2">
-                    <Button size="sm" className="flex-1 bg-white text-deep-charcoal hover:bg-white/90">
-                      <ShoppingCart className="w-4 h-4 mr-2" />
-                      Quick Add
+                    <Button 
+                      size="sm" 
+                      className="flex-1 bg-white text-deep-charcoal hover:bg-white/90"
+                      asChild
+                    >
+                      <Link href={`/products/${product.slug || product.id}`}>
+                        <ShoppingCart className="w-4 h-4 mr-2" />
+                        Quick Add
+                      </Link>
                     </Button>
                     <Button size="sm" variant="outline" className="border-white text-white hover:bg-white hover:text-deep-charcoal">
                       <Heart className="w-4 h-4" />
@@ -106,27 +186,43 @@ export default function FeaturedProductsSection() {
                     {product.category}
                   </Badge>
                 </div>
+
+                {/* Stock Status Badge */}
+                {product.stockStatus === 'outofstock' && (
+                  <div className="absolute top-4 right-4">
+                    <Badge variant="destructive" className="text-xs">
+                      Out of Stock
+                    </Badge>
+                  </div>
+                )}
               </div>
               
               {/* Product Info */}
               <CardContent className="p-5 space-y-3">
                 <div>
                   <h3 className="font-serif font-semibold text-lg mb-2 text-foreground group-hover:text-primary transition-colors line-clamp-1">
-                    {product.name}
+                    <Link href={`/products/${product.slug || product.id}`} className="hover:underline">
+                      {product.name}
+                    </Link>
                   </h3>
                   
-                  {/* Rating */}
-                  <div className="flex items-center gap-2 text-sm mb-3">
-                    <div className="flex items-center gap-1 text-yellow-500">
-                      <Star className="w-4 h-4 fill-current" />
-                      <span className="font-medium text-foreground">{product.rating}</span>
-                    </div>
-                    <span className="text-muted-foreground">({product.reviews})</span>
+                  {/* Price */}
+                  <div className="flex items-center gap-2 mb-3">
+                    {product.salePrice ? (
+                      <>
+                        <p className="text-2xl font-bold text-foreground">
+                          {formatPrice(product.salePrice)}
+                        </p>
+                        <p className="text-lg text-muted-foreground line-through">
+                          {formatPrice(product.price)}
+                        </p>
+                      </>
+                    ) : (
+                      <p className="text-2xl font-bold text-foreground">
+                        {formatPrice(product.price)}
+                      </p>
+                    )}
                   </div>
-                  
-                  <p className="text-2xl font-bold text-foreground">
-                    {product.price}
-                  </p>
                 </div>
               </CardContent>
             </Card>
