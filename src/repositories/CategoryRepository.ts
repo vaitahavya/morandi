@@ -257,7 +257,7 @@ export class CategoryRepository extends BaseRepository<Category, CreateCategoryI
 
   async getCategoriesByParent(parentId?: string): Promise<Category[]> {
     return await this.prisma.category.findMany({
-      where: { parent_id: parentId || null },
+      where: { parentId: parentId || null },
       include: {
         children: true,
         parent: true,
@@ -268,7 +268,7 @@ export class CategoryRepository extends BaseRepository<Category, CreateCategoryI
           },
         },
       },
-      orderBy: { display_order: 'asc' },
+      orderBy: { displayOrder: 'asc' },
     });
   }
 
