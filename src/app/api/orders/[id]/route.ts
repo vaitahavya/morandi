@@ -15,30 +15,27 @@ export async function GET(
     const order = await prisma.order.findUnique({
       where: { id },
       include: {
-        order_items: {
+        orderItems: {
           include: {
-            products: {
+            product: {
               select: {
                 id: true,
                 name: true,
                 slug: true,
                 images: true,
-                featured_image: true,
+                featuredImage: true,
                 sku: true
               }
             }
           }
         },
-        users: {
+        user: {
           select: {
             id: true,
             name: true,
             email: true,
             image: true
           }
-        },
-        statusHistory: {
-          orderBy: { createdAt: 'desc' }
         }
       }
     });
@@ -51,7 +48,7 @@ export async function GET(
     }
 
     // Check if user has permission to view this order
-    if (order.user_id && order.user_id !== session?.user?.id) {
+    if (order.userId && order.userId !== session?.user?.id) {
       return NextResponse.json({
         success: false,
         error: 'Access denied'
@@ -86,7 +83,7 @@ export async function PUT(
     const existingOrder = await prisma.order.findUnique({
       where: { id },
       include: {
-        order_items: true
+        orderItems: true
       }
     });
 
@@ -98,7 +95,7 @@ export async function PUT(
     }
 
     // Check permissions
-    const isOwner = existingOrder.user_id === session?.user?.id;
+    const isOwner = existingOrder.userId === session?.user?.id;
     const isAdmin = false; // Role-based auth not implemented yet
     
     if (!isOwner && !isAdmin) {
@@ -149,16 +146,11 @@ export async function PUT(
       }
 
       // Set timestamps for certain status changes
-      if (updateData.status === 'shipped' && !existingOrder.shipped_at) {
-        updateData.shipped_at = new Date();
-      }
-      if (updateData.status === 'delivered' && !existingOrder.delivered_at) {
-        updateData.delivered_at = new Date();
-      }
+      // Note: shipped_at and delivered_at fields don't exist in the schema
     }
 
     // Handle payment status updates
-    if (updateData.payment_status === 'paid' && existingOrder.payment_status !== 'paid') {
+    if (updateData.paymentStatus === 'paid' && existingOrder.paymentStatus !== 'paid') {
       // Auto-confirm order when payment is successful
       if (existingOrder.status === 'pending') {
         updateData.status = 'confirmed';
@@ -172,9 +164,9 @@ export async function PUT(
         where: { id },
         data: updateData,
         include: {
-          order_items: {
+          orderItems: {
             include: {
-              products: {
+              product: {
                 select: {
                   id: true,
                   name: true,
@@ -184,55 +176,42 @@ export async function PUT(
               }
             }
           },
-          users: {
+          user: {
             select: {
               id: true,
               name: true,
               email: true
             }
           },
-          statusHistory: {
-            orderBy: { createdAt: 'desc' }
-          }
         }
       });
 
-      // Create status history entry if status changed
-      if (updateData.status && updateData.status !== existingOrder.status) {
-        await tx.orderStatusHistory.create({
-          data: {
-            order_id: id,
-            status: updateData.status,
-            notes: body.statusNote || `Status changed to ${updateData.status}`,
-            changed_by: session?.user?.id
-          }
-        });
-      }
+      // Note: orderStatusHistory model doesn't exist in the schema
 
       // Handle inventory updates based on status changes
       if (updateData.status === 'confirmed' && existingOrder.status !== 'confirmed') {
         // Reduce inventory when order is confirmed
-        for (const item of existingOrder.order_items) {
-          if (item.product_id) {
+        for (const item of existingOrder.orderItems) {
+          if (item.productId) {
             await tx.inventoryTransaction.create({
               data: {
-                product_id: item.product_id,
+                productId: item.productId,
                 type: 'sale',
                 quantity: -item.quantity,
-                reason: `Order confirmed: ${existingOrder.order_number}`,
+                reason: `Order confirmed: ${existingOrder.orderNumber}`,
                 reference: id,
-                stock_after: Math.max(0, await getProductStock(tx, item.product_id) - item.quantity)
+                stockAfter: Math.max(0, await getProductStock(tx, item.productId) - item.quantity)
               }
             });
 
             // Update product stock
             await tx.product.update({
-              where: { id: item.product_id },
+              where: { id: item.productId },
               data: {
-                stock_quantity: {
+                stockQuantity: {
                   decrement: item.quantity
                 },
-                stock_status: await getProductStock(tx, item.product_id) - item.quantity <= 0 ? 'outofstock' : 'instock'
+                stockStatus: await getProductStock(tx, item.productId) - item.quantity <= 0 ? 'outofstock' : 'instock'
               }
             });
           }
@@ -241,27 +220,27 @@ export async function PUT(
 
       // Restore inventory if order is cancelled from confirmed status
       if (updateData.status === 'cancelled' && existingOrder.status === 'confirmed') {
-        for (const item of existingOrder.order_items) {
-          if (item.product_id) {
+        for (const item of existingOrder.orderItems) {
+          if (item.productId) {
             await tx.inventoryTransaction.create({
               data: {
-                product_id: item.product_id,
+                productId: item.productId,
                 type: 'return',
                 quantity: item.quantity,
-                reason: `Order cancelled: ${existingOrder.order_number}`,
+                reason: `Order cancelled: ${existingOrder.orderNumber}`,
                 reference: id,
-                stock_after: await getProductStock(tx, item.product_id) + item.quantity
+                stockAfter: await getProductStock(tx, item.productId) + item.quantity
               }
             });
 
             // Update product stock
             await tx.product.update({
-              where: { id: item.product_id },
+              where: { id: item.productId },
               data: {
-                stock_quantity: {
+                stockQuantity: {
                   increment: item.quantity
                 },
-                stock_status: 'instock'
+                stockStatus: 'instock'
               }
             });
           }
@@ -297,7 +276,7 @@ export async function DELETE(
 
     const existingOrder = await prisma.order.findUnique({
       where: { id },
-      include: { order_items: true }
+      include: { orderItems: true }
     });
 
     if (!existingOrder) {
@@ -308,7 +287,7 @@ export async function DELETE(
     }
 
     // Check permissions
-    const isOwner = existingOrder.user_id === session?.user?.id;
+    const isOwner = existingOrder.userId === session?.user?.id;
     const isAdmin = false; // Role-based auth not implemented yet
     
     if (!isOwner && !isAdmin) {
@@ -350,24 +329,24 @@ export async function DELETE(
 
       // Restore inventory if order was confirmed
       if (existingOrder.status === 'confirmed') {
-        for (const item of existingOrder.order_items) {
-          if (item.product_id) {
+        for (const item of existingOrder.orderItems) {
+          if (item.productId) {
             await tx.inventoryTransaction.create({
               data: {
-                product_id: item.product_id,
+                productId: item.productId,
                 type: 'return',
                 quantity: item.quantity,
-                reason: `Order cancelled: ${existingOrder.order_number}`,
+                reason: `Order cancelled: ${existingOrder.orderNumber}`,
                 reference: id,
-                stock_after: await getProductStock(tx, item.product_id) + item.quantity
+                stockAfter: await getProductStock(tx, item.productId) + item.quantity
               }
             });
 
             await tx.product.update({
-              where: { id: item.product_id },
+              where: { id: item.productId },
               data: {
-                stock_quantity: { increment: item.quantity },
-                stock_status: 'instock'
+                stockQuantity: { increment: item.quantity },
+                stockStatus: 'instock'
               }
             });
           }
@@ -396,7 +375,7 @@ export async function DELETE(
 async function getProductStock(tx: any, product_id: string): Promise<number> {
   const product = await tx.product.findUnique({
     where: { id: product_id },
-    select: { stock_quantity: true }
+    select: { stockQuantity: true }
   });
-  return product?.stock_quantity || 0;
+  return product?.stockQuantity || 0;
 }

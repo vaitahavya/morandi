@@ -176,6 +176,9 @@ model Order {
   status            String?  @default("pending")
   paymentStatus     String?  @default("pending") @map("payment_status")
   paymentMethod     String?  @map("payment_method")
+  razorpayOrderId   String?  @map("razorpay_order_id")
+  razorpayPaymentId String?  @map("razorpay_payment_id")
+  razorpaySignature String?  @map("razorpay_signature")
   subtotal          Float
   tax               Float?   @default(0)
   shipping          Float?   @default(0)

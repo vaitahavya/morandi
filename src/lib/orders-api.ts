@@ -108,10 +108,23 @@ export interface Order {
 }
 
 export interface CreateOrderData {
+  status: string;
+  paymentStatus: string;
+  total: number;
+  subtotal: number;
+  orderNumber?: string;
   items: {
     productId: string;
     variantId?: string;
     quantity: number;
+    price: number;
+    productName: string;
+    productSku?: string;
+    variantName?: string;
+    unitPrice?: number;
+    totalPrice?: number;
+    attributes?: any;
+    productImage?: string;
   }[];
   customerEmail: string;
   customerPhone?: string;

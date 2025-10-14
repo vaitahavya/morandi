@@ -2,12 +2,24 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { ChevronDown, Search, X, Heart, User } from 'lucide-react';
+import { ChevronDown, Search, X, Heart, User, LogOut, ShoppingBag } from 'lucide-react';
 import { useSession, signOut } from 'next-auth/react';
 import MobileMenu from './MobileMenu';
 import CartDrawer from '@/components/cart/CartDrawer';
 import { useWishlistStore } from '@/store/wishlist-store';
 import Logo from '@/components/ui/Logo';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import { Dialog, DialogContent } from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
 
 // Admin user emails mapping (should match AdminAuthGuard)
 const ADMIN_USERS: Record<string, string> = {
@@ -38,8 +50,8 @@ export default function Header() {
 
   return (
     <>
-      <header className="sticky top-0 z-40 w-full bg-morandi-white/95 backdrop-blur-sm shadow-soft">
-        <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-3 md:px-6 lg:px-8">
+      <header className="sticky top-0 z-40 w-full glass border-b border-border/40 shadow-sm">
+        <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-4 md:px-6 lg:px-8">
           {/* Mobile menu */}
           <MobileMenu />
 
@@ -47,118 +59,129 @@ export default function Header() {
           <Logo />
 
           {/* Desktop Navigation */}
-          <nav className="hidden space-x-8 md:flex">
-            <Link href="/" className="text-deep-charcoal hover:text-clay-pink transition-colors font-medium">
+          <nav className="hidden space-x-8 md:flex items-center">
+            <Link href="/" className="text-sm font-medium text-foreground hover:text-primary transition-colors">
               Home
             </Link>
-            <Link href="/products" className="text-deep-charcoal hover:text-clay-pink transition-colors font-medium">
+            <Link href="/products" className="text-sm font-medium text-foreground hover:text-primary transition-colors">
               Shop
             </Link>
-            <Link href="/collections" className="text-deep-charcoal hover:text-clay-pink transition-colors font-medium">
+            <Link href="/collections" className="text-sm font-medium text-foreground hover:text-primary transition-colors">
               Collections
             </Link>
-            <Link href="/about" className="text-deep-charcoal hover:text-clay-pink transition-colors font-medium">
+            <Link href="/about" className="text-sm font-medium text-foreground hover:text-primary transition-colors">
               About
             </Link>
-            <Link href="/contact" className="text-deep-charcoal hover:text-clay-pink transition-colors font-medium">
+            <Link href="/contact" className="text-sm font-medium text-foreground hover:text-primary transition-colors">
               Contact
             </Link>
           </nav>
 
           {/* Right side */}
-          <div className="flex items-center space-x-4">
+          <div className="flex items-center gap-2">
             {/* Search button */}
-            <button
+            <Button
+              variant="ghost"
+              size="icon"
               onClick={() => setIsSearchOpen(true)}
-              className="hidden md:flex items-center text-gray-700 hover:text-primary-700"
+              className="hidden md:flex"
             >
-              <Search size={20} />
-            </button>
+              <Search className="h-5 w-5" />
+            </Button>
 
             {/* Wishlist */}
-            <Link href="/wishlist" className="relative hidden md:flex items-center text-gray-700 hover:text-primary-700">
-              <Heart size={20} />
-              {wishlistCount > 0 && (
-                <span className="absolute -right-2 -top-2 inline-flex h-5 min-w-[1.25rem] items-center justify-center rounded-full bg-red-500 px-1 text-[11px] font-medium text-white">
-                  {wishlistCount}
-                </span>
-              )}
-            </Link>
+            <Button
+              variant="ghost"
+              size="icon"
+              asChild
+              className="relative hidden md:flex"
+            >
+              <Link href="/wishlist">
+                <Heart className="h-5 w-5" />
+                {wishlistCount > 0 && (
+                  <Badge className="absolute -right-1 -top-1 h-5 min-w-5 items-center justify-center rounded-full bg-destructive text-destructive-foreground border-0 px-1 text-[10px]">
+                    {wishlistCount}
+                  </Badge>
+                )}
+              </Link>
+            </Button>
 
             {/* User Menu */}
             <div className="relative hidden md:block">
               {status === 'loading' ? (
-                <div className="w-6 h-6 border-2 border-gray-300 border-t-gray-600 rounded-full animate-spin"></div>
+                <div className="w-6 h-6 border-2 border-border border-t-primary rounded-full animate-spin"></div>
               ) : session ? (
-                <div className="relative">
-                  <button
-                    onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
-                    className="flex items-center space-x-1 text-gray-700 hover:text-primary-700"
-                  >
-                    <User size={20} />
-                    <span className="text-sm">{session.user?.name || session.user?.email}</span>
-                    <ChevronDown size={16} />
-                  </button>
-
-                  {isUserMenuOpen && (
-                    <div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg py-1 z-50">
-                      <Link
-                        href="/account"
-                        className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
-                        onClick={() => setIsUserMenuOpen(false)}
-                      >
-                        My Account
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" className="gap-2">
+                      <User className="h-4 w-4" />
+                      <span className="text-sm hidden lg:inline">{session.user?.name || session.user?.email}</span>
+                      <ChevronDown className="h-4 w-4" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="w-48">
+                    <DropdownMenuLabel>My Account</DropdownMenuLabel>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem asChild>
+                      <Link href="/account" className="cursor-pointer">
+                        <User className="mr-2 h-4 w-4" />
+                        Profile
                       </Link>
-                      <Link
-                        href="/admin"
-                        className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
-                        onClick={() => setIsUserMenuOpen(false)}
-                      >
+                    </DropdownMenuItem>
+                    <DropdownMenuItem asChild>
+                      <Link href="/admin" className="cursor-pointer">
+                        <ShoppingBag className="mr-2 h-4 w-4" />
                         Admin Dashboard
                       </Link>
-                      <button
-                        onClick={handleSignOut}
-                        className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
-                      >
-                        Sign Out
-                      </button>
-                    </div>
-                  )}
-                </div>
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem onClick={handleSignOut} className="cursor-pointer">
+                      <LogOut className="mr-2 h-4 w-4" />
+                      Sign Out
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
               ) : (
-                <div className="flex items-center space-x-2">
-                  <Link
-                    href="/auth/signin"
-                    className="text-sm text-gray-700 hover:text-primary-700"
-                  >
-                    Sign In
-                  </Link>
-                  <span className="text-gray-300">|</span>
-                  <Link
-                    href="/auth/signup"
-                    className="text-sm bg-primary-600 text-white px-3 py-1 rounded-md hover:bg-primary-700"
-                  >
-                    Sign Up
-                  </Link>
+                <div className="flex items-center gap-2">
+                  <Button variant="ghost" size="sm" asChild>
+                    <Link href="/auth/signin">
+                      Sign In
+                    </Link>
+                  </Button>
+                  <Button size="sm" className="bg-clay-pink hover:bg-clay-pink/90" asChild>
+                    <Link href="/auth/signup">
+                      Sign Up
+                    </Link>
+                  </Button>
                 </div>
               )}
             </div>
 
             {/* Shop Now CTA */}
-            <Link 
-              href="/products" 
-              className="hidden md:block bg-clay-pink text-morandi-white px-4 py-2 rounded-lg font-medium hover:bg-clay-pink/90 transition-colors text-sm"
+            <Button 
+              asChild
+              size="sm"
+              className="hidden lg:flex bg-clay-pink hover:bg-clay-pink/90 text-white"
             >
-              Shop Now
-            </Link>
+              <Link href="/products">
+                Shop Now
+              </Link>
+            </Button>
 
             {/* Currency selector */}
-            <div className="relative hidden md:block">
-              <button className="flex items-center space-x-1 text-sm text-deep-charcoal hover:text-clay-pink">
-                <span>₹ INR</span>
-                <ChevronDown size={16} />
-              </button>
-            </div>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="sm" className="hidden md:flex gap-1">
+                  <span className="text-sm">₹ INR</span>
+                  <ChevronDown className="h-3 w-3" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem>₹ INR</DropdownMenuItem>
+                <DropdownMenuItem>$ USD</DropdownMenuItem>
+                <DropdownMenuItem>€ EUR</DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
 
             {/* Cart Drawer */}
             <CartDrawer />
@@ -166,47 +189,32 @@ export default function Header() {
         </div>
       </header>
 
-      {/* Search Modal */}
-      {isSearchOpen && (
-        <div className="fixed inset-0 z-50 bg-black bg-opacity-50" onClick={() => setIsSearchOpen(false)}>
-          <div className="absolute inset-0 flex items-center justify-center p-4" onClick={(e) => e.stopPropagation()}>
-            <div className="w-full max-w-md">
-              <div className="relative">
-                <form onSubmit={handleSearch} className="relative">
-                  <input
-                    type="text"
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    placeholder="Search products..."
-                    autoFocus
-                    className="w-full rounded-lg border border-gray-300 px-4 py-3 pr-12 text-lg focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-500"
-                  />
-                  <button
-                    type="submit"
-                    className="absolute right-2 top-1/2 -translate-y-1/2 rounded-md bg-primary-600 px-3 py-1 text-sm text-white hover:bg-primary-700"
-                  >
-                    Search
-                  </button>
-                </form>
-                <button
-                  onClick={() => setIsSearchOpen(false)}
-                  className="absolute -right-12 top-1/2 -translate-y-1/2 text-white hover:text-gray-300"
-                >
-                  <X size={24} />
-                </button>
-              </div>
+      {/* Search Dialog */}
+      <Dialog open={isSearchOpen} onOpenChange={setIsSearchOpen}>
+        <DialogContent className="sm:max-w-[500px]">
+          <form onSubmit={handleSearch} className="space-y-4">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+              <Input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Search products..."
+                autoFocus
+                className="pl-10 pr-4 h-12 text-base"
+              />
             </div>
-          </div>
-        </div>
-      )}
-
-      {/* Click outside to close user menu */}
-      {isUserMenuOpen && (
-        <div
-          className="fixed inset-0 z-30"
-          onClick={() => setIsUserMenuOpen(false)}
-        />
-      )}
+            <Button 
+              type="submit" 
+              className="w-full bg-clay-pink hover:bg-clay-pink/90"
+              size="lg"
+            >
+              <Search className="mr-2 h-4 w-4" />
+              Search
+            </Button>
+          </form>
+        </DialogContent>
+      </Dialog>
     </>
   );
 }

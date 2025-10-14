@@ -22,7 +22,7 @@ export async function GET(
     // Sort status history by date
     if (returnData.return_status_history) {
       returnData.return_status_history.sort((a, b) => 
-        new Date(b.created_at!).getTime() - new Date(a.created_at!).getTime()
+        new Date(b.createdAt!).getTime() - new Date(a.createdAt!).getTime()
       );
     }
 
@@ -130,7 +130,7 @@ export async function PUT(
           if (item.totalRefundAmount) itemUpdateData.total_refund_amount = item.totalRefundAmount;
 
           if (Object.keys(itemUpdateData).length > 0) {
-            itemUpdateData.updated_at = new Date();
+            itemUpdateData.updatedAt = new Date();
             
             await prisma.return_items.update({
               where: { id: item.id },

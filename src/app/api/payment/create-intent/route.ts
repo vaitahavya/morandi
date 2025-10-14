@@ -31,9 +31,9 @@ export async function POST(request: NextRequest) {
     const order = await prisma.order.findUnique({
       where: { id: orderId },
       include: {
-        order_items: {
+        orderItems: {
           include: {
-            products: {
+            product: {
               select: {
                 name: true,
                 slug: true
@@ -41,7 +41,7 @@ export async function POST(request: NextRequest) {
             }
           }
         },
-        users: {
+        user: {
           select: {
             name: true,
             email: true
@@ -66,7 +66,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Verify order amount matches
-    const orderAmount = Math.round(order.total.toNumber() * 100); // Convert to paise
+    const orderAmount = Math.round(Number(order.total) * 100); // Convert to paise
     const requestAmount = Math.round(amount * 100);
 
     if (orderAmount !== requestAmount) {
@@ -117,8 +117,8 @@ export async function POST(request: NextRequest) {
     await prisma.order.update({
       where: { id: orderId },
       data: {
-        razorpay_order_id: razorpayOrder.id,
-        payment_status: 'pending'
+        razorpayOrderId: razorpayOrder.id,
+        paymentStatus: 'pending'
       }
     });
 

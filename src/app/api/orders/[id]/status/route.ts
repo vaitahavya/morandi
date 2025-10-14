@@ -25,13 +25,13 @@ export async function PUT(
     const existingOrder = await prisma.order.findUnique({
       where: { id },
       include: {
-        order_items: {
+        orderItems: {
           include: {
-            products: {
+            product: {
               select: {
                 id: true,
                 name: true,
-                stock_quantity: true
+                stockQuantity: true
               }
             }
           }
@@ -103,7 +103,7 @@ export async function PUT(
         where: { id },
         data: updateData,
         include: {
-          order_items: {
+          orderItems: {
             include: {
               products: {
                 select: {
@@ -115,7 +115,7 @@ export async function PUT(
               }
             }
           },
-          users: {
+          user: {
             select: {
               id: true,
               name: true,
@@ -185,7 +185,7 @@ async function handleInventoryChanges(tx: any, order: any, newStatus: string) {
       // Reduce inventory when order is confirmed
       if (order.status !== 'confirmed') {
         for (const item of order.items) {
-          const currentStock = item.product.stock_quantity;
+          const currentStock = item.product.stockQuantity;
           const newStock = Math.max(0, currentStock - item.quantity);
 
           // Create inventory transaction
@@ -204,7 +204,7 @@ async function handleInventoryChanges(tx: any, order: any, newStatus: string) {
           await tx.product.update({
             where: { id: item.productId },
             data: {
-              stock_quantity: newStock,
+              stockQuantity: newStock,
               stockStatus: newStock <= 0 ? 'outofstock' : 
                           newStock <= (item.product.lowStockThreshold || 5) ? 'lowstock' : 'instock'
             }
@@ -217,7 +217,7 @@ async function handleInventoryChanges(tx: any, order: any, newStatus: string) {
       // Restore inventory if order was previously confirmed
       if (order.status === 'confirmed' || order.status === 'processing') {
         for (const item of order.items) {
-          const currentStock = item.product.stock_quantity;
+          const currentStock = item.product.stockQuantity;
           const newStock = currentStock + item.quantity;
 
           // Create inventory transaction
@@ -236,7 +236,7 @@ async function handleInventoryChanges(tx: any, order: any, newStatus: string) {
           await tx.product.update({
             where: { id: item.productId },
             data: {
-              stock_quantity: newStock,
+              stockQuantity: newStock,
               stockStatus: 'instock'
             }
           });
@@ -248,7 +248,7 @@ async function handleInventoryChanges(tx: any, order: any, newStatus: string) {
       // Handle refund inventory restoration if needed
       if (order.status === 'delivered') {
         for (const item of order.items) {
-          const currentStock = item.product.stock_quantity;
+          const currentStock = item.product.stockQuantity;
           const newStock = currentStock + item.quantity;
 
           await tx.inventoryTransaction.create({
@@ -265,7 +265,7 @@ async function handleInventoryChanges(tx: any, order: any, newStatus: string) {
           await tx.product.update({
             where: { id: item.productId },
             data: {
-              stock_quantity: newStock,
+              stockQuantity: newStock,
               stockStatus: 'instock'
             }
           });

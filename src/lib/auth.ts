@@ -50,29 +50,39 @@ export const authOptions: NextAuthOptions = {
       },
       async authorize(credentials) {
         if (!credentials?.email || !credentials?.password) {
+          console.log('❌ Missing credentials');
           return null;
         }
 
         try {
+          console.log('🔍 Looking for user:', credentials.email);
+          
           const user = await prisma.user.findUnique({
             where: { email: credentials.email }
           });
 
           if (!user) {
+            console.log('❌ User not found:', credentials.email);
             return null;
           }
 
+          console.log('✅ User found:', user.email, 'Role:', user.role);
+
           // For OAuth users without password
           if (!user.password) {
+            console.log('❌ No password set for user');
             throw new Error('Please sign in with your social account');
           }
 
           const isPasswordValid = await bcrypt.compare(credentials.password, user.password);
+          console.log('🔑 Password valid:', isPasswordValid);
 
           if (!isPasswordValid) {
+            console.log('❌ Invalid password');
             return null;
           }
 
+          console.log('✅ Authentication successful for:', user.email);
           return {
             id: user.id,
             email: user.email,
@@ -81,7 +91,7 @@ export const authOptions: NextAuthOptions = {
             role: user.role,
           };
         } catch (error) {
-          console.error('Authentication error:', error);
+          console.error('❌ Authentication error:', error);
           return null;
         }
       },
