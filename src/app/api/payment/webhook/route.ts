@@ -115,13 +115,13 @@ async function handlePaymentCaptured(payment: any) {
     const order = await prisma.order.findFirst({
       where: { razorpay_order_id: payment.order_id },
       include: {
-        order_items: {
+        orderItems: {
           include: {
-            products: {
+            product: {
               select: {
                 id: true,
                 name: true,
-                stock_quantity: true
+                stockQuantity: true
               }
             }
           }
@@ -172,7 +172,7 @@ async function handlePaymentCaptured(payment: any) {
       // Update inventory if order is being confirmed
       if (order.status === 'pending') {
         for (const item of order.order_items) {
-          const currentStock = item.products?.stock_quantity || 0;
+          const currentStock = item.products?.stockQuantity || 0;
           const newStock = Math.max(0, currentStock - item.quantity);
 
           // Create inventory transaction
@@ -183,7 +183,7 @@ async function handlePaymentCaptured(payment: any) {
               quantity: -item.quantity,
               reason: `Order confirmed via webhook: ${order.order_number}`,
               reference: order.id,
-              stock_after: newStock
+              stockAfter: newStock
             }
           });
 
@@ -192,8 +192,8 @@ async function handlePaymentCaptured(payment: any) {
             await tx.product.update({
               where: { id: item.product_id },
               data: {
-                stock_quantity: newStock,
-                stock_status: newStock <= 0 ? 'outofstock' : 
+                stockQuantity: newStock,
+                stockStatus: newStock <= 0 ? 'outofstock' : 
                             newStock <= 5 ? 'lowstock' : 'instock'
               }
             });

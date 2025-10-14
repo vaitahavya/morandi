@@ -27,26 +27,15 @@ export async function GET(request: NextRequest) {
     }
 
     if (fromDate || toDate) {
-      whereConditions.created_at = {};
-      if (fromDate) whereConditions.created_at.gte = new Date(fromDate);
-      if (toDate) whereConditions.created_at.lte = new Date(toDate);
+      whereConditions.createdAt = {};
+      if (fromDate) whereConditions.createdAt.gte = new Date(fromDate);
+      if (toDate) whereConditions.createdAt.lte = new Date(toDate);
     }
 
     // Get transactions with product information
     const [transactions, totalCount] = await Promise.all([
       prisma.inventoryTransaction.findMany({
         where: whereConditions,
-        include: {
-          product: {
-            select: {
-              id: true,
-              name: true,
-              sku: true,
-              slug: true,
-              featured_image: true
-            }
-          }
-        },
         orderBy: { createdAt: 'desc' },
         skip: offset,
         take: limit

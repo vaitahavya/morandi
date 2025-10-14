@@ -55,13 +55,13 @@ export async function POST(request: NextRequest) {
     const order = await prisma.order.findFirst({
       where: whereClause,
       include: {
-        order_items: {
+        orderItems: {
           include: {
-            products: {
+            product: {
               select: {
                 id: true,
                 name: true,
-                stock_quantity: true
+                stockQuantity: true
               }
             }
           }
@@ -140,7 +140,7 @@ export async function POST(request: NextRequest) {
           transaction_id: razorpay_payment_id
         },
         include: {
-          order_items: {
+          orderItems: {
             include: {
               products: {
                 select: {
@@ -152,7 +152,7 @@ export async function POST(request: NextRequest) {
               }
             }
           },
-          users: {
+          user: {
             select: {
               id: true,
               name: true,
@@ -165,7 +165,7 @@ export async function POST(request: NextRequest) {
       // Create order status history
       await tx.orderStatusHistory.create({
         data: {
-          order_id: order.id,
+          orderId: order.id,
           status: 'confirmed',
           notes: `Payment confirmed - Razorpay Payment ID: ${razorpay_payment_id}`,
           changed_by: session?.user?.id
@@ -174,18 +174,18 @@ export async function POST(request: NextRequest) {
 
       // Update inventory for confirmed order
       for (const item of order.order_items) {
-        const currentStock = item.products?.stock_quantity || 0;
+        const currentStock = item.products?.stockQuantity || 0;
         const newStock = Math.max(0, currentStock - item.quantity);
 
         // Create inventory transaction
         await tx.inventoryTransaction.create({
           data: {
-            product_id: item.product_id,
+            productId: item.productId,
             type: 'sale',
             quantity: -item.quantity,
             reason: `Order confirmed: ${order.order_number}`,
             reference: order.id,
-            stock_after: newStock
+            stockAfter: newStock
           }
         });
 
@@ -193,8 +193,8 @@ export async function POST(request: NextRequest) {
         item.product_id && await tx.product.update({
           where: { id: item.product_id },
           data: {
-            stock_quantity: newStock,
-            stock_status: newStock <= 0 ? 'outofstock' : 
+            stockQuantity: newStock,
+            stockStatus: newStock <= 0 ? 'outofstock' : 
                         newStock <= 5 ? 'lowstock' : 'instock'
           }
         });
@@ -203,8 +203,8 @@ export async function POST(request: NextRequest) {
       // Create email notification for order confirmation
       await tx.emailNotification.create({
         data: {
-          user_id: order.user_id,
-          order_id: order.id,
+          userId: order.userId,
+          orderId: order.id,
           type: 'order_confirmation',
           subject: `Order Confirmed - ${order.order_number}`,
           content: `Your order ${order.order_number} has been confirmed and payment received.`,
@@ -284,7 +284,7 @@ export async function GET(request: NextRequest) {
         order_number: true,
         status: true,
         payment_status: true,
-        razorpay_order_id: true,
+        razorpayOrderId: true,
         razorpay_payment_id: true,
         total: true,
         currency: true,
@@ -310,7 +310,7 @@ export async function GET(request: NextRequest) {
           currency: payment.currency,
           method: payment.method,
           status: payment.status,
-          created_at: payment.created_at
+          created_at: payment.createdAt
         };
       } catch (error) {
         console.error('Error fetching payment details:', error);

@@ -51,12 +51,12 @@ export async function GET(
           name: true,
           slug: true,
           price: true,
-          sale_price: true,
+          salePrice: true,
           images: true,
-          featured_image: true,
-          stock_status: true,
+          featuredImage: true,
+          stockStatus: true,
           featured: true,
-          short_description: true
+          shortDescription: true
         }
       });
       
@@ -71,17 +71,17 @@ export async function GET(
       slug: category.slug,
       description: category.description,
       image: category.image,
-      parentId: category.parent_id,
+      parentId: category.parentId,
       parent: category.parent,
-      metaTitle: category.meta_title,
-      metaDescription: category.meta_description,
-      displayOrder: category.display_order,
-      isVisible: category.is_visible,
+      metaTitle: category.metaTitle,
+      metaDescription: category.metaDescription,
+      displayOrder: category.displayOrder,
+      isVisible: category.isVisible,
       children: category.children,
       products: products,
       productCount: productCount,
-      createdAt: category.created_at,
-      updatedAt: category.updated_at
+      createdAt: category.createdAt,
+      updatedAt: category.updatedAt
     };
 
     return NextResponse.json({
@@ -293,17 +293,17 @@ export async function DELETE(
 async function checkIfChildCategory(potentialChildId: string, parentId: string): Promise<boolean> {
   const category = await prisma.category.findUnique({
     where: { id: potentialChildId },
-    select: { parent_id: true }
+    select: { parentId: true }
   });
 
-  if (!category || !category.parent_id) {
+  if (!category || !category.parentId) {
     return false;
   }
 
-  if (category.parent_id === parentId) {
+  if (category.parentId === parentId) {
     return true;
   }
 
   // Recursively check up the hierarchy
-  return checkIfChildCategory(category.parent_id, parentId);
+  return checkIfChildCategory(category.parentId, parentId);
 }

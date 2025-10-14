@@ -71,7 +71,7 @@ export async function POST(request: NextRequest) {
     // Verify order exists and belongs to customer
     const order = await prisma.order.findUnique({
       where: { id: orderId },
-      include: { order_items: true },
+      include: { orderItems: true },
     });
 
     if (!order || order.customer_email !== customerEmail) {
@@ -82,7 +82,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Check if order is eligible for returns
-    const orderDate = new Date(order.created_at!);
+    const orderDate = new Date(order.createdAt!);
     const daysSinceOrder = Math.floor((new Date().getTime() - orderDate.getTime()) / (1000 * 60 * 60 * 24));
     
     if (daysSinceOrder > 30) { // 30-day return policy
@@ -125,7 +125,7 @@ export async function POST(request: NextRequest) {
 
       validItems.push({
         order_item_id: item.orderItemId,
-        product_id: orderItem.product_id || '',
+        productId: orderItem.productId || '',
         product_name: orderItem.product_name || '',
         quantity_returned: item.quantity,
         unit_price: Number(orderItem.unit_price || orderItem.price),

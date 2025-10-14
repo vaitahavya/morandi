@@ -40,21 +40,21 @@ export async function GET(request: NextRequest) {
     // Calculate summary stats
     const allCoupons = await prisma.coupon.findMany({
       select: {
-        is_active: true,
+        isActive: true,
         type: true,
-        usage_count: true,
-        usage_limit: true,
+        usedCount: true,
+        usageLimit: true,
       },
     });
 
     const stats = {
       totalCoupons: total,
-      activeCoupons: allCoupons.filter(c => c.is_active).length,
+      activeCoupons: allCoupons.filter(c => c.isActive).length,
       percentageCoupons: allCoupons.filter(c => c.type === 'percentage').length,
       fixedAmountCoupons: allCoupons.filter(c => c.type === 'fixed_amount').length,
-      totalUsage: allCoupons.reduce((sum, c) => sum + (c.usage_count || 0), 0),
+      totalUsage: allCoupons.reduce((sum, c) => sum + (c.usedCount || 0), 0),
       avgUsage: allCoupons.length > 0 
-        ? allCoupons.reduce((sum, c) => sum + (c.usage_count || 0), 0) / allCoupons.length 
+        ? allCoupons.reduce((sum, c) => sum + (c.usedCount || 0), 0) / allCoupons.length 
         : 0
     };
 
@@ -148,12 +148,11 @@ export async function POST(request: NextRequest) {
         code: code.toUpperCase(),
         type,
         value,
-        minimum_amount: minimumAmount,
-        usage_limit: usageLimit,
-        user_limit: userLimit,
-        valid_from: validFrom ? new Date(validFrom) : new Date(),
-        valid_until: validUntil ? new Date(validUntil) : null,
-        is_active: isActive,
+        minimumAmount: minimumAmount,
+        usageLimit: usageLimit,
+        startDate: validFrom ? new Date(validFrom) : new Date(),
+        endDate: validUntil ? new Date(validUntil) : null,
+        isActive: isActive,
         description
       },
     });

@@ -109,10 +109,19 @@ export default function CheckoutPage() {
 
       // Prepare order data
       const orderData: CreateOrderData = {
+        status: 'pending',
+        paymentStatus: 'pending',
+        total,
+        subtotal,
         items: items.map(item => ({
           productId: item.id,
           quantity: item.quantity,
-          variantId: item.variation_id
+          variantId: item.variation_id,
+          price: item.price,
+          productName: item.name,
+          unitPrice: item.price,
+          totalPrice: item.price * item.quantity,
+          productImage: item.image
         })),
         customerEmail: data.email,
         customerPhone: data.phone,

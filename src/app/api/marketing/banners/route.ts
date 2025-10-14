@@ -26,34 +26,30 @@ export async function GET(request: NextRequest) {
     }
 
     const [banners, total] = await Promise.all([
-      prisma.banners.findMany({
+      prisma.banner.findMany({
         where,
         skip,
         take: limit,
         orderBy: { [sortBy]: sortOrder === 'asc' ? 'asc' : 'desc' },
       }),
-      prisma.banners.count({ where }),
+      prisma.banner.count({ where }),
     ]);
 
     const totalPages = Math.ceil(total / limit);
 
     // Calculate summary stats
-    const allBanners = await prisma.banners.findMany({
+    const allBanners = await prisma.banner.findMany({
       select: {
-        is_active: true,
-        impressions: true,
-        clicks: true,
+        isActive: true,
       },
     });
 
     const stats = {
       totalBanners: total,
-      activeBanners: allBanners.filter(b => b.is_active).length,
-      totalImpressions: allBanners.reduce((sum, b) => sum + (b.impressions || 0), 0),
-      totalClicks: allBanners.reduce((sum, b) => sum + (b.clicks || 0), 0),
-      avgClickRate: allBanners.length > 0 
-        ? (allBanners.reduce((sum, b) => sum + (b.clicks || 0), 0) / Math.max(allBanners.reduce((sum, b) => sum + (b.impressions || 0), 0), 1)) * 100 
-        : 0
+      activeBanners: allBanners.filter(b => b.isActive).length,
+      totalImpressions: 0, // Field not in schema
+      totalClicks: 0, // Field not in schema
+      avgClickRate: 0 // Field not in schema
     };
 
     return NextResponse.json({
@@ -104,33 +100,24 @@ export async function POST(request: NextRequest) {
     } = body;
 
     // Validate required fields
-    if (!name || !imageUrl) {
+    if (!title || !imageUrl) {
       return NextResponse.json({ 
         success: false, 
-        error: 'Name and image URL are required' 
+        error: 'Title and image URL are required' 
       }, { status: 400 });
     }
 
     // Create banner
-    const newBanner = await prisma.banners.create({
+    const newBanner = await prisma.banner.create({
       data: {
-        name,
         title,
-        subtitle,
         description,
-        image_url: imageUrl,
-        mobile_image_url: mobileImageUrl,
-        alt_text: altText,
-        button_text: buttonText,
-        button_url: buttonUrl,
-        external_link: externalLink,
+        image: imageUrl,
+        link: buttonUrl,
         position,
-        priority,
-        is_active: isActive,
-        start_date: startDate ? new Date(startDate) : null,
-        end_date: endDate ? new Date(endDate) : null,
-        target_audience: targetAudience,
-        target_pages: targetPages
+        isActive: isActive,
+        startDate: startDate ? new Date(startDate) : null,
+        endDate: endDate ? new Date(endDate) : null
       },
     });
 

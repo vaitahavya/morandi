@@ -38,9 +38,9 @@ export async function POST(request: NextRequest) {
         const order = await prisma.order.findUnique({
           where: { id: orderId },
           include: {
-            order_items: {
+            orderItems: {
               include: {
-                products: true
+                product: true
               }
             }
           }

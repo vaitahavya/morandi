@@ -2,42 +2,157 @@
 @tailwind components;
 @tailwind utilities;
 
-body {
-  @apply bg-morandi-white text-deep-charcoal font-sans;
+@layer base {
+  :root {
+    /* Shadcn color system - Morandi inspired */
+    --background: 0 0% 100%;
+    --foreground: 0 0% 20%;
+    
+    --card: 30 20% 95%;
+    --card-foreground: 0 0% 20%;
+    
+    --popover: 0 0% 100%;
+    --popover-foreground: 0 0% 20%;
+    
+    /* Primary: Clay Pink */
+    --primary: 10 31% 70%;
+    --primary-foreground: 0 0% 100%;
+    
+    /* Secondary: Soft Sage */
+    --secondary: 110 18% 73%;
+    --secondary-foreground: 0 0% 20%;
+    
+    /* Muted: Earthy Beige */
+    --muted: 30 20% 90%;
+    --muted-foreground: 0 0% 45%;
+    
+    /* Accent: Soft Sage lighter */
+    --accent: 110 18% 85%;
+    --accent-foreground: 0 0% 20%;
+    
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 0 0% 98%;
+    
+    --border: 30 15% 85%;
+    --input: 30 15% 85%;
+    --ring: 10 31% 70%;
+    
+    --radius: 0.75rem;
+    
+    /* Chart colors - Morandi palette */
+    --chart-1: 10 31% 70%;
+    --chart-2: 110 18% 73%;
+    --chart-3: 30 20% 90%;
+    --chart-4: 0 0% 20%;
+    --chart-5: 20 25% 75%;
+  }
+
+  .dark {
+    --background: 0 0% 12%;
+    --foreground: 0 0% 98%;
+    
+    --card: 0 0% 15%;
+    --card-foreground: 0 0% 98%;
+    
+    --popover: 0 0% 12%;
+    --popover-foreground: 0 0% 98%;
+    
+    --primary: 10 31% 70%;
+    --primary-foreground: 0 0% 100%;
+    
+    --secondary: 110 18% 40%;
+    --secondary-foreground: 0 0% 98%;
+    
+    --muted: 0 0% 20%;
+    --muted-foreground: 0 0% 63.9%;
+    
+    --accent: 110 18% 25%;
+    --accent-foreground: 0 0% 98%;
+    
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 0 0% 98%;
+    
+    --border: 0 0% 20%;
+    --input: 0 0% 20%;
+    --ring: 10 31% 70%;
+  }
 }
 
-/* Custom scrollbar */
-::-webkit-scrollbar {
-  width: 8px;
+@layer base {
+  * {
+    @apply border-border;
+  }
+  
+  body {
+    @apply bg-background text-foreground font-sans antialiased;
+  }
+  
+  html {
+    scroll-behavior: smooth;
+  }
 }
 
-::-webkit-scrollbar-track {
-  background: #f1f1f1;
-}
+@layer components {
+  /* Custom scrollbar */
+  ::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
 
-::-webkit-scrollbar-thumb {
-  background: #B7C4B2;
-  border-radius: 4px;
-}
+  ::-webkit-scrollbar-track {
+    @apply bg-muted/30;
+  }
 
-::-webkit-scrollbar-thumb:hover {
-  background: #9BA896;
-}
+  ::-webkit-scrollbar-thumb {
+    @apply bg-soft-sage/60 rounded-lg;
+  }
 
-/* Smooth scrolling */
-html {
-  scroll-behavior: smooth;
-}
+  ::-webkit-scrollbar-thumb:hover {
+    @apply bg-soft-sage;
+  }
 
-/* Custom button styles */
-.btn-primary {
-  @apply bg-clay-pink text-morandi-white px-8 py-3 rounded-xl font-medium hover:bg-opacity-90 transition-all duration-300 shadow-soft;
-}
+  /* Legacy button styles for backward compatibility */
+  .btn-primary {
+    @apply bg-clay-pink text-morandi-white px-8 py-3.5 rounded-xl font-medium hover:bg-clay-pink/90 transition-all duration-300 shadow-soft hover:shadow-card;
+  }
 
-.btn-secondary {
-  @apply bg-soft-sage text-deep-charcoal px-8 py-3 rounded-xl font-medium hover:bg-opacity-90 transition-all duration-300 shadow-soft;
-}
+  .btn-secondary {
+    @apply bg-soft-sage text-deep-charcoal px-8 py-3.5 rounded-xl font-medium hover:bg-soft-sage/90 transition-all duration-300 shadow-soft hover:shadow-card;
+  }
 
-.btn-outline {
-  @apply border-2 border-clay-pink text-clay-pink px-8 py-3 rounded-xl font-medium hover:bg-clay-pink hover:text-morandi-white transition-all duration-300;
+  .btn-outline {
+    @apply border-2 border-clay-pink text-clay-pink px-8 py-3.5 rounded-xl font-medium hover:bg-clay-pink hover:text-morandi-white transition-all duration-300;
+  }
+  
+  /* Modern section container */
+  .section-container {
+    @apply max-w-7xl mx-auto px-4 sm:px-6 lg:px-8;
+  }
+  
+  /* Elegant headings */
+  .heading-xl {
+    @apply text-4xl md:text-5xl lg:text-6xl font-serif font-bold tracking-tight;
+  }
+  
+  .heading-lg {
+    @apply text-3xl md:text-4xl lg:text-5xl font-serif font-bold tracking-tight;
+  }
+  
+  .heading-md {
+    @apply text-2xl md:text-3xl lg:text-4xl font-serif font-semibold tracking-tight;
+  }
+  
+  .heading-sm {
+    @apply text-xl md:text-2xl font-serif font-semibold tracking-tight;
+  }
+  
+  /* Glass effect */
+  .glass {
+    @apply bg-white/80 backdrop-blur-md border border-white/20;
+  }
+  
+  /* Elegant card */
+  .elegant-card {
+    @apply bg-card rounded-2xl p-6 shadow-soft hover:shadow-card transition-all duration-300;
+  }
 }
