@@ -74,7 +74,7 @@ export async function POST(request: NextRequest) {
       include: { orderItems: true },
     });
 
-    if (!order || order.customer_email !== customerEmail) {
+    if (!order || order.customerEmail !== customerEmail) {
       return NextResponse.json({ 
         success: false, 
         error: 'Order not found or access denied' 
@@ -105,7 +105,7 @@ export async function POST(request: NextRequest) {
     const validItems = [];
 
     for (const item of items) {
-      const orderItem = order.order_items.find((oi) => oi.id === item.orderItemId);
+      const orderItem = order.orderItems.find((oi) => oi.id === item.orderItemId);
       if (!orderItem) {
         return NextResponse.json({ 
           success: false, 
@@ -116,20 +116,20 @@ export async function POST(request: NextRequest) {
       if (item.quantity > orderItem.quantity) {
         return NextResponse.json({ 
           success: false, 
-          error: `Cannot return more items than ordered for ${orderItem.product_name}` 
+          error: `Cannot return more items than ordered for ${orderItem.productName}` 
         }, { status: 400 });
       }
 
-      const itemRefundAmount = Number(orderItem.unit_price || orderItem.price) * item.quantity;
+      const itemRefundAmount = Number(orderItem.unitPrice || orderItem.price) * item.quantity;
       totalRefundAmount += itemRefundAmount;
 
       validItems.push({
-        order_item_id: item.orderItemId,
+        orderItemId: item.orderItemId,
         productId: orderItem.productId || '',
-        product_name: orderItem.product_name || '',
-        quantity_returned: item.quantity,
-        unit_price: Number(orderItem.unit_price || orderItem.price),
-        total_refund_amount: itemRefundAmount
+        productName: orderItem.productName || '',
+        quantityReturned: item.quantity,
+        unitPrice: Number(orderItem.unitPrice || orderItem.price),
+        totalRefundAmount: itemRefundAmount
       });
     }
 
@@ -147,12 +147,12 @@ export async function POST(request: NextRequest) {
       images,
       videos,
       items: validItems.map(item => ({
-        orderItemId: item.order_item_id,
-        productId: item.product_id,
-        productName: item.product_name,
-        quantity: item.quantity_returned,
-        unitPrice: item.unit_price,
-        totalRefundAmount: item.total_refund_amount,
+        orderItemId: item.orderItemId,
+        productId: item.productId,
+        productName: item.productName,
+        quantity: item.quantityReturned,
+        unitPrice: item.unitPrice,
+        totalRefundAmount: item.totalRefundAmount,
         restockable: true
       }))
     });
@@ -161,7 +161,7 @@ export async function POST(request: NextRequest) {
       success: true,
       data: {
         returnId: newReturn.id,
-        returnNumber: newReturn.return_number,
+        returnNumber: newReturn.returnNumber,
         status: newReturn.status,
         refundAmount: totalRefundAmount
       }

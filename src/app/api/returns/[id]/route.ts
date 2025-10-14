@@ -19,12 +19,7 @@ export async function GET(
       }, { status: 404 });
     }
 
-    // Sort status history by date
-    if (returnData.return_status_history) {
-      returnData.return_status_history.sort((a, b) => 
-        new Date(b.createdAt!).getTime() - new Date(a.createdAt!).getTime()
-      );
-    }
+    // Note: ReturnStatusHistory relation not defined in Returns model
 
     return NextResponse.json({
       success: true,
@@ -83,34 +78,18 @@ export async function PUT(
       }, { status: 404 });
     }
 
-    // Prepare update data
-    const updateData: any = {
-      updated_at: new Date().toISOString()
-    };
+    // Prepare update data (only fields that exist in schema)
+    const updateData: any = {};
 
     if (status) updateData.status = status;
-    if (adminNotes) updateData.admin_notes = adminNotes;
-    if (refundAmount) updateData.refund_amount = refundAmount;
-    if (refundMethod) updateData.refund_method = refundMethod;
-    if (processedBy) updateData.processed_by = processedBy;
-    if (qcStatus) updateData.qc_status = qcStatus;
-    if (qcNotes) updateData.qc_notes = qcNotes;
-    if (qcBy) updateData.qc_by = qcBy;
-    if (trackingNumber) updateData.tracking_number = trackingNumber;
-    if (carrier) updateData.carrier = carrier;
-    if (returnShippingCost) updateData.return_shipping_cost = returnShippingCost;
-    if (refundTransactionId) updateData.refund_transaction_id = refundTransactionId;
-
-    // Set timestamps based on status
-    if (status === 'processed' && currentReturn.status !== 'processed') {
-      updateData.processed_at = new Date().toISOString();
-    }
-    if (status === 'refunded' && currentReturn.status !== 'refunded') {
-      updateData.refunded_at = new Date().toISOString();
-    }
-    if (qcStatus && currentReturn.qc_status !== qcStatus) {
-      updateData.qc_at = new Date().toISOString();
-    }
+    if (adminNotes) updateData.notes = adminNotes;
+    if (refundAmount) updateData.refundAmount = refundAmount;
+    if (processedBy) updateData.processedBy = processedBy;
+    if (qcBy) updateData.qcBy = qcBy;
+    
+    // Note: Many fields from request don't exist in schema:
+    // refundMethod, qcStatus, qcNotes, trackingNumber, carrier, 
+    // returnShippingCost, refundTransactionId, processed_at, refunded_at, qc_at
 
     // Update return
     const updatedReturn = await prisma.returns.update({
@@ -132,7 +111,7 @@ export async function PUT(
           if (Object.keys(itemUpdateData).length > 0) {
             itemUpdateData.updatedAt = new Date();
             
-            await prisma.return_items.update({
+            await prisma.returnItem.update({
               where: { id: item.id },
               data: itemUpdateData,
             });
@@ -151,21 +130,21 @@ export async function PUT(
     if (status === 'refunded' && currentReturn.status !== 'refunded') {
       // Check if this is a full refund
       const orderData = await prisma.order.findUnique({
-        where: { id: currentReturn.order_id! },
-        select: { total: true, payment_status: true },
+        where: { id: currentReturn.orderId! },
+        select: { total: true, paymentStatus: true },
       });
 
-      if (orderData && updatedReturn.refund_amount && Number(updatedReturn.refund_amount) >= Number(orderData.total)) {
+      if (orderData && updatedReturn.refundAmount && Number(updatedReturn.refundAmount) >= Number(orderData.total)) {
         // Full refund - update order payment status
         await prisma.order.update({
-          where: { id: currentReturn.order_id! },
-          data: { payment_status: 'refunded' },
+          where: { id: currentReturn.orderId! },
+          data: { paymentStatus: 'refunded' },
         });
-      } else if (orderData && updatedReturn.refund_amount && Number(updatedReturn.refund_amount) > 0) {
+      } else if (orderData && updatedReturn.refundAmount && Number(updatedReturn.refundAmount) > 0) {
         // Partial refund
         await prisma.order.update({
-          where: { id: currentReturn.order_id! },
-          data: { payment_status: 'partially_refunded' },
+          where: { id: currentReturn.orderId! },
+          data: { paymentStatus: 'partially_refunded' },
         });
       }
     }
@@ -212,7 +191,7 @@ export async function DELETE(
       }, { status: 400 });
     }
 
-    // Delete return (this will cascade to return_items and return_status_history)
+    // Delete return (this will cascade to return_items)
     await prisma.returns.delete({
       where: { id: returnId },
     });

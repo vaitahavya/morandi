@@ -413,16 +413,26 @@ export function ReturnDetails({ returnItem, onClose, onUpdate }: ReturnDetailsPr
                           </CardHeader>
                           <CardContent>
                             <div className="grid grid-cols-2 gap-4">
-                              {returnData.images?.map((image, index) => (
-                                <div key={index} className="border rounded-lg p-2">
-                                  <img src={image} alt={`Return attachment ${index + 1}`} className="w-full h-32 object-cover rounded" />
-                                </div>
-                              ))}
-                              {returnData.videos?.map((video, index) => (
-                                <div key={index} className="border rounded-lg p-2">
-                                  <video src={video} controls className="w-full h-32 rounded" />
-                                </div>
-                              ))}
+                              {(() => {
+                                try {
+                                  const images = returnData.images ? JSON.parse(returnData.images) : [];
+                                  return Array.isArray(images) ? images.map((image: string, index: number) => (
+                                    <div key={index} className="border rounded-lg p-2">
+                                      <img src={image} alt={`Return attachment ${index + 1}`} className="w-full h-32 object-cover rounded" />
+                                    </div>
+                                  )) : null;
+                                } catch { return null; }
+                              })()}
+                              {(() => {
+                                try {
+                                  const videos = returnData.videos ? JSON.parse(returnData.videos) : [];
+                                  return Array.isArray(videos) ? videos.map((video: string, index: number) => (
+                                    <div key={index} className="border rounded-lg p-2">
+                                      <video src={video} controls className="w-full h-32 rounded" />
+                                    </div>
+                                  )) : null;
+                                } catch { return null; }
+                              })()}
                             </div>
                           </CardContent>
                         </Card>

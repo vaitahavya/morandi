@@ -7,6 +7,19 @@ import { BaseRepository, FindManyOptions, PaginatedResult } from './base/BaseRep
 export type ProductWithArrays = Omit<Product, 'tags' | 'images'> & {
   tags: string[];
   images: string[];
+  productCategories?: Array<{
+    id: string;
+    productId: string;
+    categoryId: string;
+    category: {
+      id: string;
+      name: string;
+      slug: string;
+      description: string | null;
+      image: string | null;
+    };
+  }>;
+  variants?: Array<any>;
 };
 
 /**

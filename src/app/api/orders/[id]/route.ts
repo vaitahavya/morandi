@@ -48,7 +48,7 @@ export async function GET(
     }
 
     // Check if user has permission to view this order
-    if (order.userId && order.userId !== session?.user?.id) {
+    if (!session?.user || (order.userId && order.userId !== session.user.id)) {
       return NextResponse.json({
         success: false,
         error: 'Access denied'
@@ -362,7 +362,13 @@ export async function DELETE(
 }
 
 // Helper function to get current product stock
-async function getProductStock(tx: any, product_id: string): Promise<number> {
+async function getProductStock(tx: any, productId: string): Promise<number> {
+  const product = await tx.product.findUnique({
+    where: { id: productId },
+    select: { stockQuantity: true }
+  });
+  return product?.stockQuantity || 0;
+}
   const product = await tx.product.findUnique({
     where: { id: product_id },
     select: { stockQuantity: true }

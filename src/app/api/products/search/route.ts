@@ -161,10 +161,6 @@ export async function GET(request: NextRequest) {
           variants: {
             orderBy: { price: 'asc' },
             take: 3 // Limit variants in search results
-          },
-          attributes: true,
-          reviews: {
-            select: { rating: true }
           }
         }
       }),
@@ -178,9 +174,8 @@ export async function GET(request: NextRequest) {
 
     // Transform results
     const transformedProducts = products.map(product => {
-      const avgRating = product.reviews.length > 0
-        ? product.reviews.reduce((sum, review) => sum + review.rating, 0) / product.reviews.length
-        : 0;
+      // Note: reviews model doesn't exist in schema
+      const avgRating = 0;
 
       const effectivePrice = product.salePrice || product.price;
 
@@ -213,13 +208,8 @@ export async function GET(request: NextRequest) {
         featured: product.featured,
         category: product.productCategories.map(pc => pc.category),
         variants: product.variants,
-        attributes: product.attributes.reduce((acc, attr) => {
-          if (!acc[attr.name]) acc[attr.name] = [];
-          acc[attr.name].push(attr.value);
-          return acc;
-        }, {} as Record<string, string[]>),
         avgRating: Math.round(avgRating * 10) / 10,
-        reviewCount: product.reviews.length,
+        reviewCount: 0, // reviews model doesn't exist
         relevanceScore: relevanceScore,
         // Convert tags from JSON string to array
         tags: (() => {

@@ -16,6 +16,7 @@ export default function Logo() {
               // Fallback to text if image fails to load
               const target = e.target as HTMLImageElement;
               target.style.display = 'none';
+              target.parentElement!.style.display = 'none';
               target.parentElement?.nextElementSibling?.classList.remove('hidden');
             }}
           />
