@@ -167,7 +167,7 @@ export default function CategoryManager({ initialCategories = [] }: CategoryMana
       }));
   };
 
-  const categoryTree = buildCategoryTree(filteredCategories, null);
+  const categoryTree = buildCategoryTree(filteredCategories, undefined);
 
   const renderCategoryRow = (category: Category, level = 0) => (
     <div key={category.id} className="space-y-2">
