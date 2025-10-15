@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { ChevronDown, Search, X, Heart, User, LogOut, ShoppingBag } from 'lucide-react';
 import { useSession, signOut } from 'next-auth/react';
@@ -34,8 +34,14 @@ export default function Header() {
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
+  const [isClient, setIsClient] = useState(false);
   const wishlistCount = useWishlistStore((state) => state.getItemCount());
   const { data: session, status } = useSession();
+
+  // Prevent hydration mismatch by only accessing store after client-side mount
+  useEffect(() => {
+    setIsClient(true);
+  }, []);
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
@@ -98,7 +104,7 @@ export default function Header() {
             >
               <Link href="/wishlist">
                 <Heart className="h-5 w-5" />
-                {wishlistCount > 0 && (
+                {isClient && wishlistCount > 0 && (
                   <Badge className="absolute -right-1 -top-1 h-5 min-w-5 items-center justify-center rounded-full bg-destructive text-destructive-foreground border-0 px-1 text-[10px]">
                     {wishlistCount}
                   </Badge>

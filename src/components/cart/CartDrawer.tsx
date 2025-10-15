@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Image from 'next/image';
 import { X, ShoppingCart, Trash2, Minus, Plus } from 'lucide-react';
 import { useCartStore } from '@/store/cart-store';
@@ -12,7 +12,13 @@ import { Separator } from '@/components/ui/separator';
 
 export default function CartDrawer() {
   const [isOpen, setIsOpen] = useState(false);
+  const [isClient, setIsClient] = useState(false);
   const { items, removeItem, updateQuantity, getTotal, clearCart } = useCartStore();
+
+  // Prevent hydration mismatch by only accessing store after client-side mount
+  useEffect(() => {
+    setIsClient(true);
+  }, []);
 
   const handleQuantityChange = (productId: string, newQuantity: number) => {
     if (newQuantity <= 0) {
@@ -27,7 +33,7 @@ export default function CartDrawer() {
       <SheetTrigger asChild>
         <Button variant="ghost" size="icon" className="relative">
           <ShoppingCart className="h-5 w-5" />
-          {items.length > 0 && (
+          {isClient && items.length > 0 && (
             <Badge className="absolute -right-1 -top-1 h-5 min-w-5 items-center justify-center rounded-full bg-clay-pink text-white border-0 px-1 text-[10px]">
               {items.length}
             </Badge>

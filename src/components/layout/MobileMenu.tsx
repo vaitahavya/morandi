@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { Menu, X, ShoppingCart, Heart } from 'lucide-react';
 import { useCartStore } from '@/store/cart-store';
@@ -9,8 +9,14 @@ import Logo from '@/components/ui/Logo';
 
 export default function MobileMenu() {
   const [isOpen, setIsOpen] = useState(false);
+  const [isClient, setIsClient] = useState(false);
   const itemCount = useCartStore((state) => state.getItemCount());
   const wishlistCount = useWishlistStore((state) => state.getItemCount());
+
+  // Prevent hydration mismatch by only accessing store after client-side mount
+  useEffect(() => {
+    setIsClient(true);
+  }, []);
 
   const toggleMenu = () => {
     setIsOpen(!isOpen);
@@ -103,7 +109,7 @@ export default function MobileMenu() {
                 className="flex items-center justify-center space-x-2 rounded-md border border-gray-300 px-4 py-3 text-gray-700 hover:bg-gray-50"
               >
                 <Heart size={20} />
-                <span>Wishlist ({wishlistCount})</span>
+                <span>Wishlist ({isClient ? wishlistCount : 0})</span>
               </Link>
               <Link
                 href="/cart"
@@ -111,7 +117,7 @@ export default function MobileMenu() {
                 className="flex items-center justify-center space-x-2 rounded-md bg-primary-600 px-4 py-3 text-white"
               >
                 <ShoppingCart size={20} />
-                <span>Cart ({itemCount})</span>
+                <span>Cart ({isClient ? itemCount : 0})</span>
               </Link>
             </div>
           </div>
