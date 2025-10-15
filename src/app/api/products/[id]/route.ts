@@ -148,7 +148,7 @@ export async function PUT(
       'price', 'regularPrice', 'salePrice', 'images', 'featuredImage',
       'stockQuantity', 'stockStatus', 'manageStock', 'lowStockThreshold',
       'weight', 'dimensions', 'status', 'featured', 'metaTitle', 'metaDescription',
-      'category', 'tags'
+      'tags'
     ];
 
     updateableFields.forEach(field => {
@@ -191,6 +191,24 @@ export async function PUT(
       const newStockQuantity = updateData.stockQuantity ?? existingProduct.stockQuantity;
       const newStockStatus = updateData.stockStatus ?? existingProduct.stockStatus;
       updateData.inStock = newStockQuantity > 0 && newStockStatus === 'instock';
+    }
+
+    // Handle category updates (many-to-many relationship)
+    if (body.selectedCategories !== undefined) {
+      // Delete existing category associations
+      await prisma.productCategory.deleteMany({
+        where: { productId: id }
+      });
+
+      // Create new category associations
+      if (Array.isArray(body.selectedCategories) && body.selectedCategories.length > 0) {
+        await prisma.productCategory.createMany({
+          data: body.selectedCategories.map((categoryId: string) => ({
+            productId: id,
+            categoryId
+          }))
+        });
+      }
     }
 
     // Update product
