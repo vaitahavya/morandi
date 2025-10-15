@@ -143,19 +143,48 @@ export function ProductForm({ product, onSuccess, onCancel }: ProductFormProps) 
     const files = e.target.files;
     if (!files) return;
 
-    // In a real app, you'd upload to your storage service
-    // For now, we'll just add placeholder URLs
-    const newImages = Array.from(files).map(file => ({
-      id: Date.now() + Math.random(),
-      src: URL.createObjectURL(file),
-      alt: file.name
-    }));
+    setLoading(true);
     
-    setFormData(prev => ({
-      ...prev,
-      images: [...prev.images, ...newImages],
-      featuredImage: prev.featuredImage || newImages[0]?.src || ''
-    }));
+    try {
+      const uploadPromises = Array.from(files).map(async (file) => {
+        const formData = new FormData();
+        formData.append('file', file);
+        formData.append('folder', 'products');
+        
+        const response = await fetch('/api/upload-image', {
+          method: 'POST',
+          body: formData,
+        });
+        
+        if (!response.ok) {
+          throw new Error('Failed to upload image');
+        }
+        
+        const result = await response.json();
+        if (!result.success) {
+          throw new Error(result.error || 'Upload failed');
+        }
+        
+        return {
+          id: Date.now() + Math.random(),
+          src: result.url,
+          alt: file.name
+        };
+      });
+      
+      const newImages = await Promise.all(uploadPromises);
+      
+      setFormData(prev => ({
+        ...prev,
+        images: [...prev.images, ...newImages],
+        featuredImage: prev.featuredImage || newImages[0]?.src || ''
+      }));
+    } catch (error) {
+      console.error('Image upload failed:', error);
+      setError(error instanceof Error ? error.message : 'Failed to upload images');
+    } finally {
+      setLoading(false);
+    }
   };
 
   const removeImage = (index: number) => {

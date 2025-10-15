@@ -109,9 +109,34 @@ export function CategoryForm({ category, categories, onSuccess, onCancel }: Cate
     const file = e.target.files?.[0];
     if (!file) return;
 
-    // For now, we'll just store the filename
-    // In a real app, you'd upload to a service like Cloudinary
-    setFormData(prev => ({ ...prev, image: file.name }));
+    setLoading(true);
+    
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('folder', 'categories');
+      
+      const response = await fetch('/api/upload-image', {
+        method: 'POST',
+        body: formData,
+      });
+      
+      if (!response.ok) {
+        throw new Error('Failed to upload image');
+      }
+      
+      const result = await response.json();
+      if (!result.success) {
+        throw new Error(result.error || 'Upload failed');
+      }
+      
+      setFormData(prev => ({ ...prev, image: result.url }));
+    } catch (error) {
+      console.error('Image upload failed:', error);
+      setError(error instanceof Error ? error.message : 'Failed to upload image');
+    } finally {
+      setLoading(false);
+    }
   };
 
   // Filter out current category and its descendants from parent options

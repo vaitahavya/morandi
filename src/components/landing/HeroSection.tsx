@@ -10,18 +10,18 @@ export default function HeroSection() {
   return (
     <section className="relative h-[85vh] w-full overflow-hidden">
       {/* Background Image covering full section */}
-      <div className="absolute inset-0">
+      <div className="absolute inset-0 -right-[5%] sm:-right-[8%] md:-right-[10%] lg:-right-[12%]">
         <Image
           src="/images/banners/hero-main.jpg"
           alt="Maternity Wear - Where Every Mother Blooms"
           fill
           priority
-          className="object-cover object-right scale-110 transition-transform duration-700 hover:scale-105"
+          className="object-cover object-[70%] sm:object-[75%] md:object-[78%] lg:object-[80%] scale-110 transition-transform duration-700 hover:scale-105"
         />
       </div>
       
       {/* Gradient Overlay for better text contrast */}
-      <div className="absolute inset-0 bg-gradient-to-r from-gray-900/80 via-gray-800/60 to-transparent" />
+      <div className="absolute inset-0 bg-gradient-to-r from-gray-900/85 via-gray-800/65 to-transparent" />
       
       {/* Split Layout for Content Only */}
       <div className="relative z-10 h-full flex items-center">

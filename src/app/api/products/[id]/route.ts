@@ -157,6 +157,29 @@ export async function PUT(
           updateData[field] = parseFloat(body[field]);
         } else if (['stockQuantity', 'lowStockThreshold'].includes(field)) {
           updateData[field] = parseInt(body[field]);
+        } else if (field === 'images') {
+          // Convert images array to JSON string
+          if (Array.isArray(body[field])) {
+            updateData[field] = JSON.stringify(body[field].map(img => 
+              typeof img === 'string' ? img : img.src || img
+            ));
+          } else {
+            updateData[field] = body[field];
+          }
+        } else if (field === 'tags') {
+          // Convert tags array to JSON string
+          if (Array.isArray(body[field])) {
+            updateData[field] = JSON.stringify(body[field]);
+          } else {
+            updateData[field] = body[field];
+          }
+        } else if (field === 'dimensions') {
+          // Convert dimensions object to JSON string
+          if (body[field] && typeof body[field] === 'object') {
+            updateData[field] = JSON.stringify(body[field]);
+          } else {
+            updateData[field] = body[field];
+          }
         } else {
           updateData[field] = body[field];
         }
