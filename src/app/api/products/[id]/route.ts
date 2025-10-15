@@ -160,11 +160,19 @@ export async function PUT(
         } else if (field === 'images') {
           // Convert images array to JSON string
           if (Array.isArray(body[field])) {
-            updateData[field] = JSON.stringify(body[field].map(img => 
-              typeof img === 'string' ? img : img.src || img
-            ));
-          } else {
+            // Extract just the src URLs from image objects
+            const imageSrcs = body[field].map((img: any) => {
+              if (typeof img === 'string') return img;
+              if (typeof img === 'object' && img.src) return img.src;
+              return '';
+            }).filter((src: string) => src && !src.startsWith('blob:')); // Filter out blob URLs
+            
+            updateData[field] = JSON.stringify(imageSrcs);
+          } else if (typeof body[field] === 'string') {
             updateData[field] = body[field];
+          } else {
+            // If it's not an array or string, skip it
+            console.warn('Invalid images format received:', body[field]);
           }
         } else if (field === 'tags') {
           // Convert tags array to JSON string
@@ -191,6 +199,19 @@ export async function PUT(
       const newStockQuantity = updateData.stockQuantity ?? existingProduct.stockQuantity;
       const newStockStatus = updateData.stockStatus ?? existingProduct.stockStatus;
       updateData.inStock = newStockQuantity > 0 && newStockStatus === 'instock';
+    }
+
+    // Final safety check: ensure images is a string (not an array or object)
+    if (updateData.images !== undefined && typeof updateData.images !== 'string') {
+      console.error('Images field is not a string before Prisma update:', updateData.images);
+      if (Array.isArray(updateData.images)) {
+        updateData.images = JSON.stringify(updateData.images.map((img: any) => 
+          typeof img === 'string' ? img : (img?.src || '')
+        ).filter((src: string) => src && !src.startsWith('blob:')));
+      } else {
+        // If it's still not a string or array, remove it to prevent error
+        delete updateData.images;
+      }
     }
 
     // Handle category updates (many-to-many relationship)

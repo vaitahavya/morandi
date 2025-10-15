@@ -108,9 +108,16 @@ export function ProductForm({ product, onSuccess, onCancel }: ProductFormProps) 
     setError(null);
 
     try {
+      // Filter out blob URLs from images (they're temporary and shouldn't be saved)
+      const validImages = formData.images.filter((img: any) => {
+        const src = typeof img === 'string' ? img : img?.src;
+        return src && !src.startsWith('blob:');
+      });
+
       // Prepare the data
       const productData = {
         ...formData,
+        images: validImages, // Use filtered images
         price: parseFloat(formData.price.toString()),
         regularPrice: parseFloat(formData.regularPrice.toString()),
         salePrice: formData.salePrice ? parseFloat(formData.salePrice.toString()) : undefined,
