@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
+import { cleanupSupabaseImages, getRemovedImageUrls, parseImageUrls } from '@/lib/image-cleanup';
 
 // GET /api/products/[id] - Get individual product by ID or slug
 export async function GET(
@@ -201,17 +202,36 @@ export async function PUT(
       updateData.inStock = newStockQuantity > 0 && newStockStatus === 'instock';
     }
 
-    // Final safety check: ensure images is a string (not an array or object)
-    if (updateData.images !== undefined && typeof updateData.images !== 'string') {
-      console.error('Images field is not a string before Prisma update:', updateData.images);
-      if (Array.isArray(updateData.images)) {
-        updateData.images = JSON.stringify(updateData.images.map((img: any) => 
+    // Handle image cleanup and validation
+    if (updateData.images !== undefined) {
+      // Parse existing images for comparison
+      const existingImages = parseImageUrls(existingProduct.images);
+      
+      // Parse new images
+      let newImages: string[] = [];
+      if (typeof updateData.images === 'string') {
+        newImages = parseImageUrls(updateData.images);
+      } else if (Array.isArray(updateData.images)) {
+        newImages = updateData.images.map((img: any) => 
           typeof img === 'string' ? img : (img?.src || '')
-        ).filter((src: string) => src && !src.startsWith('blob:')));
-      } else {
-        // If it's still not a string or array, remove it to prevent error
-        delete updateData.images;
+        ).filter((src: string) => src && !src.startsWith('blob:'));
       }
+      
+      // Find removed images and clean them up from Supabase
+      const removedImages = getRemovedImageUrls(existingImages, newImages);
+      if (removedImages.length > 0) {
+        try {
+          const cleanupResult = await cleanupSupabaseImages(removedImages, 'products');
+          if (!cleanupResult.success) {
+            console.warn('Some images could not be cleaned up:', cleanupResult.errors);
+          }
+        } catch (error) {
+          console.error('Error cleaning up images:', error);
+        }
+      }
+      
+      // Convert to string for database storage
+      updateData.images = JSON.stringify(newImages);
     }
 
     // Handle category updates (many-to-many relationship)
@@ -317,6 +337,19 @@ export async function DELETE(
         success: false,
         error: 'Cannot delete product that has been ordered. Consider marking it as inactive instead.'
       }, { status: 400 });
+    }
+
+    // Clean up images from Supabase Storage before soft delete
+    const existingImages = parseImageUrls(existingProduct.images);
+    if (existingImages.length > 0) {
+      try {
+        const cleanupResult = await cleanupSupabaseImages(existingImages, 'products');
+        if (!cleanupResult.success) {
+          console.warn('Some images could not be cleaned up during product deletion:', cleanupResult.errors);
+        }
+      } catch (error) {
+        console.error('Error cleaning up images during product deletion:', error);
+      }
     }
 
     // Soft delete by updating status instead of hard delete to preserve data integrity
