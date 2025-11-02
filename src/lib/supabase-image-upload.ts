@@ -20,6 +20,13 @@ export async function uploadImageToSupabase(
   fileName?: string
 ): Promise<UploadResult> {
   try {
+    if (!supabase) {
+      return {
+        success: false,
+        error: 'Supabase is not configured. Please set NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY'
+      };
+    }
+
     // Generate filename if not provided
     const finalFileName = fileName || `${Date.now()}-${file.name}`;
     const filePath = folder ? `${folder}/${finalFileName}` : finalFileName;
@@ -73,6 +80,13 @@ export async function deleteImageFromSupabase(
   filePath: string
 ): Promise<UploadResult> {
   try {
+    if (!supabase) {
+      return {
+        success: false,
+        error: 'Supabase is not configured. Please set NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY'
+      };
+    }
+
     const { error } = await supabase.storage
       .from(bucket)
       .remove([filePath]);
@@ -111,14 +125,24 @@ export function getOptimizedImageUrlFromSupabase(
   height: number = 400,
   quality: number = 80
 ): string {
-  // Supabase Storage supports some transformations via URL parameters
-  const urlObj = new URL(url);
-  urlObj.searchParams.set('width', width.toString());
-  urlObj.searchParams.set('height', height.toString());
-  urlObj.searchParams.set('quality', quality.toString());
-  urlObj.searchParams.set('resize', 'cover');
-  
-  return urlObj.toString();
+  try {
+    // Supabase Storage supports some transformations via URL parameters
+    // Only process valid URLs
+    if (!url || (!url.startsWith('http://') && !url.startsWith('https://'))) {
+      return url; // Return original if invalid
+    }
+    
+    const urlObj = new URL(url);
+    urlObj.searchParams.set('width', width.toString());
+    urlObj.searchParams.set('height', height.toString());
+    urlObj.searchParams.set('quality', quality.toString());
+    urlObj.searchParams.set('resize', 'cover');
+    
+    return urlObj.toString();
+  } catch (error) {
+    // Return original URL if parsing fails
+    return url;
+  }
 }
 
 /**
@@ -162,6 +186,13 @@ export async function listImagesInSupabase(
   folder: string = ''
 ): Promise<{ success: boolean; files?: any[]; error?: string }> {
   try {
+    if (!supabase) {
+      return {
+        success: false,
+        error: 'Supabase is not configured. Please set NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY'
+      };
+    }
+
     const { data, error } = await supabase.storage
       .from(bucket)
       .list(folder);

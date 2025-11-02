@@ -209,7 +209,7 @@ function validateProduct(product: any, row: number): { valid: boolean; error?: s
 }
 
 // Transform product data to match API format
-async function transformProduct(product: any): Promise<Partial<Product>> {
+async function transformProduct(product: any): Promise<any> {
   // Resolve categories (can be names or IDs)
   let categoryIds: string[] = [];
   if (product.selectedCategories && Array.isArray(product.selectedCategories)) {
@@ -243,7 +243,7 @@ async function transformProduct(product: any): Promise<Partial<Product>> {
     metaDescription: product.metaDescription,
     images: product.images || [],
     featuredImage: product.featuredImage || product.images?.[0] || '',
-    selectedCategories: categoryIds,
+    categoryIds: categoryIds,
     tags: product.tags || []
   };
 }

@@ -1,9 +1,19 @@
 import { createClient } from '@supabase/supabase-js';
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
 
-export const supabase = createClient(supabaseUrl, supabaseAnonKey);
+// Only create client if we have valid URLs (avoid build-time errors)
+// Check if URL is valid and not a placeholder
+const isValidSupabaseUrl = supabaseUrl && 
+  supabaseUrl !== 'your-supabase-url' && 
+  !supabaseUrl.includes('your-supabase-url') &&
+  (supabaseUrl.startsWith('http://') || supabaseUrl.startsWith('https://'));
+
+export const supabase = isValidSupabaseUrl && supabaseAnonKey
+  ? createClient(supabaseUrl, supabaseAnonKey)
+  : null;
+
 export { createClient };
 
 // Database types
