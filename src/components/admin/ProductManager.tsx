@@ -10,6 +10,7 @@ import { ProductPaginationComponent } from './ProductPaginationComponent';
 import { ProductForm } from './ProductForm';
 import { ProductBulkActions } from './ProductBulkActions';
 import { ProductStats } from './ProductStats';
+import { ProductBulkUpload } from './ProductBulkUpload';
 
 interface ProductManagerProps {
   initialProducts?: any[];
@@ -18,6 +19,7 @@ interface ProductManagerProps {
 export default function ProductManager({ initialProducts = [] }: ProductManagerProps) {
   const [selectedProducts, setSelectedProducts] = useState<string[]>([]);
   const [showProductForm, setShowProductForm] = useState(false);
+  const [showBulkUpload, setShowBulkUpload] = useState(false);
   const [editingProduct, setEditingProduct] = useState<any | null>(null);
   const [filters, setFilters] = useState<ProductFilters>({
     page: 1,
@@ -87,12 +89,19 @@ export default function ProductManager({ initialProducts = [] }: ProductManagerP
     // TanStack Query will automatically refetch
   };
 
+  // Handle bulk upload success
+  const handleBulkUploadSuccess = () => {
+    setShowBulkUpload(false);
+    // TanStack Query will automatically refetch
+  };
+
   return (
     <ProductManagerUI
       loading={isLoading}
       error={queryError ? 'Failed to load products' : null}
       onRefresh={() => window.location.reload()}
       onAddProduct={() => setShowProductForm(true)}
+      onBulkUpload={() => setShowBulkUpload(true)}
     >
       <ProductStats />
       
@@ -142,6 +151,13 @@ export default function ProductManager({ initialProducts = [] }: ProductManagerP
             setShowProductForm(false);
             setEditingProduct(null);
           }}
+        />
+      )}
+
+      {showBulkUpload && (
+        <ProductBulkUpload
+          onSuccess={handleBulkUploadSuccess}
+          onCancel={() => setShowBulkUpload(false)}
         />
       )}
     </ProductManagerUI>

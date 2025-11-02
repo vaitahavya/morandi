@@ -1,7 +1,7 @@
 import { ReactNode } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Package, Search, AlertCircle } from 'lucide-react';
+import { Package, Search, AlertCircle, Upload } from 'lucide-react';
 
 interface ProductManagerUIProps {
   children: ReactNode;
@@ -9,6 +9,7 @@ interface ProductManagerUIProps {
   error: string | null;
   onRefresh: () => void;
   onAddProduct: () => void;
+  onBulkUpload?: () => void;
 }
 
 export function ProductManagerUI({ 
@@ -16,7 +17,8 @@ export function ProductManagerUI({
   loading, 
   error, 
   onRefresh, 
-  onAddProduct 
+  onAddProduct,
+  onBulkUpload
 }: ProductManagerUIProps) {
   return (
     <div className="space-y-6">
@@ -43,6 +45,17 @@ export function ProductManagerUI({
                 <Search className="h-4 w-4 mr-2" />
                 Refresh
               </Button>
+              {onBulkUpload && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={onBulkUpload}
+                  disabled={loading}
+                >
+                  <Upload className="h-4 w-4 mr-2" />
+                  Bulk Upload
+                </Button>
+              )}
               <Button
                 onClick={onAddProduct}
                 size="sm"
