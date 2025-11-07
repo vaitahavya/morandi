@@ -20,6 +20,10 @@ function parseCSV(csvText: string): any[] {
     const char = csvText[i];
     const nextChar = csvText[i + 1];
 
+    if (char === '\r') {
+      continue;
+    }
+
     if (char === '"') {
       if (inQuotes && nextChar === '"') {
         // Escaped quote
@@ -56,26 +60,27 @@ function parseCSV(csvText: string): any[] {
 
     const product: any = {};
     headers.forEach((header, index) => {
+      const normalizedHeader = header.trim();
       let value = values[index]?.trim() || '';
       
       // Parse based on field type
-      if (header === 'regularPrice' || header === 'salePrice' || header === 'weight') {
-        product[header] = value ? parseFloat(value) : undefined;
-      } else if (header === 'stockQuantity' || header === 'lowStockThreshold') {
-        product[header] = value ? parseInt(value) : undefined;
-      } else if (header === 'manageStock' || header === 'featured') {
-        product[header] = value === 'true' || value === '1';
-      } else if (header === 'images') {
+      if (normalizedHeader === 'regularPrice' || normalizedHeader === 'salePrice' || normalizedHeader === 'weight' || normalizedHeader === 'price') {
+        product[normalizedHeader] = value ? parseFloat(value) : undefined;
+      } else if (normalizedHeader === 'stockQuantity' || normalizedHeader === 'lowStockThreshold' || normalizedHeader === 'quantity') {
+        product[normalizedHeader] = value ? parseInt(value) : undefined;
+      } else if (normalizedHeader === 'manageStock' || normalizedHeader === 'trackQuantity' || normalizedHeader === 'featured' || normalizedHeader === 'allowBackorder') {
+        product[normalizedHeader] = value === 'true' || value === '1';
+      } else if (normalizedHeader === 'images') {
         // Handle multiple images separated by semicolon (comma conflicts with CSV delimiter)
-        product[header] = value ? value.split(';').map((img: string) => img.trim()).filter(Boolean) : [];
-      } else if (header === 'tags') {
+        product[normalizedHeader] = value ? value.split(';').map((img: string) => img.trim()).filter(Boolean) : [];
+      } else if (normalizedHeader === 'tags') {
         // Handle multiple tags separated by semicolon
-        product[header] = value ? value.split(';').map((tag: string) => tag.trim()).filter(Boolean) : [];
-      } else if (header === 'category' || header === 'categories') {
+        product[normalizedHeader] = value ? value.split(';').map((tag: string) => tag.trim()).filter(Boolean) : [];
+      } else if (normalizedHeader === 'category' || normalizedHeader === 'categories') {
         // Store category names/IDs to resolve later
-        product[header] = value ? value.split(';').map((cat: string) => cat.trim()).filter(Boolean) : [];
+        product[normalizedHeader] = value ? value.split(';').map((cat: string) => cat.trim()).filter(Boolean) : [];
       } else {
-        product[header] = value || undefined;
+        product[normalizedHeader] = value || undefined;
       }
     });
 
@@ -96,8 +101,14 @@ function parseCSV(csvText: string): any[] {
       product.stockStatus = 'instock';
     }
 
-    if (product.manageStock === undefined) {
+    const managesStock = product.manageStock ?? product.trackQuantity;
+    if (managesStock === undefined) {
       product.manageStock = true;
+      product.trackQuantity = true;
+    } else {
+      const normalized = managesStock === true || managesStock === 'true' || managesStock === 1 || managesStock === '1';
+      product.manageStock = normalized;
+      product.trackQuantity = normalized;
     }
 
     if (!product.status) {
@@ -119,6 +130,10 @@ function parseCSVLine(line: string): string[] {
   for (let i = 0; i < line.length; i++) {
     const char = line[i];
     const nextChar = line[i + 1];
+
+    if (char === '\r') {
+      continue;
+    }
 
     if (char === '"') {
       if (inQuotes && nextChar === '"') {
@@ -201,7 +216,9 @@ function validateProduct(product: any, row: number): { valid: boolean; error?: s
     return { valid: false, error: 'Sale price cannot be greater than regular price' };
   }
 
-  if (product.manageStock && product.stockQuantity !== undefined && product.stockQuantity < 0) {
+  const managesStock = product.manageStock !== false && product.trackQuantity !== false;
+
+  if (managesStock && product.stockQuantity !== undefined && product.stockQuantity < 0) {
     return { valid: false, error: 'Stock quantity cannot be negative' };
   }
 
@@ -223,29 +240,52 @@ async function transformProduct(product: any): Promise<any> {
     categoryIds = await resolveCategoryIds(categoryList);
   }
 
+  const images = Array.isArray(product.images)
+    ? product.images
+        .map((img: any) => {
+          if (typeof img === 'string') return img.trim();
+          if (img && typeof img === 'object') {
+            return img.src || img.url || '';
+          }
+          return '';
+        })
+        .filter(Boolean)
+    : [];
+
+  const salePrice = product.salePrice ? parseFloat(product.salePrice.toString()) : undefined;
+  const regularPrice = product.regularPrice ? parseFloat(product.regularPrice.toString()) : undefined;
+  const resolvedPrice = product.price ? parseFloat(product.price.toString()) : salePrice || regularPrice || 0;
+  const trackQuantity = product.manageStock !== false && product.trackQuantity !== false;
+  const quantityValue = product.stockQuantity ?? product.quantity;
+
   return {
     name: product.name,
     slug: product.slug,
     sku: product.sku,
     description: product.description,
     shortDescription: product.shortDescription,
-    regularPrice: product.regularPrice,
-    salePrice: product.salePrice,
-    price: product.price || product.salePrice || product.regularPrice,
-    stockQuantity: product.stockQuantity || 0,
-    stockStatus: product.stockStatus || 'instock',
-    manageStock: product.manageStock !== false,
-    lowStockThreshold: product.lowStockThreshold || 5,
+    price: resolvedPrice,
+    compareAtPrice: product.compareAtPrice ? parseFloat(product.compareAtPrice.toString()) : regularPrice,
+    regularPrice,
+    salePrice,
+    costPrice: product.costPrice ? parseFloat(product.costPrice.toString()) : undefined,
+    trackQuantity,
+    quantity: quantityValue !== undefined ? parseInt(quantityValue.toString()) : trackQuantity ? 0 : undefined,
+    allowBackorder: product.allowBackorder === true || product.allowBackorder === 'true',
     weight: product.weight ? parseFloat(product.weight.toString()) : undefined,
+    weightUnit: product.weightUnit,
     status: product.status || 'published',
     featured: product.featured === true || product.featured === 'true',
+    tags: Array.isArray(product.tags) ? product.tags : [],
     metaTitle: product.metaTitle,
     metaDescription: product.metaDescription,
-    images: product.images || [],
-    featuredImage: product.featuredImage || product.images?.[0] || '',
-    categoryIds: categoryIds,
-    tags: product.tags || []
-  };
+    images,
+    featuredImage: product.featuredImage || images[0] || undefined,
+    categoryIds,
+    lowStockThreshold: product.lowStockThreshold !== undefined
+      ? parseInt(product.lowStockThreshold.toString())
+      : undefined,
+  } as any;
 }
 
 // POST /api/products/bulk-upload - Bulk upload products from CSV or JSON

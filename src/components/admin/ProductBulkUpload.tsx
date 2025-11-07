@@ -1,9 +1,11 @@
 'use client';
 
 import { useState } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Upload, FileText, X, CheckCircle, AlertCircle, Download, Loader2 } from 'lucide-react';
+import { queryKeys } from '@/lib/query-client';
 
 interface BulkUploadResult {
   success: number;
@@ -21,6 +23,7 @@ export function ProductBulkUpload({ onSuccess, onCancel }: ProductBulkUploadProp
   const [uploading, setUploading] = useState(false);
   const [result, setResult] = useState<BulkUploadResult | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const queryClient = useQueryClient();
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFile = e.target.files?.[0];
@@ -59,8 +62,11 @@ export function ProductBulkUpload({ onSuccess, onCancel }: ProductBulkUploadProp
       }
 
       setResult(data.result);
-      
+
       if (data.result.success > 0) {
+        queryClient.invalidateQueries({ queryKey: queryKeys.products.lists() });
+        queryClient.invalidateQueries({ queryKey: queryKeys.products.details() });
+
         // Auto-close after 2 seconds if successful
         setTimeout(() => {
           if (data.result.failed === 0) {
