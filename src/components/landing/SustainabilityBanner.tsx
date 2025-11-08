@@ -1,6 +1,7 @@
 'use client';
 
 import Image from 'next/image';
+import Link from 'next/link';
 
 export default function SustainabilityBanner() {
   return (
@@ -76,9 +77,12 @@ export default function SustainabilityBanner() {
           
           {/* Call to Action */}
           <div className="mt-12">
-            <button className="bg-morandi-white text-deep-charcoal px-8 py-3 rounded-xl font-medium hover:bg-morandi-white/90 transition-all duration-300 shadow-card">
+            <Link
+              href="/contact"
+              className="inline-block bg-morandi-white text-deep-charcoal px-8 py-3 rounded-xl font-medium hover:bg-morandi-white/90 transition-all duration-300 shadow-card"
+            >
               Learn More About Our Mission
-            </button>
+            </Link>
           </div>
         </div>
       </div>

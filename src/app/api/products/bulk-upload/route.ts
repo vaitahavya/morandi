@@ -353,44 +353,66 @@ export async function POST(request: NextRequest) {
       errors: []
     };
 
-    // Process products in batches to avoid overwhelming the database
-    const batchSize = 10;
-    for (let i = 0; i < products.length; i += batchSize) {
-      const batch = products.slice(i, i + batchSize);
-      
-      await Promise.all(
-        batch.map(async (product, batchIndex) => {
-          const row = i + batchIndex + 1; // +1 because CSV header is row 0
+    const seenSlugs = new Set<string>();
+    const seenSkus = new Set<string>();
 
-          // Validate product
-          const validation = validateProduct(product, row);
-          if (!validation.valid) {
-            result.failed++;
-            result.errors.push({
-              row,
-              product: product.name || `Row ${row}`,
-              error: validation.error || 'Validation failed'
-            });
-            return;
-          }
+    for (let index = 0; index < products.length; index++) {
+      const product = products[index];
+      const row = index + 1; // +1 because CSV header is considered row 0
 
-          try {
-            // Transform product data (async because it resolves categories)
-            const transformedProduct = await transformProduct(product);
+      const slugKey = product.slug?.toLowerCase();
+      const skuKey = product.sku?.toLowerCase();
 
-            // Create product
-            await productService.createProduct(transformedProduct);
-            result.success++;
-          } catch (error) {
-            result.failed++;
-            result.errors.push({
-              row,
-              product: product.name || `Row ${row}`,
-              error: error instanceof Error ? error.message : 'Failed to create product'
-            });
-          }
-        })
-      );
+      if (slugKey && seenSlugs.has(slugKey)) {
+        result.failed++;
+        result.errors.push({
+          row,
+          product: product.name || `Row ${row}`,
+          error: 'Duplicate slug found in CSV file'
+        });
+        continue;
+      }
+
+      if (skuKey && seenSkus.has(skuKey)) {
+        result.failed++;
+        result.errors.push({
+          row,
+          product: product.name || `Row ${row}`,
+          error: 'Duplicate SKU found in CSV file'
+        });
+        continue;
+      }
+
+      if (slugKey) seenSlugs.add(slugKey);
+      if (skuKey) seenSkus.add(skuKey);
+
+      // Validate product
+      const validation = validateProduct(product, row);
+      if (!validation.valid) {
+        result.failed++;
+        result.errors.push({
+          row,
+          product: product.name || `Row ${row}`,
+          error: validation.error || 'Validation failed'
+        });
+        continue;
+      }
+
+      try {
+        // Transform product data (async because it resolves categories)
+        const transformedProduct = await transformProduct(product);
+
+        // Create product
+        await productService.createProduct(transformedProduct);
+        result.success++;
+      } catch (error) {
+        result.failed++;
+        result.errors.push({
+          row,
+          product: product.name || `Row ${row}`,
+          error: error instanceof Error ? error.message : 'Failed to create product'
+        });
+      }
     }
 
     return NextResponse.json({

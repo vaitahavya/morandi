@@ -48,7 +48,7 @@ export default function ContactPage() {
               </div>
               <div>
                 <h3 className="font-semibold">Phone</h3>
-                <p className="text-gray-600">+91 98765 43210</p>
+                <p className="text-gray-600">+91 88850 48090</p>
               </div>
             </div>
 
@@ -60,7 +60,7 @@ export default function ContactPage() {
               </div>
               <div>
                 <h3 className="font-semibold">Email</h3>
-                <p className="text-gray-600">hello@morandilifestyle.com</p>
+                <p className="text-gray-600">ceo@morandilifestyle.com</p>
               </div>
             </div>
 
@@ -74,8 +74,8 @@ export default function ContactPage() {
               <div>
                 <h3 className="font-semibold">Address</h3>
                 <p className="text-gray-600">
-                  123 Lifestyle Street<br />
-                  Mumbai, Maharashtra 400001<br />
+                  FM62+6J6, Ayyappa Nagar, Rampally<br />
+                  Secunderabad, Telangana 501302<br />
                   India
                 </p>
               </div>
