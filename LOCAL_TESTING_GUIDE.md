@@ -55,6 +55,23 @@ node scripts/test-auth.js
 - **Products:** `GET /api/products`
 - **Orders:** `GET /api/orders`
 
+## 🚚 Shipping & Coupons
+
+### Shipping Rates
+- Run the latest Prisma migration after pulling updates:  
+  ```bash
+  npx prisma migrate deploy
+  # or, for SQLite testing
+  npx prisma db push
+  ```
+- Visit **Admin → Shipping Rates** to add rules by pincode, prefix, or zone.
+- Each rule supports base cost, surcharge, and free-shipping thresholds. Disable or delete rules as needed.
+
+### Coupon Validation
+- Use **Admin → Marketing → Coupons** to configure discount or free-shipping coupons.
+- At checkout, apply coupon codes and confirm the order summary updates with discounts and shipping changes.
+- Orders now record `couponCode`, `couponId`, and `shippingRateId` so you can audit the applied incentives.
+
 ## 🧪 Testing Authentication Flow
 
 ### 1. Test User Registration

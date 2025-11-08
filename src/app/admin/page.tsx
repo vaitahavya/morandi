@@ -6,6 +6,7 @@ import AdminAuthGuard from '@/components/admin/AdminAuthGuard';
 import ProductManager from '@/components/admin/ProductManager';
 import CategoryManager from '@/components/admin/CategoryManager';
 import OrderManager from '@/components/admin/OrderManager';
+import ShippingManager from '@/components/admin/ShippingManager';
 import AnalyticsDashboard from '@/components/admin/AnalyticsDashboard';
 import InventoryManager from '@/components/admin/InventoryManager';
 import AdminRoleManager from '@/components/admin/AdminRoleManager';
@@ -111,6 +112,12 @@ export default function AdminPage() {
         return (
           <div className="container mx-auto px-4 py-8">
             <OrderManager />
+          </div>
+        );
+      case 'shipping':
+        return (
+          <div className="container mx-auto px-4 py-8">
+            <ShippingManager />
           </div>
         );
       case 'customers':

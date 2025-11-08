@@ -13,6 +13,7 @@ export * from './OrderRepository';
 export * from './CategoryRepository';
 export * from './ReturnRepository';
 export * from './CustomerRepository';
+export * from './ShippingRateRepository';
 
 // Repository instances (singletons)
 export { userRepository } from './UserRepository';
@@ -21,6 +22,7 @@ export { orderRepository } from './OrderRepository';
 export { categoryRepository } from './CategoryRepository';
 export { returnRepository } from './ReturnRepository';
 export { customerRepository } from './CustomerRepository';
+export { shippingRateRepository } from './ShippingRateRepository';
 
 // Types
 export type {
@@ -68,6 +70,14 @@ export type {
   CustomerDetails,
   ICustomerRepository,
 } from './CustomerRepository';
+
+export type {
+  CreateShippingRateInput,
+  UpdateShippingRateInput,
+  ShippingRateFilters,
+  CalculatedShippingQuote,
+  IShippingRateRepository,
+} from './ShippingRateRepository';
 
 export type {
   FindManyOptions,

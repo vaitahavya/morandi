@@ -1,13 +1,13 @@
 'use client';
 
 import { useState } from 'react';
-import { 
-  BarChart3, 
-  Package, 
-  ShoppingCart, 
-  Settings, 
-  Menu, 
-  X, 
+import {
+  BarChart3,
+  Package,
+  ShoppingCart,
+  Settings,
+  Menu,
+  X,
   Home,
   Users,
   TrendingUp,
@@ -16,7 +16,8 @@ import {
   HelpCircle,
   LogOut,
   RotateCcw,
-  FolderTree
+  FolderTree,
+  Truck,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -70,6 +71,12 @@ export default function AdminLayout({ children, activeSection, onSectionChange }
       description: 'Order management and fulfillment'
     },
     {
+      id: 'shipping',
+      name: 'Shipping Rates',
+      icon: Truck,
+      description: 'Configure location-based shipping costs'
+    },
+    {
       id: 'customers',
       name: 'Customers',
       icon: Users,
@@ -98,6 +105,7 @@ export default function AdminLayout({ children, activeSection, onSectionChange }
   const quickActions = [
     { label: 'Add Product', action: () => onSectionChange('products') },
     { label: 'View Orders', action: () => onSectionChange('orders') },
+    { label: 'Manage Shipping', action: () => onSectionChange('shipping') },
     { label: 'Check Analytics', action: () => onSectionChange('analytics') }
   ];
 

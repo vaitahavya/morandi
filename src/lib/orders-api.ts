@@ -153,6 +153,9 @@ export interface CreateOrderData {
   shippingCost?: number;
   taxAmount?: number;
   discountAmount?: number;
+  couponCode?: string;
+  couponId?: string;
+  shippingRateId?: string;
   customerNotes?: string;
   currency?: string;
 }

@@ -8,6 +8,7 @@ export interface CreateOrderInput {
   userId?: string;
   status: string;
   total: number;
+  subtotal: number;
   orderNumber: string;
   paymentStatus: string;
   customerEmail: string;
@@ -37,6 +38,9 @@ export interface CreateOrderInput {
   shippingCost?: number;
   taxAmount?: number;
   discountAmount?: number;
+  couponId?: string;
+  couponCode?: string;
+  shippingRateId?: string;
   customerNotes?: string;
   currency?: string;
   items: CreateOrderItemInput[];
@@ -65,6 +69,7 @@ export interface CreateOrderItemInput {
 export interface UpdateOrderInput {
   status?: string;
   total?: number;
+  subtotal?: number;
   paymentStatus?: string;
   customerEmail?: string;
   customerPhone?: string;
@@ -72,6 +77,9 @@ export interface UpdateOrderInput {
   shippingCost?: number;
   taxAmount?: number;
   discountAmount?: number;
+  couponId?: string;
+  couponCode?: string;
+  shippingRateId?: string;
 }
 
 /**
@@ -130,6 +138,7 @@ export class OrderRepository extends BaseRepository<OrderWithItems, CreateOrderI
           userId: data.userId,
           status: data.status,
           total: data.total,
+          subtotal: data.subtotal,
           orderNumber: data.orderNumber,
           paymentStatus: data.paymentStatus,
           customerEmail: data.customerEmail,
@@ -153,10 +162,12 @@ export class OrderRepository extends BaseRepository<OrderWithItems, CreateOrderI
           shippingPostcode: data.shippingPostcode,
           shippingCountry: data.shippingCountry,
           paymentMethod: data.paymentMethod,
-          subtotal: data.total - (data.shippingCost || 0) - (data.taxAmount || 0) + (data.discountAmount || 0),
           tax: data.taxAmount,
           shipping: data.shippingCost,
           discount: data.discountAmount,
+          couponId: data.couponId,
+          couponCode: data.couponCode,
+          shippingRateId: data.shippingRateId,
           notes: data.customerNotes,
           currency: data.currency,
         },
@@ -275,6 +286,10 @@ export class OrderRepository extends BaseRepository<OrderWithItems, CreateOrderI
     if (data.shippingCost !== undefined) updateData.shipping = data.shippingCost;
     if (data.taxAmount !== undefined) updateData.tax = data.taxAmount;
     if (data.discountAmount !== undefined) updateData.discount = data.discountAmount;
+    if (data.subtotal !== undefined) updateData.subtotal = data.subtotal;
+    if (data.couponId !== undefined) updateData.couponId = data.couponId;
+    if (data.couponCode !== undefined) updateData.couponCode = data.couponCode;
+    if (data.shippingRateId !== undefined) updateData.shippingRateId = data.shippingRateId;
     
     // Always update the updatedAt timestamp
     updateData.updatedAt = new Date();

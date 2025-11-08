@@ -184,6 +184,9 @@ model Order {
   tax               Float?   @default(0)
   shipping          Float?   @default(0)
   discount          Float?   @default(0)
+  couponCode        String?  @map("coupon_code")
+  couponId          String?  @map("coupon_id")
+  shippingRateId    String?  @map("shipping_rate_id")
   total             Float
   currency          String   @default("INR")
   billingFirstName  String?  @map("billing_first_name")
@@ -211,6 +214,8 @@ model Order {
   user       User?        @relation(fields: [userId], references: [id])
   orderItems OrderItem[]
   returns    Returns[]
+  coupon     Coupon?        @relation(fields: [couponId], references: [id])
+  shippingRate ShippingRate? @relation(fields: [shippingRateId], references: [id])
   
   @@map("orders")
 }
@@ -335,10 +340,37 @@ model Coupon {
   startDate   DateTime? @map("start_date")
   endDate     DateTime? @map("end_date")
   isActive    Boolean   @default(true) @map("is_active")
+  freeShipping Boolean  @default(false) @map("free_shipping")
+  appliesToZones String? @map("applies_to_zones")
   createdAt   DateTime  @default(now()) @map("created_at")
   updatedAt   DateTime  @default(now()) @updatedAt @map("updated_at")
+  orders      Order[]
   
   @@map("coupons")
+}
+
+model ShippingRate {
+  id                   String   @id @default(cuid())
+  name                 String?
+  pincode              String? 
+  pincodePrefix        String?  @map("pincode_prefix")
+  zone                 String?
+  baseCost             Float    @map("base_cost")
+  surcharge            Float?   @default(0)
+  freeShippingThreshold Float?  @map("free_shipping_threshold")
+  estimatedDeliveryMin Int?     @map("estimated_delivery_min")
+  estimatedDeliveryMax Int?     @map("estimated_delivery_max")
+  isActive             Boolean  @default(true) @map("is_active")
+  notes                String?
+  createdAt            DateTime @default(now()) @map("created_at")
+  updatedAt            DateTime @default(now()) @updatedAt @map("updated_at")
+
+  orders Order[]
+
+  @@map("shipping_rates")
+  @@index([pincode])
+  @@index([pincodePrefix])
+  @@index([zone])
 }
 
 model Banner {

@@ -5,7 +5,7 @@ import { useCartStore } from '@/store/cart-store';
 import { createOrder, CreateOrderData } from '@/lib/orders-api';
 import { processPayment, loadRazorpayScript } from '@/lib/payment-api';
 import { useRouter } from 'next/navigation';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useSession } from 'next-auth/react';
 import toast from 'react-hot-toast';
 
@@ -35,6 +35,36 @@ interface CheckoutFormValues {
   sameAsShipping: boolean;
 }
 
+interface ShippingQuoteResult {
+  rateId: string;
+  name?: string | null;
+  zone?: string | null;
+  pincode?: string | null;
+  pincodePrefix?: string | null;
+  shippingCost: number;
+  isFree: boolean;
+  freeShippingThreshold?: number | null;
+  estimatedDeliveryMin?: number | null;
+  estimatedDeliveryMax?: number | null;
+}
+
+interface AppliedCouponState {
+  couponId: string;
+  code: string;
+  type: string;
+  value: number;
+  discountAmount: number;
+  freeShipping: boolean;
+  message: string;
+}
+
+const formatCurrency = (value: number) =>
+  new Intl.NumberFormat('en-IN', {
+    style: 'currency',
+    currency: 'INR',
+    minimumFractionDigits: 2,
+  }).format(value);
+
 export default function CheckoutPage() {
   const router = useRouter();
   const { data: session } = useSession();
@@ -44,6 +74,13 @@ export default function CheckoutPage() {
   }));
   const [loading, setLoading] = useState(false);
   const [razorpayLoaded, setRazorpayLoaded] = useState(false);
+  const [shippingQuote, setShippingQuote] = useState<ShippingQuoteResult | null>(null);
+  const [shippingLoading, setShippingLoading] = useState(false);
+  const [shippingError, setShippingError] = useState<string | null>(null);
+  const [couponInput, setCouponInput] = useState('');
+  const [appliedCoupon, setAppliedCoupon] = useState<AppliedCouponState | null>(null);
+  const [couponLoading, setCouponLoading] = useState(false);
+  const [couponError, setCouponError] = useState<string | null>(null);
   
   const {
     register,
@@ -64,6 +101,41 @@ export default function CheckoutPage() {
 
 
   const watchedSameAsShipping = watch('sameAsShipping');
+  const watchedPostcode = watch('postcode');
+  const watchedShippingPostcode = watch('shippingPostcode');
+
+  const subtotal = useMemo(
+    () => items.reduce((sum, item) => sum + item.price * item.quantity, 0),
+    [items]
+  );
+
+  const taxAmount = useMemo(
+    () => Math.round(subtotal * 0.18 * 100) / 100,
+    [subtotal]
+  );
+
+  const baseShippingCost = useMemo(() => {
+    if (!shippingQuote) return 0;
+    if (shippingQuote.isFree) return 0;
+    return Math.max(0, shippingQuote.shippingCost);
+  }, [shippingQuote]);
+
+  const shippingCost = useMemo(() => {
+    if (appliedCoupon?.freeShipping) {
+      return 0;
+    }
+    return baseShippingCost;
+  }, [appliedCoupon?.freeShipping, baseShippingCost]);
+
+  const discountAmount = useMemo(
+    () => appliedCoupon?.discountAmount ?? 0,
+    [appliedCoupon]
+  );
+
+  const total = useMemo(
+    () => Math.max(0, subtotal + shippingCost + taxAmount - discountAmount),
+    [subtotal, shippingCost, taxAmount, discountAmount]
+  );
 
   // Load Razorpay script on component mount
   useEffect(() => {
@@ -87,6 +159,132 @@ export default function CheckoutPage() {
     }
   }, [session, setValue]);
 
+  useEffect(() => {
+    if (!items.length || subtotal <= 0) {
+      setShippingQuote(null);
+      setShippingError(null);
+      setShippingLoading(false);
+      return;
+    }
+
+    const effectivePostcode = (watchedSameAsShipping ? watchedPostcode : watchedShippingPostcode)?.trim();
+
+    if (!effectivePostcode || effectivePostcode.length < 4) {
+      setShippingQuote(null);
+      setShippingError(null);
+      setShippingLoading(false);
+      return;
+    }
+
+    let isCancelled = false;
+    const controller = new AbortController();
+
+    setShippingLoading(true);
+    setShippingError(null);
+
+    const timeoutId = window.setTimeout(async () => {
+      try {
+        const response = await fetch(
+          `/api/shipping/quote?pincode=${encodeURIComponent(effectivePostcode)}&subtotal=${subtotal}`,
+          { signal: controller.signal }
+        );
+        const result = await response.json();
+
+        if (isCancelled) {
+          return;
+        }
+
+        if (!response.ok || !result.success) {
+          setShippingQuote(null);
+          setShippingError(
+            result.error ||
+              'Unable to calculate shipping for the entered postcode. Please verify the details.'
+          );
+          return;
+        }
+
+        setShippingQuote(result.data);
+        setShippingError(null);
+      } catch (error: any) {
+        if (isCancelled || error?.name === 'AbortError') {
+          return;
+        }
+        console.error('Shipping quote error:', error);
+        setShippingQuote(null);
+        setShippingError('Unable to calculate shipping right now. Please try again shortly.');
+      } finally {
+        if (!isCancelled) {
+          setShippingLoading(false);
+        }
+      }
+    }, 300);
+
+    return () => {
+      isCancelled = true;
+      clearTimeout(timeoutId);
+      controller.abort();
+    };
+  }, [
+    items.length,
+    subtotal,
+    watchedSameAsShipping,
+    watchedPostcode,
+    watchedShippingPostcode,
+  ]);
+
+  const handleApplyCoupon = useCallback(async () => {
+    const code = couponInput.trim().toUpperCase();
+
+    if (!code) {
+      setCouponError('Enter a coupon code to apply.');
+      return;
+    }
+
+    if (subtotal <= 0) {
+      setCouponError('Add items to your cart before applying a coupon.');
+      return;
+    }
+
+    setCouponLoading(true);
+    setCouponError(null);
+
+    try {
+      const response = await fetch('/api/coupons/validate', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          code,
+          subtotal,
+          zone: shippingQuote?.zone ?? null,
+        }),
+      });
+
+      const result = await response.json();
+
+      if (!response.ok || !result.success) {
+        setCouponError(result.error || 'Unable to apply coupon. Please try another code.');
+        return;
+      }
+
+      setAppliedCoupon(result.data);
+      setCouponInput(result.data.code);
+      toast.success(result.data.message || 'Coupon applied successfully.');
+    } catch (error) {
+      console.error('Coupon apply error:', error);
+      setCouponError('Unable to apply coupon right now. Please try again.');
+    } finally {
+      setCouponLoading(false);
+    }
+  }, [couponInput, subtotal, shippingQuote]);
+
+  const handleRemoveCoupon = useCallback(() => {
+    setAppliedCoupon(null);
+    setCouponInput('');
+    setCouponError(null);
+  }, []);
+
   const onSubmit = async (data: CheckoutFormValues) => {
     if (!items.length) {
       toast.error('Your cart is empty');
@@ -101,13 +299,28 @@ export default function CheckoutPage() {
     setLoading(true);
 
     try {
-      // Calculate order totals
-      const subtotal = items.reduce((sum, item) => sum + (item.price * item.quantity), 0);
-      const shippingCost = subtotal >= 500 ? 0 : 50; // Free shipping over ₹500
-      const taxAmount = Math.round(subtotal * 0.18 * 100) / 100; // 18% GST
-      const total = subtotal + shippingCost + taxAmount;
+      if (shippingLoading) {
+        toast.error('Please wait until shipping is calculated.');
+        setLoading(false);
+        return;
+      }
+
+      if (!shippingQuote && subtotal > 0 && !appliedCoupon?.freeShipping) {
+        toast.error('Unable to calculate shipping for the provided postcode.');
+        setLoading(false);
+        return;
+      }
 
       // Prepare order data
+      const shippingFirstName = data.sameAsShipping ? data.firstName : data.shippingFirstName;
+      const shippingLastName = data.sameAsShipping ? data.lastName : data.shippingLastName;
+      const shippingAddress1 = data.sameAsShipping ? data.address1 : data.shippingAddress1;
+      const shippingAddress2 = data.sameAsShipping ? data.address2 : data.shippingAddress2;
+      const shippingCity = data.sameAsShipping ? data.city : data.shippingCity;
+      const shippingState = data.sameAsShipping ? data.state : data.shippingState;
+      const shippingPostcode = data.sameAsShipping ? data.postcode : data.shippingPostcode;
+      const shippingCountry = data.sameAsShipping ? data.country : data.shippingCountry;
+
       const orderData: CreateOrderData = {
         status: 'pending',
         paymentStatus: 'pending',
@@ -137,20 +350,23 @@ export default function CheckoutPage() {
         billingCountry: data.country,
         
         // Shipping address (copy from billing if same)
-        shippingFirstName: data.sameAsShipping ? data.firstName : data.shippingFirstName,
-        shippingLastName: data.sameAsShipping ? data.lastName : data.shippingLastName,
-        shippingAddress1: data.sameAsShipping ? data.address1 : data.shippingAddress1,
-        shippingAddress2: data.sameAsShipping ? data.address2 : data.shippingAddress2,
-        shippingCity: data.sameAsShipping ? data.city : data.shippingCity,
-        shippingState: data.sameAsShipping ? data.state : data.shippingState,
-        shippingPostcode: data.sameAsShipping ? data.postcode : data.shippingPostcode,
-        shippingCountry: data.sameAsShipping ? data.country : data.shippingCountry,
+        shippingFirstName,
+        shippingLastName,
+        shippingAddress1,
+        shippingAddress2,
+        shippingCity,
+        shippingState,
+        shippingPostcode,
+        shippingCountry,
         
         // Payment and shipping details
         paymentMethod: 'razorpay',
         paymentMethodTitle: 'Razorpay',
         shippingCost,
         taxAmount,
+        discountAmount,
+        couponCode: appliedCoupon?.code,
+        shippingRateId: shippingQuote?.rateId,
         customerNotes: data.customerNotes,
         currency: 'INR'
       };
@@ -170,6 +386,8 @@ export default function CheckoutPage() {
         total,
         // Success callback
         (order) => {
+          setAppliedCoupon(null);
+          setCouponInput('');
           clearCart();
           toast.success('Payment successful! Order confirmed.');
           router.push(`/order-success?order=${order.id}`);
@@ -188,12 +406,6 @@ export default function CheckoutPage() {
       setLoading(false);
     }
   };
-
-  // Calculate order totals for display
-  const subtotal = items.reduce((sum, item) => sum + item.price * item.quantity, 0);
-  const shippingCost = subtotal >= 500 ? 0 : 50; // Free shipping over ₹500
-  const taxAmount = Math.round(subtotal * 0.18 * 100) / 100; // 18% GST
-  const total = subtotal + shippingCost + taxAmount;
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-10 md:px-6 lg:px-8">
@@ -220,16 +432,85 @@ export default function CheckoutPage() {
                         <p className="text-sm text-gray-600">Qty: {item.quantity}</p>
                       </div>
                     </div>
-                    <p className="font-semibold">₹{item.price * item.quantity}</p>
+                    <p className="font-semibold">{formatCurrency(item.price * item.quantity)}</p>
                   </div>
                 ))}
               </div>
-              <div className="mt-6 border-t pt-4">
+              <div className="mt-6">
+                <label className="mb-1 block text-sm font-medium">Coupon Code</label>
+                <div className="flex gap-2">
+                  <input
+                    value={couponInput}
+                    onChange={(event) => setCouponInput(event.target.value.toUpperCase())}
+                    placeholder="SAVE10"
+                    className="w-full rounded-md border px-3 py-2 uppercase"
+                    disabled={couponLoading || !!appliedCoupon}
+                  />
+                  {appliedCoupon ? (
+                    <button
+                      type="button"
+                      onClick={handleRemoveCoupon}
+                      className="rounded-md border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+                    >
+                      Remove
+                    </button>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={handleApplyCoupon}
+                      disabled={couponLoading}
+                      className="rounded-md bg-primary-600 px-4 py-2 text-sm font-medium text-white hover:bg-primary-700 disabled:opacity-60"
+                    >
+                      {couponLoading ? 'Applying...' : 'Apply'}
+                    </button>
+                  )}
+                </div>
+                {couponError && <p className="mt-1 text-sm text-red-600">{couponError}</p>}
+                {appliedCoupon && !couponError && (
+                  <p className="mt-1 text-sm text-green-600">{appliedCoupon.message}</p>
+                )}
+              </div>
+              <div className="mt-6 space-y-2 border-t pt-4 text-sm">
+                <div className="flex items-center justify-between">
+                  <span>Subtotal</span>
+                  <span>{formatCurrency(subtotal)}</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span>Shipping</span>
+                  <span>
+                    {shippingLoading
+                      ? 'Calculating...'
+                      : appliedCoupon?.freeShipping || shippingQuote?.isFree
+                        ? 'Free'
+                        : formatCurrency(shippingCost)}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span>Tax (18% GST)</span>
+                  <span>{formatCurrency(taxAmount)}</span>
+                </div>
+                {discountAmount > 0 && (
+                  <div className="flex items-center justify-between text-green-600">
+                    <span>Discount</span>
+                    <span>-{formatCurrency(discountAmount)}</span>
+                  </div>
+                )}
                 <div className="flex items-center justify-between text-lg font-semibold">
-                  <span>Total</span>
-                  <span>₹{total}</span>
+                  <span>Total Due</span>
+                  <span>{formatCurrency(total)}</span>
                 </div>
               </div>
+              {shippingError && (
+                <p className="mt-2 text-sm text-red-600">{shippingError}</p>
+              )}
+              {shippingQuote && !shippingError && (
+                <p className="mt-2 text-xs text-gray-500">
+                  {shippingQuote.estimatedDeliveryMin
+                    ? `Estimated delivery ${shippingQuote.estimatedDeliveryMin}-${shippingQuote.estimatedDeliveryMax ?? shippingQuote.estimatedDeliveryMin
+                      } days.`
+                    : 'Estimated delivery will be shared after payment.'}
+                </p>
+              )}
             </div>
           </div>
 
@@ -337,7 +618,7 @@ export default function CheckoutPage() {
                 disabled={loading}
                 className="w-full rounded-md bg-primary-600 px-8 py-3 text-white hover:bg-primary-700 disabled:opacity-50"
               >
-                {loading ? 'Processing...' : `Proceed to Payment - ₹${total}`}
+                {loading ? 'Processing...' : `Proceed to Payment - ${formatCurrency(total)}`}
               </button>
             </form>
           </div>

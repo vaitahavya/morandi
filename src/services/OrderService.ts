@@ -1,12 +1,14 @@
-import { 
-  orderRepository, 
-  CreateOrderInput, 
-  UpdateOrderInput, 
+import {
+  orderRepository,
+  CreateOrderInput,
+  UpdateOrderInput,
   OrderFilters,
   FindManyOptions,
   PaginatedResult,
-  OrderWithItems
+  OrderWithItems,
 } from '@/repositories';
+import { shippingService } from './ShippingService';
+import { couponService } from './CouponService';
 
 /**
  * Order Service - Business logic layer
@@ -40,6 +42,58 @@ export class OrderService {
       }
     }
 
+    // Calculate subtotal from items to avoid tampering
+    const computedSubtotal = orderData.items.reduce((sum, item) => {
+      const unit = item.unitPrice ?? item.price;
+      return sum + unit * item.quantity;
+    }, 0);
+
+    const shippingPostcode =
+      orderData.shippingPostcode || orderData.billingPostcode || '';
+
+    const shippingQuote = shippingPostcode
+      ? await shippingService.getQuoteByPincode(shippingPostcode, computedSubtotal)
+      : null;
+
+    let shippingCost = shippingQuote?.effectiveCost ?? Number(orderData.shippingCost ?? 0);
+    let shippingRateId = shippingQuote?.rate.id;
+
+    // Coupon handling
+    let discountAmount = 0;
+    let couponId: string | undefined;
+    let couponCode: string | undefined;
+
+    if (orderData.couponCode) {
+      const couponResult = await couponService.validateCoupon({
+        code: orderData.couponCode,
+        subtotal: computedSubtotal,
+        zone: shippingQuote?.rate.zone,
+      });
+      discountAmount = couponResult.discountAmount;
+      couponId = couponResult.coupon.id;
+      couponCode = couponResult.coupon.code;
+
+      if (couponResult.freeShipping) {
+        shippingCost = 0;
+      }
+    } else if (orderData.discountAmount) {
+      discountAmount = Number(orderData.discountAmount);
+    }
+
+    if (shippingQuote?.isFree && !couponCode) {
+      shippingCost = 0;
+    }
+
+    const taxAmount =
+      orderData.taxAmount !== undefined
+        ? Number(orderData.taxAmount)
+        : Math.round(computedSubtotal * 0.18 * 100) / 100;
+
+    const total = Math.max(
+      0,
+      computedSubtotal + shippingCost + taxAmount - discountAmount,
+    );
+
     // Generate order number if not provided
     if (!orderData.orderNumber) {
       orderData.orderNumber = this.generateOrderNumber();
@@ -52,7 +106,23 @@ export class OrderService {
     }
 
     // Create order
-    return await orderRepository.create(orderData);
+    const createdOrder = await orderRepository.create({
+      ...orderData,
+      subtotal: computedSubtotal,
+      total,
+      shippingCost,
+      taxAmount,
+      discountAmount,
+      couponId,
+      couponCode,
+      shippingRateId,
+    });
+
+    if (couponId) {
+      await couponService.incrementUsage(couponId);
+    }
+
+    return createdOrder;
   }
 
   /**
