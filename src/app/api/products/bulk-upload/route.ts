@@ -20,7 +20,13 @@ function parseCSV(csvText: string): any[] {
     const char = csvText[i];
     const nextChar = csvText[i + 1];
 
-    if (char === '\r') {
+    if ((char === '\n' || char === '\r') && !inQuotes) {
+      // Handle both LF and CR line endings (including CRLF)
+      if (char === '\r' && nextChar === '\n') {
+        i++; // Skip the following LF in CRLF
+      }
+      lines.push(currentLine);
+      currentLine = '';
       continue;
     }
 
@@ -33,13 +39,9 @@ function parseCSV(csvText: string): any[] {
         // Toggle quote state
         inQuotes = !inQuotes;
       }
-    } else if (char === '\n' && !inQuotes) {
-      // End of line
-      lines.push(currentLine);
-      currentLine = '';
-    } else {
-      currentLine += char;
     }
+
+    currentLine += char;
   }
   
   // Add last line
@@ -47,20 +49,23 @@ function parseCSV(csvText: string): any[] {
     lines.push(currentLine);
   }
 
-  if (lines.length < 2) return [];
+  const normalizedLines = lines.filter(line => line.trim().length > 0);
+
+  if (normalizedLines.length < 2) return [];
 
   // Parse header
-  const headers = parseCSVLine(lines[0]);
+  const headers = parseCSVLine(normalizedLines[0]).map(header =>
+    header.replace(/^\uFEFF/, '').trim()
+  );
   const products: any[] = [];
 
   // Parse rows
-  for (let i = 1; i < lines.length; i++) {
-    const values = parseCSVLine(lines[i]);
+  for (let i = 1; i < normalizedLines.length; i++) {
+    const values = parseCSVLine(normalizedLines[i]);
     if (values.length !== headers.length) continue;
 
     const product: any = {};
-    headers.forEach((header, index) => {
-      const normalizedHeader = header.trim();
+    headers.forEach((normalizedHeader, index) => {
       let value = values[index]?.trim() || '';
       
       // Parse based on field type
@@ -131,7 +136,12 @@ function parseCSVLine(line: string): string[] {
     const char = line[i];
     const nextChar = line[i + 1];
 
-    if (char === '\r') {
+    if ((char === '\n' || char === '\r') && !inQuotes) {
+      if (char === '\r' && nextChar === '\n') {
+        i++;
+      }
+      values.push(currentValue);
+      currentValue = '';
       continue;
     }
 
