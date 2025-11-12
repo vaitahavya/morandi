@@ -8,7 +8,7 @@ export default function Logo() {
       <div className="relative w-36 h-9 md:w-44 md:h-11 overflow-hidden">
         <div className="absolute -top-[10%] left-0 w-full h-[110%]">
           <Image
-            src="/morandi lifestyle.png"
+            src="/images/logo/morandi_logo.png"
             alt="MORANDI Lifestyle"
             fill
             className="object-contain object-bottom"

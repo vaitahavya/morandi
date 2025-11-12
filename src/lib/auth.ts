@@ -21,7 +21,8 @@ export const authOptions: NextAuthOptions = {
             access_type: "offline",
             response_type: "code"
           }
-        }
+        },
+        allowDangerousEmailAccountLinking: true,
       })
     ] : []),
 
@@ -75,7 +76,7 @@ export const authOptions: NextAuthOptions = {
           }
 
           const isPasswordValid = await bcrypt.compare(credentials.password, user.password);
-          console.log('🔑 Password valid:', isPasswordValid);
+          console.log('🔐 Password valid:', isPasswordValid);
 
           if (!isPasswordValid) {
             console.log('❌ Invalid password');
@@ -102,42 +103,41 @@ export const authOptions: NextAuthOptions = {
     maxAge: 30 * 24 * 60 * 60, // 30 days
   },
   callbacks: {
-    async signIn({ user, account, profile, email }) {
+    async signIn({ user, account, profile }) {
       // Allow email verification
       if (account?.provider === 'email') {
         return true;
       }
 
-      // Handle OAuth providers
+      // Handle OAuth providers - Let PrismaAdapter do its job
       if (account?.provider === 'google') {
         try {
           // Check if user exists
           const existingUser = await prisma.user.findUnique({
-            where: { email: user.email! }
+            where: { email: user.email! },
+            include: { accounts: true } // Include accounts to check linking
           });
 
+          // REMOVE THE MANUAL USER CREATION
+          // PrismaAdapter will handle this automatically
+          
+          // Only set role if it's a new user (no existing user found)
           if (!existingUser) {
-            // Create new user for OAuth
-            await prisma.user.create({
-              data: {
-                email: user.email!,
-                name: user.name,
-                image: user.image,
-                emailVerified: new Date(),
-                role: 'customer',
-              }
-            });
-          } else {
-            // Update existing user info
-            await prisma.user.update({
-              where: { id: existingUser.id },
-              data: {
-                name: user.name || existingUser.name,
-                image: user.image || existingUser.image,
-                emailVerified: existingUser.emailVerified || new Date(),
-              }
-            });
+            // The adapter will create the user, we just ensure role is set
+            // This will be handled in the jwt callback
+            return true;
           }
+
+          // If user exists, just update their info
+          await prisma.user.update({
+            where: { id: existingUser.id },
+            data: {
+              name: user.name || existingUser.name,
+              image: user.image || existingUser.image,
+              emailVerified: existingUser.emailVerified || new Date(),
+            }
+          });
+
           return true;
         } catch (error) {
           console.error('Error handling OAuth sign in:', error);
@@ -148,7 +148,7 @@ export const authOptions: NextAuthOptions = {
       return true;
     },
     
-    async jwt({ token, user, account }) {
+    async jwt({ token, user, account, trigger }) {
       // Persist the OAuth access_token and or the user id to the token right after signin
       if (account) {
         token.accessToken = account.access_token;
@@ -157,22 +157,23 @@ export const authOptions: NextAuthOptions = {
       
       if (user) {
         token.id = user.id;
-        token.role = (user as any).role || 'customer';
+        
+        // Get the user's role from database
+        const dbUser = await prisma.user.findUnique({
+          where: { id: user.id }
+        });
+        
+        token.role = dbUser?.role || 'customer';
       }
       
       return token;
     },
     
-    async session({ session, token, user }) {
+    async session({ session, token }) {
       // Send properties to the client
       if (token) {
         session.user.id = token.id as string;
         session.user.role = token.role as string;
-      }
-      
-      if (user) {
-        session.user.id = user.id;
-        session.user.role = (user as any).role || 'customer';
       }
       
       return session;
@@ -184,6 +185,14 @@ export const authOptions: NextAuthOptions = {
   events: {
     async signIn({ user, account, profile, isNewUser }) {
       console.log(`User ${user.email} signed in via ${account?.provider}`);
+      
+      // Set default role for new OAuth users
+      if (isNewUser && account?.provider !== 'credentials') {
+        await prisma.user.update({
+          where: { id: user.id },
+          data: { role: 'customer' }
+        });
+      }
     },
     async signOut({ session, token }) {
       console.log(`User ${session?.user?.email} signed out`);
