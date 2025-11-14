@@ -1,8 +1,17 @@
 import { NextResponse, NextRequest } from 'next/server';
 
-// Temporarily disabled middleware to fix redirect loops
 export default function middleware(req: NextRequest) {
-  // Just pass through for now - no redirects
+  const proto = req.headers.get('x-forwarded-proto');
+  const host = req.headers.get('host') || '';
+  const isLocalHost =
+    host.startsWith('localhost') || host.startsWith('127.0.0.1') || host.endsWith('.vercel-infra.com');
+
+  if (proto === 'http' && !isLocalHost) {
+    const url = new URL(req.url);
+    url.protocol = 'https:';
+    return NextResponse.redirect(url, 308);
+  }
+
   return NextResponse.next();
 }
 

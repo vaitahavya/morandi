@@ -11,6 +11,8 @@ import VariantSelector, { VariantOption } from '@/components/products/VariantSel
 import ReviewForm from '@/components/reviews/ReviewForm';
 import ReviewDisplay, { Review } from '@/components/reviews/ReviewDisplay';
 import ProductRecommendations from '@/components/products/ProductRecommendations';
+import JsonLd from '@/components/seo/JsonLd';
+import { absoluteUrl, getSiteUrl } from '@/lib/seo';
 import toast from 'react-hot-toast';
 
 interface ProductDetailPageProps {
@@ -50,6 +52,7 @@ export default function ProductDetailPage({ params }: ProductDetailPageProps) {
   ]);
 
   const averageRating = reviews.reduce((acc, review) => acc + review.rating, 0) / reviews.length;
+  const siteUrl = useMemo(() => getSiteUrl(), []);
 
   useEffect(() => {
     const fetchProduct = async () => {
@@ -216,8 +219,49 @@ export default function ProductDetailPage({ params }: ProductDetailPageProps) {
     );
   }
 
+  const productStructuredData = useMemo(() => {
+    if (!product) return null;
+
+    const description =
+      product.shortDescription ||
+      (product.description ? product.description.replace(/<[^>]+>/g, '') : '');
+    const imageUrls = (product.images || [])
+      .map((image: any) => image?.src)
+      .filter(Boolean)
+      .map((src: string) => absoluteUrl(src));
+
+    return {
+      '@context': 'https://schema.org',
+      '@type': 'Product',
+      name: product.name,
+      image: imageUrls,
+      description,
+      sku: product.sku || product.id,
+      brand: {
+        '@type': 'Brand',
+        name: 'Morandi Lifestyle',
+      },
+      offers: {
+        '@type': 'Offer',
+        priceCurrency: 'INR',
+        url: `${siteUrl}/products/${product.slug ?? product.id}`,
+        price: product.price,
+        availability: product.inStock
+          ? 'https://schema.org/InStock'
+          : 'https://schema.org/OutOfStock',
+      },
+      aggregateRating: {
+        '@type': 'AggregateRating',
+        ratingValue: averageRating.toFixed(1),
+        reviewCount: reviews.length,
+      },
+    };
+  }, [product, siteUrl, averageRating, reviews.length]);
+
   return (
-    <div className="mx-auto max-w-7xl px-4 py-8 md:px-6 lg:px-8">
+    <>
+      {productStructuredData && <JsonLd data={productStructuredData} />}
+      <div className="mx-auto max-w-7xl px-4 py-8 md:px-6 lg:px-8">
       <div className="grid gap-8 lg:grid-cols-2">
         {/* Product Images */}
         <ProductGallery 
@@ -389,5 +433,6 @@ export default function ProductDetailPage({ params }: ProductDetailPageProps) {
         title="You might also like"
       />
     </div>
+    </>
   );
 }
