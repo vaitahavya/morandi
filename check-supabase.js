@@ -58,3 +58,4 @@ if (supabaseInitialized) {
 
 console.log('\n');
 
+

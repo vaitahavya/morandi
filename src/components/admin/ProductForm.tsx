@@ -626,30 +626,26 @@ export function ProductForm({ product, onSuccess, onCancel }: ProductFormProps) 
                       variant="outline"
                       size="sm"
                       onClick={() => {
-                        // Generate common size/color matrix
-                        const sizes = ['S', 'M', 'L', 'XL'];
-                        const colors = ['Black', 'White', 'Red', 'Blue'];
+                        // Generate size variations only
+                        const sizes = ['S', 'M', 'L', 'XL', 'XXL'];
                         
                         const newVariants: any[] = [];
-                        colors.forEach(color => {
-                          sizes.forEach(size => {
-                            newVariants.push({
-                              id: `temp-${Date.now()}-${color}-${size}`,
-                              name: `${color} - ${size}`,
-                              sku: formData.sku ? `${formData.sku}-${color.substring(0,2).toUpperCase()}-${size}` : '',
-                              price: formData.price,
-                              regularPrice: formData.regularPrice,
-                              salePrice: formData.salePrice || 0,
-                              stockQuantity: 0,
-                              stockStatus: 'instock',
-                              attributes: [
-                                { name: 'Color', value: color },
-                                { name: 'Size', value: size }
-                              ],
-                              images: [],
-                              weight: null,
-                              dimensions: null
-                            });
+                        sizes.forEach(size => {
+                          newVariants.push({
+                            id: `temp-${Date.now()}-${size}`,
+                            name: `Size ${size}`,
+                            sku: formData.sku ? `${formData.sku}-${size}` : '',
+                            price: formData.price,
+                            regularPrice: formData.regularPrice,
+                            salePrice: formData.salePrice || 0,
+                            stockQuantity: 0,
+                            stockStatus: 'instock',
+                            attributes: [
+                              { name: 'Size', value: size }
+                            ],
+                            images: [],
+                            weight: null,
+                            dimensions: null
                           });
                         });
                         

@@ -66,3 +66,4 @@ if (!supabaseInitialized) {
 }
 console.log('');
 
+

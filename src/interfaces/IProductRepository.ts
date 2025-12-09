@@ -46,13 +46,23 @@ export interface ProductVariant {
   price: number;
   salePrice?: number;
   stockQuantity: number;
-  attributes?: Record<string, any>;
+  attributes?: Record<string, string>; // Derived from variantAttributes for backward compatibility
+  variantAttributes?: ProductVariantAttribute[]; // The actual junction records
 }
 
 export interface ProductAttribute {
   id: string;
   name: string;
-  value: string;
+  values: string[]; // Array of possible values (e.g., ["Red", "Blue", "Green"])
+  displayOrder?: number;
+}
+
+export interface ProductVariantAttribute {
+  id: string;
+  variantId: string;
+  attributeId: string;
+  value: string; // The specific value for this variant (e.g., "Red")
+  attribute?: ProductAttribute; // Optional: the attribute definition
 }
 
 export interface Review {
@@ -93,6 +103,15 @@ export interface CreateProductData {
   featuredImage?: string;
   images?: string[];
   categoryIds?: string[];
+  attributes?: Array<{ name: string; values: string[]; displayOrder?: number }>; // Attribute definitions
+  variants?: Array<{
+    name: string;
+    sku?: string;
+    price: number;
+    salePrice?: number;
+    stockQuantity: number;
+    attributes: Record<string, string>; // Attribute name -> value mapping
+  }>;
 }
 
 export interface UpdateProductData extends Partial<CreateProductData> {}

@@ -112,28 +112,48 @@ model ProductVariant {
   salePrice     Float?   @map("sale_price")
   stockQuantity Int?     @default(0) @map("stock_quantity")
   stockStatus   String?  @default("instock") @map("stock_status")
-  attributes    String?
   images        String
   weight        Float?
   dimensions    String?
   createdAt     DateTime @default(now()) @map("created_at")
   updatedAt     DateTime @default(now()) @updatedAt @map("updated_at")
   
-  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+  product              Product                @relation(fields: [productId], references: [id], onDelete: Cascade)
+  variantAttributes    ProductVariantAttribute[]
   
   @@map("product_variants")
 }
 
+// Product attributes define the attribute types and their possible values
+// e.g., Color: [Red, Blue, Green], Size: [S, M, L, XL]
 model ProductAttribute {
   id        String  @id @default(cuid())
-  productId String? @map("product_id")
-  name      String
-  value     String
+  productId String  @map("product_id")
+  name      String  // Attribute name (e.g., "Color", "Size")
+  values    String  // JSON array of possible values (e.g., ["Red", "Blue", "Green"])
+  displayOrder Int? @default(0) @map("display_order")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @default(now()) @updatedAt @map("updated_at")
   
-  product Product? @relation(fields: [productId], references: [id], onDelete: Cascade)
+  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+  variantAttributes ProductVariantAttribute[]
   
-  @@unique([productId, name, value])
+  @@unique([productId, name])
   @@map("product_attributes")
+}
+
+// Junction table linking variants to specific attribute values
+model ProductVariantAttribute {
+  id                String  @id @default(cuid())
+  variantId         String  @map("variant_id")
+  attributeId       String  @map("attribute_id")
+  value             String  // The specific value for this variant (e.g., "Red", "M")
+  
+  variant   ProductVariant @relation(fields: [variantId], references: [id], onDelete: Cascade)
+  attribute ProductAttribute @relation(fields: [attributeId], references: [id], onDelete: Cascade)
+  
+  @@unique([variantId, attributeId])
+  @@map("product_variant_attributes")
 }
 
 model Category {

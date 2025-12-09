@@ -58,3 +58,4 @@ USING (bucket_id = 'products');
 -- DROP POLICY IF EXISTS "Allow public updates to product images" ON storage.objects;
 -- DROP POLICY IF EXISTS "Allow public deletes from products bucket" ON storage.objects;
 
+

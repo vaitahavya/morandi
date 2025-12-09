@@ -92,3 +92,4 @@ Then create it again.
 3. Check Supabase logs for more detailed error messages
 4. Ensure your Supabase credentials are correct
 
+

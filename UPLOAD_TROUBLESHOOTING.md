@@ -123,3 +123,4 @@ node test-upload.js http://localhost:3000
 4. **Check Supabase dashboard** for any service alerts
 5. **Review RLS policies** if authentication is required
 
+

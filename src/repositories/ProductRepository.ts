@@ -160,33 +160,77 @@ export class ProductRepository extends BaseRepository<ProductWithArrays, CreateP
     }
   }
 
+  /**
+   * Reconstruct attributes object from variant attributes junction table
+   * for backward compatibility
+   */
+  private buildVariantAttributes(variant: any): Record<string, string> {
+    if (!variant.variantAttributes || !Array.isArray(variant.variantAttributes)) {
+      return {};
+    }
+
+    const attributes: Record<string, string> = {};
+    for (const va of variant.variantAttributes) {
+      if (va.attribute && va.value) {
+        attributes[va.attribute.name] = va.value;
+      }
+    }
+    return attributes;
+  }
+
   async create(data: CreateProductInput): Promise<ProductWithArrays> {
-    const product = await this.prisma.product.create({
-      data: {
-        name: data.name,
-        slug: data.slug,
-        description: data.description,
-        shortDescription: data.shortDescription,
-        price: data.price,
-        regularPrice: (data as any).regularPrice || data.compareAtPrice || data.price,
-        salePrice: (data as any).salePrice,
-        sku: data.sku,
-        manageStock: data.trackQuantity,
-        stockQuantity: data.quantity,
-        weight: data.weight,
-        status: data.status,
-        featured: data.featured,
-        tags: this.tagsToString(data.tags),
-        metaTitle: data.metaTitle,
-        metaDescription: data.metaDescription,
-        images: this.imagesToString(data.images),
-        productCategories: data.categoryIds ? {
-          create: data.categoryIds.map(categoryId => ({
-            categoryId: categoryId,
+    // Use transaction to create product, attributes, variants, and variant attributes in correct order
+    const product = await this.prisma.$transaction(async (tx) => {
+      // Step 1: Create the product
+      const createdProduct = await tx.product.create({
+        data: {
+          name: data.name,
+          slug: data.slug,
+          description: data.description,
+          shortDescription: data.shortDescription,
+          price: data.price,
+          regularPrice: (data as any).regularPrice || data.compareAtPrice || data.price,
+          salePrice: (data as any).salePrice,
+          sku: data.sku,
+          manageStock: data.trackQuantity,
+          stockQuantity: data.quantity,
+          weight: data.weight,
+          status: data.status,
+          featured: data.featured,
+          tags: this.tagsToString(data.tags),
+          metaTitle: data.metaTitle,
+          metaDescription: data.metaDescription,
+          images: this.imagesToString(data.images),
+          productCategories: data.categoryIds ? {
+            create: data.categoryIds.map(categoryId => ({
+              categoryId: categoryId,
+            }))
+          } : undefined,
+        },
+      });
+
+      // Step 2: Create product attributes (definitions) if provided
+      if ((data as any).attributes && (data as any).attributes.length > 0) {
+        await tx.productAttribute.createMany({
+          data: (data as any).attributes.map((attr: any) => ({
+            productId: createdProduct.id,
+            name: attr.name,
+            values: JSON.stringify(attr.values || []),
+            displayOrder: attr.displayOrder || 0,
           }))
-        } : undefined,
-        variants: (data as any).variants && (data as any).variants.length > 0 ? {
-          create: (data as any).variants.filter((v: any) => !v.id?.startsWith('temp-')).map((variant: any) => ({
+        });
+      }
+
+      // Step 3: Create variants if provided
+      const variants = (data as any).variants && (data as any).variants.length > 0
+        ? (data as any).variants.filter((v: any) => !v.id?.startsWith('temp-'))
+        : [];
+
+      const createdVariants = [];
+      for (const variant of variants) {
+        const createdVariant = await tx.productVariant.create({
+          data: {
+            productId: createdProduct.id,
             name: variant.name,
             sku: variant.sku,
             price: variant.price,
@@ -194,26 +238,84 @@ export class ProductRepository extends BaseRepository<ProductWithArrays, CreateP
             salePrice: variant.salePrice,
             stockQuantity: variant.stockQuantity,
             stockStatus: variant.stockStatus,
-            attributes: typeof variant.attributes === 'string' ? variant.attributes : JSON.stringify(variant.attributes || []),
             images: typeof variant.images === 'string' ? variant.images : JSON.stringify(variant.images || []),
             weight: variant.weight,
             dimensions: typeof variant.dimensions === 'string' ? variant.dimensions : JSON.stringify(variant.dimensions),
-          }))
-        } : undefined,
-      },
-      include: {
-        productCategories: {
-          include: {
-            category: true,
+          },
+        });
+
+        // Step 4: Create variant attributes (junction records) if provided
+        if (variant.attributes && typeof variant.attributes === 'object') {
+          const variantAttrEntries = Object.entries(variant.attributes);
+          for (const [attrName, attrValue] of variantAttrEntries) {
+            // Find the attribute definition
+            const attribute = await tx.productAttribute.findUnique({
+              where: {
+                productId_name: {
+                  productId: createdProduct.id,
+                  name: attrName,
+                }
+              }
+            });
+
+            if (attribute) {
+              await tx.productVariantAttribute.create({
+                data: {
+                  variantId: createdVariant.id,
+                  attributeId: attribute.id,
+                  value: attrValue as string,
+                }
+              });
+            }
+          }
+        }
+
+        createdVariants.push(createdVariant);
+      }
+
+      // Step 5: Fetch the complete product with all relations
+      return await tx.product.findUnique({
+        where: { id: createdProduct.id },
+        include: {
+          productCategories: {
+            include: {
+              category: true,
+            },
+          },
+          attributes: true,
+          variants: {
+            include: {
+              variantAttributes: {
+                include: {
+                  attribute: true,
+                }
+              }
+            }
           },
         },
-        variants: true,
-      },
+      });
     });
     
     // Transform tags and images from JSON strings to arrays
     (product as any).tags = this.tagsToArray(product.tags);
     (product as any).images = this.imagesToArray(product.images);
+    
+    // Parse attribute values from JSON
+    if (product.attributes) {
+      (product as any).attributes = product.attributes.map((attr: any) => ({
+        ...attr,
+        values: typeof attr.values === 'string' ? JSON.parse(attr.values || '[]') : attr.values,
+      }));
+    }
+
+    // Reconstruct attributes object for variants (backward compatibility)
+    if (product.variants) {
+      (product as any).variants = product.variants.map((variant: any) => ({
+        ...variant,
+        attributes: this.buildVariantAttributes(variant),
+        images: typeof variant.images === 'string' ? JSON.parse(variant.images || '[]') : variant.images,
+      }));
+    }
     
     return product as unknown as ProductWithArrays;
   }
@@ -227,7 +329,16 @@ export class ProductRepository extends BaseRepository<ProductWithArrays, CreateP
             category: true,
           },
         },
-        variants: true,
+        attributes: true,
+        variants: {
+          include: {
+            variantAttributes: {
+              include: {
+                attribute: true,
+              }
+            }
+          }
+        },
       },
     });
     
@@ -237,11 +348,19 @@ export class ProductRepository extends BaseRepository<ProductWithArrays, CreateP
       // Convert images from JSON string to array
       (product as any).images = this.imagesToArray(product.images);
       
-      // Parse variant attributes from JSON strings
+      // Parse attribute values from JSON
+      if (product.attributes) {
+        (product as any).attributes = product.attributes.map((attr: any) => ({
+          ...attr,
+          values: typeof attr.values === 'string' ? JSON.parse(attr.values || '[]') : attr.values,
+        }));
+      }
+      
+      // Reconstruct attributes object for variants (backward compatibility)
       if (product.variants) {
         (product as any).variants = product.variants.map((variant: any) => ({
           ...variant,
-          attributes: typeof variant.attributes === 'string' ? JSON.parse(variant.attributes || '[]') : variant.attributes,
+          attributes: this.buildVariantAttributes(variant),
           images: typeof variant.images === 'string' ? JSON.parse(variant.images || '[]') : variant.images,
         }));
       }
@@ -261,7 +380,16 @@ export class ProductRepository extends BaseRepository<ProductWithArrays, CreateP
             category: true,
           },
         },
-        variants: true,
+        attributes: true,
+        variants: {
+          include: {
+            variantAttributes: {
+              include: {
+                attribute: true,
+              }
+            }
+          }
+        },
       },
     });
     
@@ -271,11 +399,19 @@ export class ProductRepository extends BaseRepository<ProductWithArrays, CreateP
       // Convert images from JSON string to array
       (product as any).images = this.imagesToArray(product.images);
       
-      // Parse variant attributes from JSON strings
+      // Parse attribute values from JSON
+      if (product.attributes) {
+        (product as any).attributes = product.attributes.map((attr: any) => ({
+          ...attr,
+          values: typeof attr.values === 'string' ? JSON.parse(attr.values || '[]') : attr.values,
+        }));
+      }
+      
+      // Reconstruct attributes object for variants (backward compatibility)
       if (product.variants) {
         (product as any).variants = product.variants.map((variant: any) => ({
           ...variant,
-          attributes: typeof variant.attributes === 'string' ? JSON.parse(variant.attributes || '[]') : variant.attributes,
+          attributes: this.buildVariantAttributes(variant),
           images: typeof variant.images === 'string' ? JSON.parse(variant.images || '[]') : variant.images,
         }));
       }
@@ -387,32 +523,84 @@ export class ProductRepository extends BaseRepository<ProductWithArrays, CreateP
     if (data.tags !== undefined) updateData.tags = this.tagsToString(data.tags);
     if (data.images !== undefined) updateData.images = this.imagesToString(data.images);
     
+    // Handle attributes if provided
+    if ((data as any).attributes !== undefined) {
+      const attributes = (data as any).attributes;
+      
+      // Delete all existing attributes and create new ones
+      await this.prisma.productAttribute.deleteMany({
+        where: { productId: id }
+      });
+      
+      // Create new attributes
+      if (attributes && attributes.length > 0) {
+        await this.prisma.productAttribute.createMany({
+          data: attributes.map((attr: any) => ({
+            productId: id,
+            name: attr.name,
+            values: JSON.stringify(attr.values || []),
+            displayOrder: attr.displayOrder || 0,
+          }))
+        });
+      }
+    }
+
     // Handle variants if provided
     if ((data as any).variants !== undefined) {
       const variants = (data as any).variants;
       
-      // Delete all existing variants and create new ones (simpler approach)
+      // Delete all existing variant attributes and variants (cascade will handle variant attributes)
       await this.prisma.productVariant.deleteMany({
         where: { productId: id }
       });
       
-      // Create new variants (filter out temp IDs)
+      // Create new variants with their attributes in a transaction
       if (variants && variants.length > 0) {
-        updateData.variants = {
-          create: variants.filter((v: any) => !v.id?.startsWith('temp-')).map((variant: any) => ({
-            name: variant.name,
-            sku: variant.sku,
-            price: variant.price,
-            regularPrice: variant.regularPrice,
-            salePrice: variant.salePrice,
-            stockQuantity: variant.stockQuantity,
-            stockStatus: variant.stockStatus,
-            attributes: typeof variant.attributes === 'string' ? variant.attributes : JSON.stringify(variant.attributes || []),
-            images: typeof variant.images === 'string' ? variant.images : JSON.stringify(variant.images || []),
-            weight: variant.weight,
-            dimensions: typeof variant.dimensions === 'string' ? variant.dimensions : JSON.stringify(variant.dimensions),
-          }))
-        };
+        const filteredVariants = variants.filter((v: any) => !v.id?.startsWith('temp-'));
+        
+        for (const variant of filteredVariants) {
+          const createdVariant = await this.prisma.productVariant.create({
+            data: {
+              productId: id,
+              name: variant.name,
+              sku: variant.sku,
+              price: variant.price,
+              regularPrice: variant.regularPrice,
+              salePrice: variant.salePrice,
+              stockQuantity: variant.stockQuantity,
+              stockStatus: variant.stockStatus,
+              images: typeof variant.images === 'string' ? variant.images : JSON.stringify(variant.images || []),
+              weight: variant.weight,
+              dimensions: typeof variant.dimensions === 'string' ? variant.dimensions : JSON.stringify(variant.dimensions),
+            },
+          });
+
+          // Create variant attributes (junction records) if provided
+          if (variant.attributes && typeof variant.attributes === 'object') {
+            const variantAttrEntries = Object.entries(variant.attributes);
+            for (const [attrName, attrValue] of variantAttrEntries) {
+              // Find the attribute definition
+              const attribute = await this.prisma.productAttribute.findUnique({
+                where: {
+                  productId_name: {
+                    productId: id,
+                    name: attrName,
+                  }
+                }
+              });
+
+              if (attribute) {
+                await this.prisma.productVariantAttribute.create({
+                  data: {
+                    variantId: createdVariant.id,
+                    attributeId: attribute.id,
+                    value: attrValue as string,
+                  }
+                });
+              }
+            }
+          }
+        }
       }
     }
     
@@ -428,13 +616,40 @@ export class ProductRepository extends BaseRepository<ProductWithArrays, CreateP
             category: true,
           },
         },
-        variants: true,
+        attributes: true,
+        variants: {
+          include: {
+            variantAttributes: {
+              include: {
+                attribute: true,
+              }
+            }
+          }
+        },
       },
     });
 
     // Convert tags and images from JSON string to array
     (updatedProduct as any).tags = this.tagsToArray(updatedProduct.tags);
     (updatedProduct as any).images = this.imagesToArray(updatedProduct.images);
+    
+    // Parse attribute values from JSON
+    if (updatedProduct.attributes) {
+      (updatedProduct as any).attributes = updatedProduct.attributes.map((attr: any) => ({
+        ...attr,
+        values: typeof attr.values === 'string' ? JSON.parse(attr.values || '[]') : attr.values,
+      }));
+    }
+
+    // Reconstruct attributes object for variants (backward compatibility)
+    if (updatedProduct.variants) {
+      (updatedProduct as any).variants = updatedProduct.variants.map((variant: any) => ({
+        ...variant,
+        attributes: this.buildVariantAttributes(variant),
+        images: typeof variant.images === 'string' ? JSON.parse(variant.images || '[]') : variant.images,
+      }));
+    }
+    
     return updatedProduct as unknown as ProductWithArrays;
   }
 
