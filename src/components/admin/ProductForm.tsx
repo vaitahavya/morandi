@@ -175,7 +175,33 @@ export function ProductForm({ product, onSuccess, onCancel }: ProductFormProps) 
           body: formData,
         });
         
-        const result = await response.json();
+        // Check content type before parsing JSON
+        const contentType = response.headers.get('content-type');
+        let result;
+        
+        if (contentType && contentType.includes('application/json')) {
+          result = await response.json();
+        } else {
+          // Response is not JSON (likely HTML error page)
+          const text = await response.text();
+          console.error('Non-JSON response received:', text.substring(0, 200));
+          
+          // Try to extract error message from HTML or use status text
+          let errorMessage = `Upload failed with status ${response.status}`;
+          if (response.status === 413) {
+            errorMessage = `File "${file.name}" is too large. Maximum size is 10MB.`;
+          } else if (response.status === 504 || response.status === 408) {
+            errorMessage = `Upload timeout. The file "${file.name}" may be too large or the server is slow.`;
+          } else if (text.includes('Request Entity Too Large')) {
+            errorMessage = `File "${file.name}" is too large. Maximum size is 10MB.`;
+          } else if (text.includes('timeout') || text.includes('Timeout')) {
+            errorMessage = `Upload timeout for "${file.name}". Please try again with a smaller file.`;
+          } else {
+            errorMessage = `Upload failed: ${response.statusText || 'Unknown error'}`;
+          }
+          
+          throw new Error(`${file.name}: ${errorMessage}`);
+        }
         
         if (!response.ok || !result.success) {
           // Provide more detailed error messages

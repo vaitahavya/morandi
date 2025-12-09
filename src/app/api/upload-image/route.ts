@@ -6,6 +6,10 @@ import {
 } from '@/lib/supabase-image-upload';
 import { supabase } from '@/lib/supabase';
 
+// Configure route for large file uploads (Next.js 14 App Router)
+export const maxDuration = 60; // Allow up to 60 seconds for uploads
+export const runtime = 'nodejs'; // Use Node.js runtime for file handling
+
 export async function POST(request: NextRequest) {
   try {
     const formData = await request.formData();
