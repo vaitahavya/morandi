@@ -296,6 +296,11 @@ export class ProductRepository extends BaseRepository<ProductWithArrays, CreateP
       });
     });
     
+    // Ensure product was created successfully
+    if (!product) {
+      throw new Error('Failed to create product');
+    }
+    
     // Transform tags and images from JSON strings to arrays
     (product as any).tags = this.tagsToArray(product.tags);
     (product as any).images = this.imagesToArray(product.images);
