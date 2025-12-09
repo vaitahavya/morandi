@@ -142,58 +142,20 @@ export const getProducts = async (filters: ProductFilters = {}): Promise<Product
 };
 
 export const getProductsWithPagination = async (filters: ProductFilters = {}): Promise<ProductListResponse> => {
-  try {
-    const params = new URLSearchParams();
-    
-    Object.entries(filters).forEach(([key, value]) => {
-      if (value !== undefined && value !== null && value !== '') {
-        if (typeof value === 'object') {
-          params.append(key, JSON.stringify(value));
-        } else {
-          params.append(key, value.toString());
-        }
+  const params = new URLSearchParams();
+  
+  Object.entries(filters).forEach(([key, value]) => {
+    if (value !== undefined && value !== null && value !== '') {
+      if (typeof value === 'object') {
+        params.append(key, JSON.stringify(value));
+      } else {
+        params.append(key, value.toString());
       }
-    });
+    }
+  });
 
-    const response = await apiCall<ProductListResponse>(`/products?${params.toString()}`);
-    return response;
-  } catch (error) {
-    console.error('Error fetching products:', error);
-    // Fallback to mock data if API fails
-    const { mockProducts } = await import('./mock-data');
-    const transformedProducts = mockProducts.map(mockProduct => ({
-      ...mockProduct,
-      id: mockProduct.id.toString(),
-      categories: mockProduct.categories?.map(cat => ({
-        id: cat.id.toString(),
-        name: cat.name,
-        slug: cat.slug
-      })) || [],
-      stockQuantity: mockProduct.stockQuantity || 10,
-      stockStatus: mockProduct.stockStatus,
-      inStock: mockProduct.inStock,
-      featured: mockProduct.featured || false,
-      avgRating: 4.5,
-      reviewCount: 0,
-      createdAt: mockProduct.createdAt || new Date().toISOString(),
-      updatedAt: mockProduct.updatedAt || new Date().toISOString(),
-      tags: mockProduct.tags || [],
-      category: mockProduct.category || mockProduct.categories?.[0]?.name || 'Uncategorized'
-    }));
-
-    return {
-      success: true,
-      data: transformedProducts,
-      pagination: {
-        page: 1,
-        limit: transformedProducts.length,
-        total: transformedProducts.length,
-        totalPages: 1,
-        hasNextPage: false,
-        hasPrevPage: false
-      }
-    };
-  }
+  const response = await apiCall<ProductListResponse>(`/products?${params.toString()}`);
+  return response;
 };
 
 export const getProduct = async (id: string): Promise<Product | null> => {
@@ -211,39 +173,6 @@ export const getProduct = async (id: string): Promise<Product | null> => {
     }
     
     console.error('Error fetching product:', error);
-    
-    // Only fallback to mock data in development
-    if (process.env.NODE_ENV === 'development') {
-      try {
-        const { mockProducts } = await import('./mock-data');
-        const mockProduct = mockProducts.find(p => p.id.toString() === id || p.slug === id);
-        
-        if (mockProduct) {
-          return {
-            ...mockProduct,
-            id: mockProduct.id.toString(),
-            categories: mockProduct.categories?.map(cat => ({
-              id: cat.id.toString(),
-              name: cat.name,
-              slug: cat.slug
-            })) || [],
-            stockQuantity: mockProduct.stockQuantity || 10,
-            stockStatus: mockProduct.stockStatus,
-            inStock: mockProduct.inStock,
-            featured: mockProduct.featured || false,
-            avgRating: 4.5,
-            reviewCount: 0,
-            createdAt: mockProduct.createdAt || new Date().toISOString(),
-            updatedAt: mockProduct.updatedAt || new Date().toISOString(),
-            tags: mockProduct.tags || [],
-            category: mockProduct.category || mockProduct.categories?.[0]?.name || 'Uncategorized'
-          };
-        }
-      } catch (mockError) {
-        console.warn('Could not load mock data:', mockError);
-      }
-    }
-    
     return null;
   }
 };
@@ -273,33 +202,7 @@ export const searchProducts = async (
     return response.data;
   } catch (error) {
     console.error('Error searching products:', error);
-    
-    // Fallback search in mock data
-    const { mockProducts } = await import('./mock-data');
-    const filtered = mockProducts.filter(product =>
-      product.name.toLowerCase().includes(query.toLowerCase()) ||
-      (product.description?.toLowerCase() || '').includes(query.toLowerCase())
-    );
-    
-    return filtered.map(mockProduct => ({
-      ...mockProduct,
-      id: mockProduct.id.toString(),
-      categories: mockProduct.categories?.map(cat => ({
-        id: cat.id.toString(),
-        name: cat.name,
-        slug: cat.slug
-      })) || [],
-      stockQuantity: mockProduct.stockQuantity || 10,
-      stockStatus: mockProduct.stockStatus,
-      inStock: mockProduct.inStock,
-      featured: mockProduct.featured || false,
-      avgRating: 4.5,
-      reviewCount: 0,
-      createdAt: mockProduct.createdAt || new Date().toISOString(),
-      updatedAt: mockProduct.updatedAt || new Date().toISOString(),
-      tags: mockProduct.tags || [],
-      category: mockProduct.category || mockProduct.categories?.[0]?.name || 'Uncategorized'
-    }));
+    return [];
   }
 };
 

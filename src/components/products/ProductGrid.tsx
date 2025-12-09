@@ -25,10 +25,20 @@ export default function ProductGrid() {
   if (error) {
     return (
       <div className="py-10 text-center">
-        <p className="text-red-600 mb-4">Failed to load products</p>
-        <p className="text-gray-600 text-sm">
+        <p className="text-red-600 mb-4 font-semibold">Failed to load products</p>
+        <p className="text-gray-600 text-sm mb-2">
           {error instanceof Error ? error.message : 'An unexpected error occurred'}
         </p>
+        <div className="mt-4 p-4 bg-gray-50 rounded-lg text-left max-w-2xl mx-auto">
+          <p className="text-sm font-semibold mb-2">Troubleshooting:</p>
+          <ul className="text-xs text-gray-600 space-y-1 list-disc list-inside">
+            <li>Check browser console (F12) for detailed error messages</li>
+            <li>Verify the API endpoint is accessible: <code className="bg-gray-200 px-1 rounded">/api/products</code></li>
+            <li>Ensure your development server is running</li>
+            <li>Check server logs for backend errors</li>
+            <li>Run diagnostic: <code className="bg-gray-200 px-1 rounded">npm run test-api</code></li>
+          </ul>
+        </div>
       </div>
     );
   }

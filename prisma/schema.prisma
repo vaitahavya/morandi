@@ -3,10 +3,9 @@ generator client {
 }
 
 datasource db {
-  provider  = "postgresql"
-  url       = env("DATABASE_URL")
-  directUrl = env("DIRECT_URL")
-}
+     provider = "postgresql"
+     url      = env("DATABASE_URL")
+   }
 
 model User {
   id            String    @id @default(cuid())
@@ -112,7 +111,7 @@ model ProductVariant {
   salePrice     Float?   @map("sale_price")
   stockQuantity Int?     @default(0) @map("stock_quantity")
   stockStatus   String?  @default("instock") @map("stock_status")
-  attributes    String?
+  // attributes column was removed by migration - use product_variant_attributes table instead
   images        String
   weight        Float?
   dimensions    String?

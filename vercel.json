@@ -5,6 +5,8 @@
   "framework": "nextjs",
   "regions": ["iad1"],
   "env": {
+    "DATABASE_URL": "$DATABASE_URL",
+    "DIRECT_URL": "$DIRECT_URL",
     "NEXT_PUBLIC_SUPABASE_URL": "$NEXT_PUBLIC_SUPABASE_URL",
     "NEXT_PUBLIC_SUPABASE_ANON_KEY": "$NEXT_PUBLIC_SUPABASE_ANON_KEY",
     "NEXTAUTH_URL": "$NEXTAUTH_URL",
