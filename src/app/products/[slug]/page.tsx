@@ -91,12 +91,28 @@ export default function ProductDetailPage({ params }: ProductDetailPageProps) {
     const colors = new Map<string, { name: string; available: boolean; price?: string }>();
     
     variations.forEach(variant => {
-      const colorAttr = variant.attributes.find((attr: any) => 
-        attr.name.toLowerCase().includes('color') || attr.name.toLowerCase().includes('colour')
-      );
+      // Handle both old array format and new object format
+      let colorName: string | undefined;
       
-      if (colorAttr) {
-        const colorName = colorAttr.value;
+      if (variant.attributes) {
+        if (Array.isArray(variant.attributes)) {
+          // Old format: array of {name, value}
+          const colorAttr = variant.attributes.find((attr: any) => 
+            attr.name && (attr.name.toLowerCase().includes('color') || attr.name.toLowerCase().includes('colour'))
+          );
+          colorName = colorAttr?.value;
+        } else if (typeof variant.attributes === 'object') {
+          // New format: object with attribute names as keys
+          for (const [key, value] of Object.entries(variant.attributes)) {
+            if (key.toLowerCase().includes('color') || key.toLowerCase().includes('colour')) {
+              colorName = value as string;
+              break;
+            }
+          }
+        }
+      }
+      
+      if (colorName) {
         const isAvailable = variant.stockStatus === 'instock';
         const price = variant.price !== product?.price ? variant.price.toString() : undefined;
         
@@ -125,12 +141,28 @@ export default function ProductDetailPage({ params }: ProductDetailPageProps) {
     const sizes = new Map<string, { name: string; available: boolean; price?: string }>();
     
     variations.forEach(variant => {
-      const sizeAttr = variant.attributes.find((attr: any) => 
-        attr.name.toLowerCase().includes('size')
-      );
+      // Handle both old array format and new object format
+      let sizeName: string | undefined;
       
-      if (sizeAttr) {
-        const sizeName = sizeAttr.value;
+      if (variant.attributes) {
+        if (Array.isArray(variant.attributes)) {
+          // Old format: array of {name, value}
+          const sizeAttr = variant.attributes.find((attr: any) => 
+            attr.name && attr.name.toLowerCase().includes('size')
+          );
+          sizeName = sizeAttr?.value;
+        } else if (typeof variant.attributes === 'object') {
+          // New format: object with attribute names as keys
+          for (const [key, value] of Object.entries(variant.attributes)) {
+            if (key.toLowerCase().includes('size')) {
+              sizeName = value as string;
+              break;
+            }
+          }
+        }
+      }
+      
+      if (sizeName) {
         const isAvailable = variant.stockStatus === 'instock';
         const price = variant.price !== product?.price ? variant.price.toString() : undefined;
         
@@ -157,15 +189,35 @@ export default function ProductDetailPage({ params }: ProductDetailPageProps) {
     if (!variations.length || (!selectedColor && !selectedSize)) return;
     
     const matchingVariant = variations.find(variant => {
-      const colorAttr = variant.attributes.find((attr: any) => 
-        attr.name.toLowerCase().includes('color') || attr.name.toLowerCase().includes('colour')
-      );
-      const sizeAttr = variant.attributes.find((attr: any) => 
-        attr.name.toLowerCase().includes('size')
-      );
+      let colorValue: string | undefined;
+      let sizeValue: string | undefined;
       
-      const colorMatch = !selectedColor || colorAttr?.value === selectedColor;
-      const sizeMatch = !selectedSize || sizeAttr?.value === selectedSize;
+      if (variant.attributes) {
+        if (Array.isArray(variant.attributes)) {
+          // Old format: array of {name, value}
+          const colorAttr = variant.attributes.find((attr: any) => 
+            attr.name && (attr.name.toLowerCase().includes('color') || attr.name.toLowerCase().includes('colour'))
+          );
+          const sizeAttr = variant.attributes.find((attr: any) => 
+            attr.name && attr.name.toLowerCase().includes('size')
+          );
+          colorValue = colorAttr?.value;
+          sizeValue = sizeAttr?.value;
+        } else if (typeof variant.attributes === 'object') {
+          // New format: object with attribute names as keys
+          for (const [key, value] of Object.entries(variant.attributes)) {
+            if (key.toLowerCase().includes('color') || key.toLowerCase().includes('colour')) {
+              colorValue = value as string;
+            }
+            if (key.toLowerCase().includes('size')) {
+              sizeValue = value as string;
+            }
+          }
+        }
+      }
+      
+      const colorMatch = !selectedColor || colorValue === selectedColor;
+      const sizeMatch = !selectedSize || sizeValue === selectedSize;
       
       return colorMatch && sizeMatch;
     });

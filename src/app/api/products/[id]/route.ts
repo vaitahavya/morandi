@@ -22,7 +22,14 @@ export async function GET(
           }
         },
         variants: {
-          orderBy: { price: 'asc' }
+          orderBy: { price: 'asc' },
+          include: {
+            variantAttributes: {
+              include: {
+                attribute: true
+              }
+            }
+          }
         },
         attributes: true
       }
@@ -119,12 +126,50 @@ export async function GET(
       metaTitle: product.metaTitle,
       metaDescription: product.metaDescription,
       categories: product.productCategories.map((pc: any) => pc.category),
-      variants: product.variants,
-      attributes: product.attributes.reduce((acc: Record<string, string[]>, attr: any) => {
-        if (!acc[attr.name]) acc[attr.name] = [];
-        acc[attr.name].push(attr.value);
-        return acc;
-      }, {} as Record<string, string[]>),
+      variants: product.variants.map((variant: any) => {
+        // Reconstruct attributes object from variantAttributes junction table
+        const attributes: Record<string, string> = {};
+        if (variant.variantAttributes && Array.isArray(variant.variantAttributes)) {
+          variant.variantAttributes.forEach((va: any) => {
+            if (va.attribute && va.value) {
+              attributes[va.attribute.name] = va.value;
+            }
+          });
+        }
+        
+        // Parse variant images
+        let variantImages: any[] = [];
+        try {
+          if (variant.images) {
+            const parsed = typeof variant.images === 'string' ? JSON.parse(variant.images) : variant.images;
+            variantImages = Array.isArray(parsed) ? parsed : [];
+          }
+        } catch {
+          variantImages = [];
+        }
+        
+        return {
+          ...variant,
+          attributes: Object.keys(attributes).length > 0 ? attributes : undefined,
+          images: variantImages
+        };
+      }),
+      attributes: product.attributes.map((attr: any) => {
+        // Parse values from JSON string
+        let values: string[] = [];
+        try {
+          if (attr.values) {
+            values = typeof attr.values === 'string' ? JSON.parse(attr.values) : attr.values;
+          }
+        } catch {
+          values = [];
+        }
+        return {
+          id: attr.id,
+          name: attr.name,
+          values: Array.isArray(values) ? values : []
+        };
+      }),
       avgRating: 0,
       reviewCount: 0,
       createdAt: product.createdAt,
