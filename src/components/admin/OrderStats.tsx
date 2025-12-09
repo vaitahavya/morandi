@@ -115,119 +115,117 @@ export function OrderStats() {
       }
       
       // Always calculate stats, even with empty orders array
+      // Calculate basic stats
+      const totalOrders = orders.length;
+      const totalRevenue = orders.reduce((sum: number, order: any) => sum + order.total, 0);
+      const averageOrderValue = totalOrders > 0 ? totalRevenue / totalOrders : 0;
+      
+      // Status counts
+      const pendingOrders = orders.filter((o: any) => o.status === 'pending').length;
+      const confirmedOrders = orders.filter((o: any) => o.status === 'confirmed').length;
+      const shippedOrders = orders.filter((o: any) => o.status === 'shipped').length;
+      const deliveredOrders = orders.filter((o: any) => o.status === 'delivered').length;
+      const cancelledOrders = orders.filter((o: any) => o.status === 'cancelled').length;
+      
+      // Payment stats
+      const pendingPayments = orders.filter((o: any) => o.paymentStatus === 'pending').length;
+      const paidOrders = orders.filter((o: any) => o.paymentStatus === 'paid').length;
+      const failedPayments = orders.filter((o: any) => o.paymentStatus === 'failed').length;
+      
+      // Today vs yesterday comparison
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const yesterday = new Date(today.getTime() - 24 * 60 * 60 * 1000);
+      
+      const todayOrders = orders.filter((o: any) => 
+        new Date(o.createdAt) >= today
+      );
+      const yesterdayOrders = orders.filter((o: any) => 
+        new Date(o.createdAt) >= yesterday && new Date(o.createdAt) < today
+      );
+      
+      const todayRevenue = todayOrders.reduce((sum: number, order: any) => sum + order.total, 0);
+      const yesterdayRevenue = yesterdayOrders.reduce((sum: number, order: any) => sum + order.total, 0);
+      
+      // Top customers (group by email)
+      const customerStats: { [email: string]: { orderCount: number; totalSpent: number; name: string } } = {};
+      orders.forEach((order: any) => {
+        const email = order.customerEmail;
+        if (!customerStats[email]) {
+          customerStats[email] = {
+            orderCount: 0,
+            totalSpent: 0,
+            name: `${order.billingFirstName} ${order.billingLastName}`
+          };
+        }
+        customerStats[email].orderCount++;
+        customerStats[email].totalSpent += order.total;
+      });
+      
+      const topCustomers = Object.entries(customerStats)
+        .map(([email, stats]) => ({
+          customerEmail: email,
+          customerName: stats.name,
+          orderCount: stats.orderCount,
+          totalSpent: stats.totalSpent
+        }))
+        .sort((a, b) => b.totalSpent - a.totalSpent)
+        .slice(0, 5);
+      
+      // Recent activity (mock for now - in real app, this would come from an activity log)
+      const recentActivity = orders
+        .sort((a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+        .slice(0, 10)
+        .map((order: any) => ({
+          type: order.status === 'delivered' ? 'order_delivered' :
+                order.status === 'shipped' ? 'order_shipped' :
+                order.paymentStatus === 'paid' ? 'payment_received' : 'order_placed',
+          orderNumber: order.orderNumber,
+          customerName: `${order.billingFirstName} ${order.billingLastName}`,
+          amount: order.total,
+          timestamp: order.createdAt
+        }));
+      
+      // Monthly trends (last 6 months)
+      const monthlyTrends = [];
+      for (let i = 5; i >= 0; i--) {
+        const date = new Date();
+        date.setMonth(date.getMonth() - i);
+        const monthStart = new Date(date.getFullYear(), date.getMonth(), 1);
+        const monthEnd = new Date(date.getFullYear(), date.getMonth() + 1, 0);
         
-        // Calculate basic stats
-        const totalOrders = orders.length;
-        const totalRevenue = orders.reduce((sum: number, order: any) => sum + order.total, 0);
-        const averageOrderValue = totalOrders > 0 ? totalRevenue / totalOrders : 0;
-        
-        // Status counts
-        const pendingOrders = orders.filter((o: any) => o.status === 'pending').length;
-        const confirmedOrders = orders.filter((o: any) => o.status === 'confirmed').length;
-        const shippedOrders = orders.filter((o: any) => o.status === 'shipped').length;
-        const deliveredOrders = orders.filter((o: any) => o.status === 'delivered').length;
-        const cancelledOrders = orders.filter((o: any) => o.status === 'cancelled').length;
-        
-        // Payment stats
-        const pendingPayments = orders.filter((o: any) => o.paymentStatus === 'pending').length;
-        const paidOrders = orders.filter((o: any) => o.paymentStatus === 'paid').length;
-        const failedPayments = orders.filter((o: any) => o.paymentStatus === 'failed').length;
-        
-        // Today vs yesterday comparison
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
-        const yesterday = new Date(today.getTime() - 24 * 60 * 60 * 1000);
-        
-        const todayOrders = orders.filter((o: any) => 
-          new Date(o.createdAt) >= today
-        );
-        const yesterdayOrders = orders.filter((o: any) => 
-          new Date(o.createdAt) >= yesterday && new Date(o.createdAt) < today
-        );
-        
-        const todayRevenue = todayOrders.reduce((sum: number, order: any) => sum + order.total, 0);
-        const yesterdayRevenue = yesterdayOrders.reduce((sum: number, order: any) => sum + order.total, 0);
-        
-        // Top customers (group by email)
-        const customerStats: { [email: string]: { orderCount: number; totalSpent: number; name: string } } = {};
-        orders.forEach((order: any) => {
-          const email = order.customerEmail;
-          if (!customerStats[email]) {
-            customerStats[email] = {
-              orderCount: 0,
-              totalSpent: 0,
-              name: `${order.billingFirstName} ${order.billingLastName}`
-            };
-          }
-          customerStats[email].orderCount++;
-          customerStats[email].totalSpent += order.total;
+        const monthOrders = orders.filter((o: any) => {
+          const orderDate = new Date(o.createdAt);
+          return orderDate >= monthStart && orderDate <= monthEnd;
         });
         
-        const topCustomers = Object.entries(customerStats)
-          .map(([email, stats]) => ({
-            customerEmail: email,
-            customerName: stats.name,
-            orderCount: stats.orderCount,
-            totalSpent: stats.totalSpent
-          }))
-          .sort((a, b) => b.totalSpent - a.totalSpent)
-          .slice(0, 5);
-        
-        // Recent activity (mock for now - in real app, this would come from an activity log)
-        const recentActivity = orders
-          .sort((a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
-          .slice(0, 10)
-          .map((order: any) => ({
-            type: order.status === 'delivered' ? 'order_delivered' :
-                  order.status === 'shipped' ? 'order_shipped' :
-                  order.paymentStatus === 'paid' ? 'payment_received' : 'order_placed',
-            orderNumber: order.orderNumber,
-            customerName: `${order.billingFirstName} ${order.billingLastName}`,
-            amount: order.total,
-            timestamp: order.createdAt
-          }));
-        
-        // Monthly trends (last 6 months)
-        const monthlyTrends = [];
-        for (let i = 5; i >= 0; i--) {
-          const date = new Date();
-          date.setMonth(date.getMonth() - i);
-          const monthStart = new Date(date.getFullYear(), date.getMonth(), 1);
-          const monthEnd = new Date(date.getFullYear(), date.getMonth() + 1, 0);
-          
-          const monthOrders = orders.filter((o: any) => {
-            const orderDate = new Date(o.createdAt);
-            return orderDate >= monthStart && orderDate <= monthEnd;
-          });
-          
-          monthlyTrends.push({
-            month: date.toLocaleDateString('en-US', { month: 'short', year: 'numeric' }),
-            orders: monthOrders.length,
-            revenue: monthOrders.reduce((sum: number, order: any) => sum + order.total, 0)
-          });
-        }
-
-        setStats({
-          totalOrders,
-          totalRevenue,
-          averageOrderValue,
-          pendingOrders,
-          confirmedOrders,
-          shippedOrders,
-          deliveredOrders,
-          cancelledOrders,
-          pendingPayments,
-          paidOrders,
-          failedPayments,
-          todayOrders: todayOrders.length,
-          todayRevenue,
-          yesterdayOrders: yesterdayOrders.length,
-          yesterdayRevenue,
-          topCustomers,
-          recentActivity,
-          monthlyTrends
+        monthlyTrends.push({
+          month: date.toLocaleDateString('en-US', { month: 'short', year: 'numeric' }),
+          orders: monthOrders.length,
+          revenue: monthOrders.reduce((sum: number, order: any) => sum + order.total, 0)
         });
       }
+
+      setStats({
+        totalOrders,
+        totalRevenue,
+        averageOrderValue,
+        pendingOrders,
+        confirmedOrders,
+        shippedOrders,
+        deliveredOrders,
+        cancelledOrders,
+        pendingPayments,
+        paidOrders,
+        failedPayments,
+        todayOrders: todayOrders.length,
+        todayRevenue,
+        yesterdayOrders: yesterdayOrders.length,
+        yesterdayRevenue,
+        topCustomers,
+        recentActivity,
+        monthlyTrends
+      });
     } catch (err) {
       // On any error, show empty stats instead of error message
       console.error('Error loading order stats:', err);
