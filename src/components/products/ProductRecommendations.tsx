@@ -74,13 +74,13 @@ export default function ProductRecommendations({
               <div className="relative h-48 bg-gray-100">
                 {(() => {
                   // Safely extract and validate image
-                  const firstImage = product.images?.[0];
+                  const firstImage: any = product.images?.[0];
                   let imageSrc: string | null = null;
                   
                   if (firstImage) {
                     if (typeof firstImage === 'string') {
                       imageSrc = firstImage && firstImage !== '[' ? firstImage : null;
-                    } else if (firstImage?.src) {
+                    } else if (firstImage && typeof firstImage === 'object' && firstImage.src) {
                       imageSrc = firstImage.src && firstImage.src !== '[' ? firstImage.src : null;
                     }
                   }
