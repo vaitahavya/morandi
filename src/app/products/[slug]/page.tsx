@@ -23,6 +23,7 @@ export default function ProductDetailPage({ params }: ProductDetailPageProps) {
   const [product, setProduct] = useState<any>(null);
   const [variations, setVariations] = useState<ProductVariant[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [selectedColor, setSelectedColor] = useState('');
   const [selectedSize, setSelectedSize] = useState('');
   const [quantity, setQuantity] = useState(1);
@@ -57,25 +58,38 @@ export default function ProductDetailPage({ params }: ProductDetailPageProps) {
   useEffect(() => {
     const fetchProduct = async () => {
       try {
+        setError(null);
         // Check if slug exists before fetching
         if (!params?.slug) {
+          setError('Invalid product URL');
           setLoading(false);
           return;
         }
         
         const data = await getProductBySlug(params.slug);
+        
+        if (!data) {
+          setError('Product not found');
+          setLoading(false);
+          return;
+        }
+        
         setProduct(data);
         
-        if (data) {
-          // Fetch variations if product has them
+        // Fetch variations if product has them
+        try {
           const vars = await getProductVariations(data.id);
-          setVariations(vars);
-          
-          // Set initial price
-          setCurrentPrice(data.price.toString());
+          setVariations(vars || []);
+        } catch (variationError) {
+          console.warn('Error fetching variations:', variationError);
+          setVariations([]);
         }
+        
+        // Set initial price
+        setCurrentPrice(data.price?.toString() || '0');
       } catch (error) {
         console.error('Error fetching product:', error);
+        setError(error instanceof Error ? error.message : 'Failed to load product');
       } finally {
         setLoading(false);
       }
@@ -325,12 +339,20 @@ export default function ProductDetailPage({ params }: ProductDetailPageProps) {
     );
   }
 
-  if (!product) {
+  if (!product || error) {
     return (
       <div className="mx-auto max-w-7xl px-4 py-12 md:px-6 lg:px-8">
         <div className="text-center py-20">
           <h1 className="text-2xl font-bold mb-4">Product Not Found</h1>
-          <p className="text-gray-600">The product you're looking for doesn't exist.</p>
+          <p className="text-gray-600 mb-4">
+            {error || "The product you're looking for doesn't exist."}
+          </p>
+          <a 
+            href="/products" 
+            className="text-primary-600 hover:text-primary-700 underline"
+          >
+            Browse all products
+          </a>
         </div>
       </div>
     );

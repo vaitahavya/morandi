@@ -199,34 +199,49 @@ export const getProductsWithPagination = async (filters: ProductFilters = {}): P
 export const getProduct = async (id: string): Promise<Product | null> => {
   try {
     const response = await apiCall<ProductResponse>(`/products/${id}`);
-    return response.data || null;
+    if (response.success && response.data) {
+      return response.data;
+    }
+    return null;
   } catch (error) {
+    // If it's a 404, the product doesn't exist - return null
+    if (error instanceof Error && error.message.includes('404')) {
+      console.log(`Product not found: ${id}`);
+      return null;
+    }
+    
     console.error('Error fetching product:', error);
     
-    // Fallback to mock data
-    const { mockProducts } = await import('./mock-data');
-    const mockProduct = mockProducts.find(p => p.id.toString() === id || p.slug === id);
-    
-    if (mockProduct) {
-      return {
-        ...mockProduct,
-        id: mockProduct.id.toString(),
-        categories: mockProduct.categories?.map(cat => ({
-          id: cat.id.toString(),
-          name: cat.name,
-          slug: cat.slug
-        })) || [],
-        stockQuantity: mockProduct.stockQuantity || 10,
-        stockStatus: mockProduct.stockStatus,
-        inStock: mockProduct.inStock,
-        featured: mockProduct.featured || false,
-        avgRating: 4.5,
-        reviewCount: 0,
-        createdAt: mockProduct.createdAt || new Date().toISOString(),
-        updatedAt: mockProduct.updatedAt || new Date().toISOString(),
-        tags: mockProduct.tags || [],
-        category: mockProduct.category || mockProduct.categories?.[0]?.name || 'Uncategorized'
-      };
+    // Only fallback to mock data in development
+    if (process.env.NODE_ENV === 'development') {
+      try {
+        const { mockProducts } = await import('./mock-data');
+        const mockProduct = mockProducts.find(p => p.id.toString() === id || p.slug === id);
+        
+        if (mockProduct) {
+          return {
+            ...mockProduct,
+            id: mockProduct.id.toString(),
+            categories: mockProduct.categories?.map(cat => ({
+              id: cat.id.toString(),
+              name: cat.name,
+              slug: cat.slug
+            })) || [],
+            stockQuantity: mockProduct.stockQuantity || 10,
+            stockStatus: mockProduct.stockStatus,
+            inStock: mockProduct.inStock,
+            featured: mockProduct.featured || false,
+            avgRating: 4.5,
+            reviewCount: 0,
+            createdAt: mockProduct.createdAt || new Date().toISOString(),
+            updatedAt: mockProduct.updatedAt || new Date().toISOString(),
+            tags: mockProduct.tags || [],
+            category: mockProduct.category || mockProduct.categories?.[0]?.name || 'Uncategorized'
+          };
+        }
+      } catch (mockError) {
+        console.warn('Could not load mock data:', mockError);
+      }
     }
     
     return null;

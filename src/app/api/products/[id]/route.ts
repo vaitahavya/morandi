@@ -13,27 +13,50 @@ export async function GET(
     // Try to find by ID first, then by slug if ID is not a valid UUID
     const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id);
     
-    const product = await prisma.product.findFirst({
-      where: isUUID ? { id } : { slug: id },
-      include: {
-        productCategories: {
-          include: {
-            category: true
-          }
-        },
-        variants: {
-          orderBy: { price: 'asc' },
-          include: {
-            variantAttributes: {
-              include: {
-                attribute: true
+    let product;
+    try {
+      product = await prisma.product.findFirst({
+        where: isUUID ? { id } : { slug: id },
+        include: {
+          productCategories: {
+            include: {
+              category: true
+            }
+          },
+          variants: {
+            orderBy: { price: 'asc' },
+            include: {
+              variantAttributes: {
+                include: {
+                  attribute: true
+                }
               }
             }
+          },
+          attributes: true
+        }
+      });
+    } catch (dbError: any) {
+      // If there's a schema error (e.g., missing columns), try a simpler query
+      console.error('Database query error, trying simpler query:', dbError);
+      try {
+        product = await prisma.product.findFirst({
+          where: isUUID ? { id } : { slug: id },
+          include: {
+            productCategories: {
+              include: {
+                category: true
+              }
+            },
+            variants: true,
+            attributes: true
           }
-        },
-        attributes: true
+        });
+      } catch (simpleError) {
+        console.error('Simple query also failed:', simpleError);
+        throw dbError; // Throw original error
       }
-    });
+    }
 
     if (!product) {
       return NextResponse.json({
@@ -115,26 +138,52 @@ export async function GET(
       salePrice: product.salePrice,
       images: parseImages(product.images),
       featuredImage: product.featuredImage,
-      stockQuantity: product.stockQuantity,
-      stockStatus: product.stockStatus,
-      manageStock: product.manageStock,
-      lowStockThreshold: product.lowStockThreshold,
+      stockQuantity: product.stockQuantity || 0,
+      stockStatus: product.stockStatus || 'instock',
+      manageStock: product.manageStock !== false,
+      lowStockThreshold: product.lowStockThreshold || 5,
       weight: product.weight,
       dimensions: product.dimensions,
-      status: product.status,
-      featured: product.featured,
+      status: product.status || 'published',
+      featured: product.featured || false,
       metaTitle: product.metaTitle,
       metaDescription: product.metaDescription,
-      categories: product.productCategories.map((pc: any) => pc.category),
-      variants: product.variants.map((variant: any) => {
+      categories: (product.productCategories || []).map((pc: any) => pc.category),
+      variants: (product.variants || []).map((variant: any) => {
         // Reconstruct attributes object from variantAttributes junction table
         const attributes: Record<string, string> = {};
+        
+        // Try new structure first (variantAttributes junction table)
         if (variant.variantAttributes && Array.isArray(variant.variantAttributes)) {
           variant.variantAttributes.forEach((va: any) => {
             if (va.attribute && va.value) {
               attributes[va.attribute.name] = va.value;
             }
           });
+        }
+        
+        // Fallback to old structure (attributes as JSON string) if new structure not available
+        if (Object.keys(attributes).length === 0 && variant.attributes) {
+          try {
+            if (typeof variant.attributes === 'string') {
+              const parsed = JSON.parse(variant.attributes);
+              if (Array.isArray(parsed)) {
+                // Old format: [{name: "Color", value: "Red"}]
+                parsed.forEach((attr: any) => {
+                  if (attr.name && attr.value) {
+                    attributes[attr.name] = attr.value;
+                  }
+                });
+              } else if (typeof parsed === 'object') {
+                // Already an object
+                Object.assign(attributes, parsed);
+              }
+            } else if (typeof variant.attributes === 'object') {
+              Object.assign(attributes, variant.attributes);
+            }
+          } catch {
+            // Ignore parsing errors
+          }
         }
         
         // Parse variant images
@@ -149,27 +198,56 @@ export async function GET(
         }
         
         return {
-          ...variant,
+          id: variant.id,
+          name: variant.name,
+          sku: variant.sku,
+          price: variant.price,
+          regularPrice: variant.regularPrice,
+          salePrice: variant.salePrice,
+          stockQuantity: variant.stockQuantity || 0,
+          stockStatus: variant.stockStatus || 'instock',
           attributes: Object.keys(attributes).length > 0 ? attributes : undefined,
-          images: variantImages
+          images: variantImages,
+          weight: variant.weight,
+          dimensions: variant.dimensions
         };
       }),
-      attributes: product.attributes.map((attr: any) => {
-        // Parse values from JSON string
-        let values: string[] = [];
-        try {
-          if (attr.values) {
-            values = typeof attr.values === 'string' ? JSON.parse(attr.values) : attr.values;
+      // Transform attributes to Record<string, string[]> format
+      attributes: (() => {
+        const attrMap: Record<string, string[]> = {};
+        
+        (product.attributes || []).forEach((attr: any) => {
+          let values: string[] = [];
+          
+          // Handle new structure (values as JSON array)
+          if (attr.values !== undefined && attr.values !== null) {
+            try {
+              if (typeof attr.values === 'string') {
+                values = JSON.parse(attr.values);
+              } else if (Array.isArray(attr.values)) {
+                values = attr.values;
+              }
+            } catch {
+              values = [];
+            }
+          } 
+          // Fallback to old structure (single value)
+          else if (attr.value) {
+            values = [attr.value];
           }
-        } catch {
-          values = [];
-        }
-        return {
-          id: attr.id,
-          name: attr.name,
-          values: Array.isArray(values) ? values : []
-        };
-      }),
+          
+          if (attr.name && values.length > 0) {
+            if (!attrMap[attr.name]) {
+              attrMap[attr.name] = [];
+            }
+            attrMap[attr.name].push(...values);
+            // Remove duplicates
+            attrMap[attr.name] = [...new Set(attrMap[attr.name])];
+          }
+        });
+        
+        return attrMap;
+      })(),
       avgRating: 0,
       reviewCount: 0,
       createdAt: product.createdAt,
@@ -187,9 +265,11 @@ export async function GET(
 
   } catch (error) {
     console.error('Error fetching product:', error);
+    console.error('Product ID/Slug:', id);
+    console.error('Error details:', error instanceof Error ? error.message : String(error));
     return NextResponse.json({
       success: false,
-      error: 'Failed to fetch product'
+      error: error instanceof Error ? error.message : 'Failed to fetch product'
     }, { status: 500 });
   }
 }
