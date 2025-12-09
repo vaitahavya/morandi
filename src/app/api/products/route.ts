@@ -29,10 +29,21 @@ export async function GET(request: NextRequest) {
     }
     
     // Parse query parameters
+    // Default to 'published' for public-facing requests, but allow 'all' or empty string for admin
+    const statusParam = searchParams.get('status');
+    let status: string | undefined;
+    if (statusParam === 'all' || statusParam === '') {
+      status = undefined; // Show all products
+    } else if (statusParam) {
+      status = statusParam; // Use the specified status
+    } else {
+      status = 'published'; // Default to published for public API
+    }
+    
     const filters: ProductFilters = {
       name: searchParams.get('name') || undefined,
       slug: searchParams.get('slug') || undefined,
-      status: searchParams.get('status') || 'published',
+      status: status,
       featured: searchParams.get('featured') ? searchParams.get('featured') === 'true' : undefined,
       categoryId: categoryId,
       minPrice: searchParams.get('minPrice') ? parseFloat(searchParams.get('minPrice')!) : undefined,
@@ -71,9 +82,17 @@ export async function GET(request: NextRequest) {
 
   } catch (error) {
     console.error('Error fetching products:', error);
+    console.error('Error details:', {
+      message: error instanceof Error ? error.message : String(error),
+      stack: error instanceof Error ? error.stack : undefined,
+      name: error instanceof Error ? error.name : undefined,
+    });
     return NextResponse.json({
       success: false,
-      error: error instanceof Error ? error.message : 'Failed to fetch products'
+      error: error instanceof Error ? error.message : 'Failed to fetch products',
+      details: process.env.NODE_ENV === 'development' 
+        ? (error instanceof Error ? error.stack : String(error))
+        : undefined
     }, { status: 500 });
   }
 }

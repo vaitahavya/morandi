@@ -62,10 +62,22 @@ export default function ProductsPage() {
       });
 
       const response = await getProductsWithPagination(filters);
-      setProducts(response.data);
-      setPagination(response.pagination);
+      if (response.success) {
+        setProducts(response.data || []);
+        setPagination(response.pagination || {
+          total: 0,
+          totalPages: 0,
+          hasNextPage: false,
+          hasPrevPage: false
+        });
+      } else {
+        console.error('API returned error:', response.error);
+        setProducts([]);
+      }
     } catch (error) {
       console.error('Error fetching products:', error);
+      console.error('Error details:', error instanceof Error ? error.message : String(error));
+      setProducts([]);
     } finally {
       setLoading(false);
     }

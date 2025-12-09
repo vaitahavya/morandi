@@ -118,20 +118,28 @@ const API_BASE = '/api';
 async function apiCall<T>(endpoint: string, options?: RequestInit): Promise<T> {
   const url = `${API_BASE}${endpoint}`;
   
-  const response = await fetch(url, {
-    headers: {
-      'Content-Type': 'application/json',
-      ...options?.headers,
-    },
-    ...options,
-  });
+  try {
+    const response = await fetch(url, {
+      headers: {
+        'Content-Type': 'application/json',
+        ...options?.headers,
+      },
+      ...options,
+    });
 
-  if (!response.ok) {
-    const errorData = await response.json().catch(() => ({ error: 'Request failed' }));
-    throw new Error(errorData.error || `HTTP ${response.status}`);
+    const data = await response.json().catch(() => {
+      throw new Error(`Failed to parse response from ${url}`);
+    });
+
+    if (!response.ok) {
+      throw new Error(data.error || `HTTP ${response.status}: ${response.statusText}`);
+    }
+
+    return data;
+  } catch (error) {
+    console.error(`API call failed for ${url}:`, error);
+    throw error;
   }
-
-  return response.json();
 }
 
 // Product API Functions
@@ -145,7 +153,8 @@ export const getProductsWithPagination = async (filters: ProductFilters = {}): P
   const params = new URLSearchParams();
   
   Object.entries(filters).forEach(([key, value]) => {
-    if (value !== undefined && value !== null && value !== '') {
+    // Allow 'all' for status to explicitly request all products
+    if (value !== undefined && value !== null && (value !== '' || key === 'status')) {
       if (typeof value === 'object') {
         params.append(key, JSON.stringify(value));
       } else {

@@ -24,7 +24,8 @@ export default function ProductManager({ initialProducts = [] }: ProductManagerP
   const [filters, setFilters] = useState<ProductFilters>({
     page: 1,
     limit: 20,
-    status: 'published',
+    // Use 'all' to show all products regardless of status in admin
+    status: 'all' as any,
     sortBy: 'updatedAt',
     sortOrder: 'desc'
   });
