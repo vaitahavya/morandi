@@ -179,7 +179,7 @@ export async function GET(
       metaTitle: product.metaTitle,
       metaDescription: product.metaDescription,
       categories: (product.productCategories || []).map((pc: any) => pc.category),
-      variants: (product.variants || []).map((variant: any) => {
+      variants: ((product as any).variants || []).map((variant: any) => {
         // Reconstruct attributes object from variantAttributes junction table
         const attributes: Record<string, string> = {};
         
@@ -246,7 +246,7 @@ export async function GET(
       attributes: (() => {
         const attrMap: Record<string, string[]> = {};
         
-        (product.attributes || []).forEach((attr: any) => {
+        ((product as any).attributes || []).forEach((attr: any) => {
           let values: string[] = [];
           
           // Handle new structure (values as JSON array)
