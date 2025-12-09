@@ -242,7 +242,7 @@ export async function GET(
             }
             attrMap[attr.name].push(...values);
             // Remove duplicates
-            attrMap[attr.name] = [...new Set(attrMap[attr.name])];
+            attrMap[attr.name] = Array.from(new Set(attrMap[attr.name]));
           }
         });
         
