@@ -1,11 +1,32 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { productService } from '@/services';
 import { ProductFilters, FindManyOptions } from '@/repositories';
+import { prisma } from '@/lib/db';
 
 // GET /api/products - List products with filtering, search, and pagination
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
+    
+    // Handle category parameter - could be ID or slug
+    let categoryId: string | undefined = undefined;
+    const categoryParam = searchParams.get('category');
+    if (categoryParam) {
+      // Check if it's a UUID
+      const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(categoryParam);
+      if (isUUID) {
+        categoryId = categoryParam;
+      } else {
+        // It's a slug, find the category by slug
+        const category = await prisma.category.findUnique({
+          where: { slug: categoryParam },
+          select: { id: true }
+        });
+        if (category) {
+          categoryId = category.id;
+        }
+      }
+    }
     
     // Parse query parameters
     const filters: ProductFilters = {
@@ -13,7 +34,7 @@ export async function GET(request: NextRequest) {
       slug: searchParams.get('slug') || undefined,
       status: searchParams.get('status') || 'published',
       featured: searchParams.get('featured') ? searchParams.get('featured') === 'true' : undefined,
-      categoryId: searchParams.get('category') || undefined,
+      categoryId: categoryId,
       minPrice: searchParams.get('minPrice') ? parseFloat(searchParams.get('minPrice')!) : undefined,
       maxPrice: searchParams.get('maxPrice') ? parseFloat(searchParams.get('maxPrice')!) : undefined,
       inStock: searchParams.get('inStock') ? searchParams.get('inStock') === 'true' : undefined,

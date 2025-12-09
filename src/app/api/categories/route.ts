@@ -42,35 +42,34 @@ export async function GET(request: NextRequest) {
 
     // Get product counts if requested
     let productCounts: Record<string, number> = {};
-    if (includeProductCount) {
+    if (includeProductCount && categories.length > 0) {
       const categoryIds = categories.map(cat => cat.id);
-      const productCountResults = await prisma.product.count({
+      
+      // Get all product-category relationships for these categories in a single query
+      const productCategoryCounts = await prisma.productCategory.groupBy({
+        by: ['categoryId'],
         where: {
-          productCategories: {
-            some: {
-              categoryId: {
-                in: categoryIds
-              }
-            }
+          categoryId: {
+            in: categoryIds
           },
-          status: 'published'
+          product: {
+            status: 'published'
+          }
+        },
+        _count: {
+          productId: true
         }
       });
       
-      // For now, we'll get the count per category in a separate query
-      for (const category of categories) {
-        const count = await prisma.product.count({
-          where: {
-            productCategories: {
-              some: {
-                categoryId: category.id
-              }
-            },
-            status: 'published'
-          }
-        });
-        productCounts[category.id] = count;
-      }
+      // Initialize all category counts to 0
+      categoryIds.forEach(id => {
+        productCounts[id] = 0;
+      });
+      
+      // Map the counts from the grouped results
+      productCategoryCounts.forEach(({ categoryId, _count }) => {
+        productCounts[categoryId] = _count.productId;
+      });
     }
 
     // Transform data
@@ -107,6 +106,10 @@ export async function GET(request: NextRequest) {
     if (!flat && parentId === null) {
       // Return only root categories with their children
       result = transformedCategories.filter(cat => cat.parentId === null);
+    } else if (flat && parentId === null) {
+      // When flat=true, return all categories regardless of parent/child relationship
+      // This ensures all visible categories are returned
+      result = transformedCategories;
     }
 
     return NextResponse.json({

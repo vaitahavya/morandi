@@ -31,11 +31,11 @@ export default function CategorySection() {
         const data = await response.json();
         
         if (data.success) {
-          // Filter categories with products and limit to 6 for display
-          const categoriesWithProducts = data.data
-            .filter((cat: Category) => cat.productCount && cat.productCount > 0)
+          // Show all visible categories, limit to 6 for display
+          // Categories will show even if they have 0 products
+          const visibleCategories = data.data
             .slice(0, 6);
-          setCategories(categoriesWithProducts);
+          setCategories(visibleCategories);
         } else {
           setError('Failed to load categories');
         }
