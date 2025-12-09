@@ -151,9 +151,21 @@ export function ProductForm({ product, onSuccess, onCancel }: ProductFormProps) 
     if (!files) return;
 
     setLoading(true);
+    setError(null); // Clear previous errors
     
     try {
       const uploadPromises = Array.from(files).map(async (file) => {
+        // Validate file before upload
+        const maxSize = 10 * 1024 * 1024; // 10MB
+        if (file.size > maxSize) {
+          throw new Error(`File "${file.name}" is too large. Maximum size is 10MB.`);
+        }
+        
+        const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp', 'image/gif'];
+        if (!allowedTypes.includes(file.type)) {
+          throw new Error(`File "${file.name}" has invalid type. Only JPEG, PNG, WebP, and GIF are allowed.`);
+        }
+        
         const formData = new FormData();
         formData.append('file', file);
         formData.append('folder', 'products');
@@ -163,13 +175,22 @@ export function ProductForm({ product, onSuccess, onCancel }: ProductFormProps) 
           body: formData,
         });
         
-        if (!response.ok) {
-          throw new Error('Failed to upload image');
-        }
-        
         const result = await response.json();
-        if (!result.success) {
-          throw new Error(result.error || 'Upload failed');
+        
+        if (!response.ok || !result.success) {
+          // Provide more detailed error messages
+          let errorMessage = result.error || result.message || 'Failed to upload image';
+          
+          // Check for common Supabase errors
+          if (errorMessage.includes('Supabase is not configured')) {
+            errorMessage = 'Supabase is not configured. Please set NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY in your environment variables.';
+          } else if (errorMessage.includes('Bucket') || errorMessage.includes('bucket')) {
+            errorMessage = `Storage error: ${errorMessage}. Please check if the "products" bucket exists and is public in Supabase.`;
+          } else if (errorMessage.includes('policy') || errorMessage.includes('RLS')) {
+            errorMessage = `Permission error: ${errorMessage}. Please check RLS policies in Supabase Storage.`;
+          }
+          
+          throw new Error(`${file.name}: ${errorMessage}`);
         }
         
         return {
@@ -186,9 +207,19 @@ export function ProductForm({ product, onSuccess, onCancel }: ProductFormProps) 
         images: [...prev.images, ...newImages],
         featuredImage: prev.featuredImage || newImages[0]?.src || ''
       }));
+      
+      // Clear file input
+      e.target.value = '';
+      
     } catch (error) {
       console.error('Image upload failed:', error);
-      setError(error instanceof Error ? error.message : 'Failed to upload images');
+      const errorMessage = error instanceof Error ? error.message : 'Failed to upload images';
+      setError(errorMessage);
+      
+      // Show error for a longer time so user can read it
+      setTimeout(() => {
+        // Error will persist until next upload attempt or form submission
+      }, 5000);
     } finally {
       setLoading(false);
     }

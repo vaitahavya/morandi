@@ -20,12 +20,6 @@ interface ProductDetailPageProps {
 }
 
 export default function ProductDetailPage({ params }: ProductDetailPageProps) {
-  // DIAGNOSTIC: Log params to check if they're being received correctly
-  console.log('[PRODUCT-PAGE-DIAGNOSTIC] Params received:', params);
-  console.log('[PRODUCT-PAGE-DIAGNOSTIC] Params type:', typeof params);
-  console.log('[PRODUCT-PAGE-DIAGNOSTIC] Params.slug:', params?.slug);
-  console.log('[PRODUCT-PAGE-DIAGNOSTIC] Is params a Promise?', params instanceof Promise);
-  
   const [product, setProduct] = useState<any>(null);
   const [variations, setVariations] = useState<ProductVariant[]>([]);
   const [loading, setLoading] = useState(true);
@@ -63,16 +57,13 @@ export default function ProductDetailPage({ params }: ProductDetailPageProps) {
   useEffect(() => {
     const fetchProduct = async () => {
       try {
-        // DIAGNOSTIC: Check if slug exists before fetching
+        // Check if slug exists before fetching
         if (!params?.slug) {
-          console.error('[PRODUCT-PAGE-DIAGNOSTIC] No slug found in params:', params);
           setLoading(false);
           return;
         }
         
-        console.log('[PRODUCT-PAGE-DIAGNOSTIC] Fetching product with slug:', params.slug);
         const data = await getProductBySlug(params.slug);
-        console.log('[PRODUCT-PAGE-DIAGNOSTIC] Product data received:', data ? 'Found' : 'Not found');
         setProduct(data);
         
         if (data) {
@@ -84,7 +75,7 @@ export default function ProductDetailPage({ params }: ProductDetailPageProps) {
           setCurrentPrice(data.price.toString());
         }
       } catch (error) {
-        console.error('[PRODUCT-PAGE-DIAGNOSTIC] Error fetching product:', error);
+        console.error('Error fetching product:', error);
       } finally {
         setLoading(false);
       }
