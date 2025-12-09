@@ -62,8 +62,8 @@ export default function ProductsPage() {
       });
 
       const response = await getProductsWithPagination(filters);
-      if (response.success) {
-        setProducts(response.data || []);
+      if (response.success && response.data) {
+        setProducts(response.data);
         setPagination(response.pagination || {
           total: 0,
           totalPages: 0,
@@ -71,7 +71,7 @@ export default function ProductsPage() {
           hasPrevPage: false
         });
       } else {
-        console.error('API returned error:', response.error);
+        console.error('API returned unsuccessful response:', response);
         setProducts([]);
       }
     } catch (error) {
