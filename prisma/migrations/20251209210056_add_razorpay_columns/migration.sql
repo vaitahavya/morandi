@@ -1,0 +1,1 @@
+-- Migration already applied (columns already exist)

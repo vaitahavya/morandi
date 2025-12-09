@@ -2,8 +2,8 @@
 -- This migration restructures the product attribute system to properly separate
 -- attribute definitions (what attributes exist) from variant attributes (which values each variant has)
 
--- Step 1: Create the new junction table for variant attributes
-CREATE TABLE "product_variant_attributes" (
+-- Step 1: Create the new junction table for variant attributes (if it doesn't exist)
+CREATE TABLE IF NOT EXISTS "product_variant_attributes" (
     "id" TEXT NOT NULL,
     "variant_id" TEXT NOT NULL,
     "attribute_id" TEXT NOT NULL,
