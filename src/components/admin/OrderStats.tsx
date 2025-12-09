@@ -73,27 +73,37 @@ export function OrderStats() {
       const params = new URLSearchParams({ limit: '1000' });
       
       // Add date filters based on timeRange
-      const now = new Date();
       switch (timeRange) {
-        case 'today':
-          const startOfDay = new Date(now.setHours(0, 0, 0, 0));
-          params.append('fromDate', startOfDay.toISOString());
+        case 'today': {
+          const startOfDay = new Date();
+          startOfDay.setHours(0, 0, 0, 0);
+          params.append('dateFrom', startOfDay.toISOString());
           break;
-        case 'week':
-          const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
-          params.append('fromDate', weekAgo.toISOString());
+        }
+        case 'week': {
+          const weekAgo = new Date();
+          weekAgo.setDate(weekAgo.getDate() - 7);
+          params.append('dateFrom', weekAgo.toISOString());
           break;
-        case 'month':
-          const monthAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
-          params.append('fromDate', monthAgo.toISOString());
+        }
+        case 'month': {
+          const monthAgo = new Date();
+          monthAgo.setDate(monthAgo.getDate() - 30);
+          params.append('dateFrom', monthAgo.toISOString());
           break;
+        }
         // 'all' - no date filter
       }
 
       const response = await fetch(`/api/orders?${params.toString()}`);
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      
       const data = await response.json();
       
-      if (data.success) {
+      if (data.success && Array.isArray(data.data)) {
         const orders = data.data;
         
         // Calculate basic stats
@@ -208,10 +218,11 @@ export function OrderStats() {
           monthlyTrends
         });
       } else {
-        setError('Failed to load order stats');
+        setError(data.error || 'Failed to load order stats');
       }
     } catch (err) {
-      setError('Failed to load order stats');
+      console.error('Error loading order stats:', err);
+      setError(err instanceof Error ? err.message : 'Failed to load order stats');
     } finally {
       setLoading(false);
     }
