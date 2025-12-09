@@ -53,7 +53,21 @@ export default function ProductCard({ product }: ProductCardProps) {
     setIsHovered(false);
   };
 
-  const currentImage = product.images?.[hoveredImageIndex]?.src || product.images?.[0]?.src || product.featuredImage;
+  // Safely extract image with validation
+  const getValidImageSrc = (img: any): string | null => {
+    if (!img) return null;
+    const src = typeof img === 'string' ? img : img?.src;
+    if (!src || typeof src !== 'string' || src.trim() === '' || src === '[') {
+      return null;
+    }
+    return src;
+  };
+
+  const currentImage = 
+    getValidImageSrc(product.images?.[hoveredImageIndex]) ||
+    getValidImageSrc(product.images?.[0]) ||
+    (product.featuredImage && typeof product.featuredImage === 'string' && product.featuredImage !== '[' ? product.featuredImage : null) ||
+    '/placeholder.svg';
   const hasDiscount = product.salePrice && product.regularPrice && product.salePrice < product.regularPrice;
   const discountPercent = hasDiscount && product.regularPrice && product.salePrice
     ? Math.round(((product.regularPrice - product.salePrice) / product.regularPrice) * 100)

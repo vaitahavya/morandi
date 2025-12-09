@@ -4,6 +4,7 @@ import {
   uploadImageToSupabase, 
   validateImageFileForSupabase 
 } from '@/lib/supabase-image-upload';
+import { supabase } from '@/lib/supabase';
 
 export async function POST(request: NextRequest) {
   try {
@@ -11,6 +12,14 @@ export async function POST(request: NextRequest) {
     const file = formData.get('file') as File;
     const folder = formData.get('folder') as string || 'uploads';
     const fileName = formData.get('fileName') as string;
+
+    // DIAGNOSTIC: Log Supabase initialization status
+    console.log('[UPLOAD-DIAGNOSTIC] Supabase initialized:', supabase !== null);
+    console.log('[UPLOAD-DIAGNOSTIC] Supabase URL:', process.env.NEXT_PUBLIC_SUPABASE_URL ? 'SET' : 'NOT SET');
+    console.log('[UPLOAD-DIAGNOSTIC] Supabase Key:', process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ? 'SET' : 'NOT SET');
+    console.log('[UPLOAD-DIAGNOSTIC] Folder:', folder);
+    console.log('[UPLOAD-DIAGNOSTIC] File name:', file?.name);
+    console.log('[UPLOAD-DIAGNOSTIC] File size:', file?.size);
 
     if (!file) {
       return NextResponse.json({
@@ -31,9 +40,12 @@ export async function POST(request: NextRequest) {
       }
 
       // Upload to Supabase Storage
+      console.log('[UPLOAD-DIAGNOSTIC] Attempting Supabase upload...');
       const result = await uploadImageToSupabase(file, 'products', '', fileName);
+      console.log('[UPLOAD-DIAGNOSTIC] Upload result:', { success: result.success, error: result.error, url: result.url });
 
       if (!result.success) {
+        console.error('[UPLOAD-DIAGNOSTIC] Upload failed:', result.error);
         return NextResponse.json({
           success: false,
           message: 'Upload failed',

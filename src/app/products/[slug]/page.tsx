@@ -20,6 +20,12 @@ interface ProductDetailPageProps {
 }
 
 export default function ProductDetailPage({ params }: ProductDetailPageProps) {
+  // DIAGNOSTIC: Log params to check if they're being received correctly
+  console.log('[PRODUCT-PAGE-DIAGNOSTIC] Params received:', params);
+  console.log('[PRODUCT-PAGE-DIAGNOSTIC] Params type:', typeof params);
+  console.log('[PRODUCT-PAGE-DIAGNOSTIC] Params.slug:', params?.slug);
+  console.log('[PRODUCT-PAGE-DIAGNOSTIC] Is params a Promise?', params instanceof Promise);
+  
   const [product, setProduct] = useState<any>(null);
   const [variations, setVariations] = useState<ProductVariant[]>([]);
   const [loading, setLoading] = useState(true);
@@ -57,7 +63,16 @@ export default function ProductDetailPage({ params }: ProductDetailPageProps) {
   useEffect(() => {
     const fetchProduct = async () => {
       try {
+        // DIAGNOSTIC: Check if slug exists before fetching
+        if (!params?.slug) {
+          console.error('[PRODUCT-PAGE-DIAGNOSTIC] No slug found in params:', params);
+          setLoading(false);
+          return;
+        }
+        
+        console.log('[PRODUCT-PAGE-DIAGNOSTIC] Fetching product with slug:', params.slug);
         const data = await getProductBySlug(params.slug);
+        console.log('[PRODUCT-PAGE-DIAGNOSTIC] Product data received:', data ? 'Found' : 'Not found');
         setProduct(data);
         
         if (data) {
@@ -69,14 +84,14 @@ export default function ProductDetailPage({ params }: ProductDetailPageProps) {
           setCurrentPrice(data.price.toString());
         }
       } catch (error) {
-        console.error('Error fetching product:', error);
+        console.error('[PRODUCT-PAGE-DIAGNOSTIC] Error fetching product:', error);
       } finally {
         setLoading(false);
       }
     };
 
     fetchProduct();
-  }, [params.slug]);
+  }, [params?.slug]);
 
   // Generate color options from variations
   const colorOptions: VariantOption[] = useMemo(() => {
@@ -198,36 +213,34 @@ export default function ProductDetailPage({ params }: ProductDetailPageProps) {
     setShowReviewForm(false);
   };
 
-  if (loading) {
-    return (
-      <div className="mx-auto max-w-7xl px-4 py-12 md:px-6 lg:px-8">
-        <div className="flex items-center justify-center py-20">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600"></div>
-        </div>
-      </div>
-    );
-  }
-
-  if (!product) {
-    return (
-      <div className="mx-auto max-w-7xl px-4 py-12 md:px-6 lg:px-8">
-        <div className="text-center py-20">
-          <h1 className="text-2xl font-bold mb-4">Product Not Found</h1>
-          <p className="text-gray-600">The product you're looking for doesn't exist.</p>
-        </div>
-      </div>
-    );
-  }
-
+  // Move useMemo BEFORE early returns to follow Rules of Hooks
   const productStructuredData = useMemo(() => {
     if (!product) return null;
 
     const description =
       product.shortDescription ||
       (product.description ? product.description.replace(/<[^>]+>/g, '') : '');
+    
+    // Safely extract and validate image URLs
     const imageUrls = (product.images || [])
-      .map((image: any) => image?.src)
-      .filter(Boolean)
+      .map((image: any) => {
+        // Handle different image formats
+        if (typeof image === 'string') {
+          return image;
+        }
+        if (image && typeof image === 'object') {
+          return image?.src || image;
+        }
+        return null;
+      })
+      .filter((src: any) => {
+        // Filter out invalid sources
+        return src && 
+               typeof src === 'string' && 
+               src.trim() !== '' && 
+               src !== '[' &&
+               (src.startsWith('http://') || src.startsWith('https://') || src.startsWith('/'));
+      })
       .map((src: string) => absoluteUrl(src));
 
     return {
@@ -257,6 +270,28 @@ export default function ProductDetailPage({ params }: ProductDetailPageProps) {
       },
     };
   }, [product, siteUrl, averageRating, reviews.length]);
+
+  // Early returns AFTER all hooks
+  if (loading) {
+    return (
+      <div className="mx-auto max-w-7xl px-4 py-12 md:px-6 lg:px-8">
+        <div className="flex items-center justify-center py-20">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600"></div>
+        </div>
+      </div>
+    );
+  }
+
+  if (!product) {
+    return (
+      <div className="mx-auto max-w-7xl px-4 py-12 md:px-6 lg:px-8">
+        <div className="text-center py-20">
+          <h1 className="text-2xl font-bold mb-4">Product Not Found</h1>
+          <p className="text-gray-600">The product you're looking for doesn't exist.</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <>

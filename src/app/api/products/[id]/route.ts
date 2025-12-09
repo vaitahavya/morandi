@@ -41,16 +41,46 @@ export async function GET(
     // Parse images from JSON string to array
     const parseImages = (imagesStr: string) => {
       try {
+        // Handle empty or invalid input
+        if (!imagesStr || imagesStr.trim() === '' || imagesStr === '[' || imagesStr === '[]') {
+          return [];
+        }
+        
+        // If already an array, use it directly
+        if (Array.isArray(imagesStr)) {
+          return imagesStr.map((img: any, index: number) => {
+            const src = typeof img === 'string' ? img : (img?.src || img);
+            // Validate src is a valid URL or path
+            if (!src || typeof src !== 'string' || src.trim() === '') {
+              return null;
+            }
+            return {
+              id: index + 1,
+              src: src,
+              alt: img?.alt || product.name
+            };
+          }).filter(Boolean); // Remove null entries
+        }
+        
+        // Try to parse as JSON
         const parsed = JSON.parse(imagesStr);
         if (Array.isArray(parsed)) {
-          return parsed.map((img: any, index: number) => ({
-            id: index + 1,
-            src: typeof img === 'string' ? img : img.src || img,
-            alt: product.name
-          }));
+          return parsed.map((img: any, index: number) => {
+            const src = typeof img === 'string' ? img : (img?.src || img);
+            // Validate src is a valid URL or path
+            if (!src || typeof src !== 'string' || src.trim() === '') {
+              return null;
+            }
+            return {
+              id: index + 1,
+              src: src,
+              alt: img?.alt || product.name
+            };
+          }).filter(Boolean); // Remove null entries
         }
         return [];
-      } catch {
+      } catch (error) {
+        console.error('Error parsing images:', error, 'Input:', imagesStr);
         return [];
       }
     };

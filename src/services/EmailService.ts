@@ -84,7 +84,7 @@ export class EmailService implements IEmailService {
         <div style="background-color: #f8f9fa; padding: 20px; border-radius: 5px; margin: 20px 0;">
           <h3>Order Details</h3>
           <p><strong>Order Number:</strong> ${order.orderNumber}</p>
-          <p><strong>Total:</strong> ${order.currency} ${order.total.toFixed(2)}</p>
+          <p><strong>Total:</strong> ₹${order.total.toFixed(2)}</p>
           <p><strong>Status:</strong> ${order.status}</p>
         </div>
 

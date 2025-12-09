@@ -13,7 +13,24 @@ export default function ProductGallery({ images, productName }: ProductGalleryPr
   const [selectedImage, setSelectedImage] = useState(0);
   const [isZoomed, setIsZoomed] = useState(false);
 
-  if (!images || images.length === 0) {
+  // Validate and normalize images array
+  const validImages = (images || []).filter((img: any) => {
+    if (!img) return false;
+    const src = typeof img === 'string' ? img : img?.src;
+    // Validate src is a valid string (URL or path)
+    return src && typeof src === 'string' && src.trim() !== '' && src !== '[';
+  }).map((img: any) => {
+    // Normalize to { src, alt } format
+    if (typeof img === 'string') {
+      return { src: img, alt: productName };
+    }
+    return {
+      src: img?.src || '',
+      alt: img?.alt || productName
+    };
+  });
+
+  if (!validImages || validImages.length === 0) {
     return (
       <div className="aspect-square w-full overflow-hidden rounded-lg bg-gray-100">
         <div className="flex h-full items-center justify-center">
@@ -28,13 +45,17 @@ export default function ProductGallery({ images, productName }: ProductGalleryPr
       {/* Main Image */}
       <div className="relative aspect-square overflow-hidden rounded-lg">
         <Image
-          src={images[selectedImage]?.src || images[0]?.src}
-          alt={images[selectedImage]?.alt || productName}
+          src={validImages[selectedImage]?.src || validImages[0]?.src || '/placeholder.svg'}
+          alt={validImages[selectedImage]?.alt || productName}
           width={600}
           height={600}
           className={`h-full w-full object-cover transition-transform duration-300 ${
             isZoomed ? 'scale-150' : 'scale-100'
           }`}
+          onError={(e) => {
+            // Fallback to placeholder if image fails to load
+            e.currentTarget.src = '/placeholder.svg';
+          }}
         />
         
         {/* Zoom Controls */}
@@ -48,9 +69,9 @@ export default function ProductGallery({ images, productName }: ProductGalleryPr
         </div>
 
         {/* Image Navigation */}
-        {images.length > 1 && (
+        {validImages.length > 1 && (
           <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex space-x-2">
-            {images.map((_, index) => (
+            {validImages.map((_, index) => (
               <button
                 key={index}
                 onClick={() => setSelectedImage(index)}
@@ -64,9 +85,9 @@ export default function ProductGallery({ images, productName }: ProductGalleryPr
       </div>
 
       {/* Thumbnail Images */}
-      {images.length > 1 && (
+      {validImages.length > 1 && (
         <div className="grid grid-cols-4 gap-2">
-          {images.map((image, index) => (
+          {validImages.map((image, index) => (
             <button
               key={index}
               onClick={() => setSelectedImage(index)}
@@ -77,11 +98,15 @@ export default function ProductGallery({ images, productName }: ProductGalleryPr
               }`}
             >
               <Image
-                src={image.src}
+                src={image.src || '/placeholder.svg'}
                 alt={image.alt || `${productName} ${index + 1}`}
                 width={150}
                 height={150}
                 className="h-full w-full object-cover"
+                onError={(e) => {
+                  // Fallback to placeholder if image fails to load
+                  e.currentTarget.src = '/placeholder.svg';
+                }}
               />
             </button>
           ))}

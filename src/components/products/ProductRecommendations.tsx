@@ -72,25 +72,51 @@ export default function ProductRecommendations({
           >
             <div className="bg-white rounded-lg shadow-sm hover:shadow-md transition-shadow duration-200 overflow-hidden">
               <div className="relative h-48 bg-gray-100">
-                {product.images && product.images.length > 0 ? (
-                  <Image
-                    src={product.images[0]}
-                    alt={product.name}
-                    fill
-                    className="object-cover group-hover:scale-105 transition-transform duration-200"
-                  />
-                ) : (
-                  <div className="w-full h-full flex items-center justify-center text-gray-400">
-                    No image
-                  </div>
-                )}
+                {(() => {
+                  // Safely extract and validate image
+                  const firstImage = product.images?.[0];
+                  let imageSrc: string | null = null;
+                  
+                  if (firstImage) {
+                    if (typeof firstImage === 'string') {
+                      imageSrc = firstImage && firstImage !== '[' ? firstImage : null;
+                    } else if (firstImage?.src) {
+                      imageSrc = firstImage.src && firstImage.src !== '[' ? firstImage.src : null;
+                    }
+                  }
+                  
+                  // Validate it's a valid URL or path
+                  if (imageSrc && (
+                    imageSrc.startsWith('http://') || 
+                    imageSrc.startsWith('https://') || 
+                    imageSrc.startsWith('/')
+                  )) {
+                    return (
+                      <Image
+                        src={imageSrc}
+                        alt={product.name}
+                        fill
+                        className="object-cover group-hover:scale-105 transition-transform duration-200"
+                        onError={(e) => {
+                          e.currentTarget.src = '/placeholder.svg';
+                        }}
+                      />
+                    );
+                  }
+                  
+                  return (
+                    <div className="w-full h-full flex items-center justify-center text-gray-400">
+                      No image
+                    </div>
+                  );
+                })()}
               </div>
               <div className="p-4">
                 <h4 className="font-medium text-gray-900 group-hover:text-indigo-600 transition-colors duration-200 truncate">
                   {product.name}
                 </h4>
                 <p className="text-lg font-semibold text-gray-900 mt-1">
-                  ${product.price.toFixed(2)}
+                  ₹{product.price.toFixed(2)}
                 </p>
                 {product.description && (
                   <p className="text-sm text-gray-500 mt-1 line-clamp-2">
