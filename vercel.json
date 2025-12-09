@@ -3,18 +3,6 @@
   "devCommand": "npm run dev",
   "installCommand": "npm install --legacy-peer-deps",
   "framework": "nextjs",
-  "regions": ["iad1"],
-  "env": {
-    "DATABASE_URL": "$DATABASE_URL",
-    "DIRECT_URL": "$DIRECT_URL",
-    "NEXT_PUBLIC_SUPABASE_URL": "$NEXT_PUBLIC_SUPABASE_URL",
-    "NEXT_PUBLIC_SUPABASE_ANON_KEY": "$NEXT_PUBLIC_SUPABASE_ANON_KEY",
-    "NEXTAUTH_URL": "$NEXTAUTH_URL",
-    "NEXTAUTH_SECRET": "$NEXTAUTH_SECRET",
-    "GOOGLE_CLIENT_ID": "$GOOGLE_CLIENT_ID",
-    "GOOGLE_CLIENT_SECRET": "$GOOGLE_CLIENT_SECRET",
-    "EMAIL_USER": "$EMAIL_USER",
-    "EMAIL_PASSWORD": "$EMAIL_PASSWORD"
-  }
+  "regions": ["iad1"]
 }
 
