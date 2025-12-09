@@ -684,7 +684,7 @@ export function ProductForm({ product, onSuccess, onCancel }: ProductFormProps) 
                   </div>
                 </CardTitle>
                 <CardDescription>
-                  Create product variations like different sizes, colors, or combinations.
+                  Create product variations like different sizes or combinations.
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
@@ -743,17 +743,17 @@ export function ProductForm({ product, onSuccess, onCancel }: ProductFormProps) 
                           </div>
                         </div>
 
-                        {/* Attributes (Color, Size, etc.) */}
+                        {/* Attributes (Size, etc.) */}
                         <div>
                           <label className="block text-sm font-medium text-gray-700 mb-2">
-                            Attributes (e.g., Color, Size)
+                            Attributes (e.g., Size)
                           </label>
                           <div className="space-y-2">
                             {variant.attributes && variant.attributes.map((attr: any, attrIndex: number) => (
                               <div key={attrIndex} className="flex gap-2">
                                 <input
                                   type="text"
-                                  placeholder="Attribute name (e.g., Color)"
+                                  placeholder="Attribute name (e.g., Size)"
                                   className="flex-1 px-3 py-2 border border-gray-300 rounded-lg"
                                   value={attr.name}
                                   onChange={(e) => {
@@ -894,7 +894,7 @@ export function ProductForm({ product, onSuccess, onCancel }: ProductFormProps) 
                   <div className="text-center py-8 text-gray-500">
                     <Package className="h-12 w-12 mx-auto mb-2 text-gray-400" />
                     <p>No variations added yet.</p>
-                    <p className="text-sm">Click "Add Variation" to create size or color options.</p>
+                    <p className="text-sm">Click "Add Variation" to create size options.</p>
                   </div>
                 )}
               </CardContent>

@@ -14,76 +14,20 @@ export async function GET(
     // Try to find by ID first, then by slug if ID is not a valid UUID
     const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id);
     
-    let product;
-    try {
-      // Try the full query with new schema structure first
-      product = await prisma.product.findFirst({
-        where: isUUID ? { id } : { slug: id },
-        include: {
-          productCategories: {
-            include: {
-              category: true
-            }
-          },
-          variants: {
-            orderBy: { price: 'asc' },
-            include: {
-              variantAttributes: {
-                include: {
-                  attribute: true
-                }
-              }
-            }
-          },
-          attributes: true
-        }
-      });
-    } catch (dbError: any) {
-      // If there's a schema error (e.g., missing columns or relations), try simpler queries
-      console.error('Database query error, trying fallback queries:', dbError?.message || dbError);
-      
-      // Try without variantAttributes relation
-      try {
-        product = await prisma.product.findFirst({
-          where: isUUID ? { id } : { slug: id },
+    const product = await prisma.product.findFirst({
+      where: isUUID ? { id } : { slug: id },
+      include: {
+        productCategories: {
           include: {
-            productCategories: {
-              include: {
-                category: true
-              }
-            },
-            variants: true,
-            attributes: true
+            category: true
           }
-        });
-      } catch (simpleError: any) {
-        console.error('Fallback query 1 failed, trying minimal query:', simpleError?.message || simpleError);
-        
-        // Try minimal query without variants/attributes
-        try {
-          product = await prisma.product.findFirst({
-            where: isUUID ? { id } : { slug: id },
-            include: {
-              productCategories: {
-                include: {
-                  category: true
-                }
-              }
-            }
-          });
-          
-          // Manually set empty arrays for variants and attributes if query succeeded
-          if (product) {
-            (product as any).variants = [];
-            (product as any).attributes = [];
-          }
-        } catch (minimalError: any) {
-          console.error('All fallback queries failed:', minimalError?.message || minimalError);
-          // Don't throw here - let it fall through to check if product is null
-          product = null;
-        }
+        },
+        variants: {
+          orderBy: { price: 'asc' }
+        },
+        attributes: true
       }
-    }
+    });
 
     if (!product) {
       console.error(`Product not found: ${id} (isUUID: ${isUUID})`);
@@ -180,39 +124,29 @@ export async function GET(
       metaDescription: product.metaDescription,
       categories: (product.productCategories || []).map((pc: any) => pc.category),
       variants: ((product as any).variants || []).map((variant: any) => {
-        // Reconstruct attributes object from variantAttributes junction table
-        const attributes: Record<string, string> = {};
-        
-        // Try new structure first (variantAttributes junction table)
-        if (variant.variantAttributes && Array.isArray(variant.variantAttributes)) {
-          variant.variantAttributes.forEach((va: any) => {
-            if (va.attribute && va.value) {
-              attributes[va.attribute.name] = va.value;
-            }
-          });
-        }
-        
-        // Fallback to old structure (attributes as JSON string) if new structure not available
-        if (Object.keys(attributes).length === 0 && variant.attributes) {
+        // Parse variant attributes from JSON string
+        let attributes: Record<string, string> | undefined = undefined;
+        if (variant.attributes) {
           try {
             if (typeof variant.attributes === 'string') {
               const parsed = JSON.parse(variant.attributes);
               if (Array.isArray(parsed)) {
-                // Old format: [{name: "Color", value: "Red"}]
+                // Format: [{name: "Color", value: "Red"}]
+                attributes = {};
                 parsed.forEach((attr: any) => {
                   if (attr.name && attr.value) {
-                    attributes[attr.name] = attr.value;
+                    attributes![attr.name] = attr.value;
                   }
                 });
-              } else if (typeof parsed === 'object') {
-                // Already an object
-                Object.assign(attributes, parsed);
+              } else if (typeof parsed === 'object' && parsed !== null) {
+                // Format: {Color: "Red", Size: "M"}
+                attributes = parsed;
               }
-            } else if (typeof variant.attributes === 'object') {
-              Object.assign(attributes, variant.attributes);
+            } else if (typeof variant.attributes === 'object' && variant.attributes !== null) {
+              attributes = variant.attributes;
             }
           } catch {
-            // Ignore parsing errors
+            attributes = undefined;
           }
         }
         
@@ -236,43 +170,24 @@ export async function GET(
           salePrice: variant.salePrice,
           stockQuantity: variant.stockQuantity || 0,
           stockStatus: variant.stockStatus || 'instock',
-          attributes: Object.keys(attributes).length > 0 ? attributes : undefined,
+          attributes: attributes,
           images: variantImages,
           weight: variant.weight,
           dimensions: variant.dimensions
         };
       }),
-      // Transform attributes to Record<string, string[]> format
+      // Transform attributes to Record<string, string[]> format (old structure: name-value pairs)
       attributes: (() => {
         const attrMap: Record<string, string[]> = {};
         
         ((product as any).attributes || []).forEach((attr: any) => {
-          let values: string[] = [];
-          
-          // Handle new structure (values as JSON array)
-          if (attr.values !== undefined && attr.values !== null) {
-            try {
-              if (typeof attr.values === 'string') {
-                values = JSON.parse(attr.values);
-              } else if (Array.isArray(attr.values)) {
-                values = attr.values;
-              }
-            } catch {
-              values = [];
-            }
-          } 
-          // Fallback to old structure (single value)
-          else if (attr.value) {
-            values = [attr.value];
-          }
-          
-          if (attr.name && values.length > 0) {
+          if (attr.name && attr.value) {
             if (!attrMap[attr.name]) {
               attrMap[attr.name] = [];
             }
-            attrMap[attr.name].push(...values);
-            // Remove duplicates
-            attrMap[attr.name] = Array.from(new Set(attrMap[attr.name]));
+            if (!attrMap[attr.name].includes(attr.value)) {
+              attrMap[attr.name].push(attr.value);
+            }
           }
         });
         

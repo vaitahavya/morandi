@@ -46,23 +46,13 @@ export interface ProductVariant {
   price: number;
   salePrice?: number;
   stockQuantity: number;
-  attributes?: Record<string, string>; // Derived from variantAttributes for backward compatibility
-  variantAttributes?: ProductVariantAttribute[]; // The actual junction records
+  attributes?: Record<string, string>; // Parsed from JSON string
 }
 
 export interface ProductAttribute {
   id: string;
   name: string;
-  values: string[]; // Array of possible values (e.g., ["Red", "Blue", "Green"])
-  displayOrder?: number;
-}
-
-export interface ProductVariantAttribute {
-  id: string;
-  variantId: string;
-  attributeId: string;
-  value: string; // The specific value for this variant (e.g., "Red")
-  attribute?: ProductAttribute; // Optional: the attribute definition
+  value: string;
 }
 
 export interface Review {
@@ -103,7 +93,7 @@ export interface CreateProductData {
   featuredImage?: string;
   images?: string[];
   categoryIds?: string[];
-  attributes?: Array<{ name: string; values: string[]; displayOrder?: number }>; // Attribute definitions
+  attributes?: Array<{ name: string; value: string } | { name: string; values: string[] }>; // Old structure: name-value pairs, or new: name-values array
   variants?: Array<{
     name: string;
     sku?: string;
