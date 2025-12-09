@@ -16,6 +16,7 @@ export async function GET(
     
     let product;
     try {
+      // Try the full query with new schema structure first
       product = await prisma.product.findFirst({
         where: isUUID ? { id } : { slug: id },
         include: {
@@ -38,8 +39,10 @@ export async function GET(
         }
       });
     } catch (dbError: any) {
-      // If there's a schema error (e.g., missing columns), try a simpler query
-      console.error('Database query error, trying simpler query:', dbError);
+      // If there's a schema error (e.g., missing columns or relations), try simpler queries
+      console.error('Database query error, trying fallback queries:', dbError?.message || dbError);
+      
+      // Try without variantAttributes relation
       try {
         product = await prisma.product.findFirst({
           where: isUUID ? { id } : { slug: id },
@@ -53,13 +56,37 @@ export async function GET(
             attributes: true
           }
         });
-      } catch (simpleError) {
-        console.error('Simple query also failed:', simpleError);
-        throw dbError; // Throw original error
+      } catch (simpleError: any) {
+        console.error('Fallback query 1 failed, trying minimal query:', simpleError?.message || simpleError);
+        
+        // Try minimal query without variants/attributes
+        try {
+          product = await prisma.product.findFirst({
+            where: isUUID ? { id } : { slug: id },
+            include: {
+              productCategories: {
+                include: {
+                  category: true
+                }
+              }
+            }
+          });
+          
+          // Manually set empty arrays for variants and attributes if query succeeded
+          if (product) {
+            (product as any).variants = [];
+            (product as any).attributes = [];
+          }
+        } catch (minimalError: any) {
+          console.error('All fallback queries failed:', minimalError?.message || minimalError);
+          // Don't throw here - let it fall through to check if product is null
+          product = null;
+        }
       }
     }
 
     if (!product) {
+      console.error(`Product not found: ${id} (isUUID: ${isUUID})`);
       return NextResponse.json({
         success: false,
         error: 'Product not found'
@@ -126,9 +153,11 @@ export async function GET(
       }
     };
 
-    // Transform data
-    const transformedProduct = {
-      id: product.id,
+    // Transform data with error handling
+    let transformedProduct;
+    try {
+      transformedProduct = {
+        id: product.id,
       name: product.name,
       slug: product.slug,
       description: product.description,
@@ -251,13 +280,18 @@ export async function GET(
       })(),
       avgRating: 0,
       reviewCount: 0,
-      createdAt: product.createdAt,
-      updatedAt: product.updatedAt,
+      createdAt: product.createdAt?.toISOString() || new Date().toISOString(),
+      updatedAt: product.updatedAt?.toISOString() || new Date().toISOString(),
       // Legacy fields for compatibility
       tags: parseTags(product.tags),
       inStock: product.stockStatus === 'instock',
-      category: product.productCategories[0]?.category.name || 'Uncategorized'
+      category: product.productCategories?.[0]?.category?.name || 'Uncategorized'
     };
+    } catch (transformError: any) {
+      console.error('Error transforming product data:', transformError);
+      console.error('Product data:', JSON.stringify(product, null, 2));
+      throw new Error(`Failed to transform product data: ${transformError?.message || 'Unknown error'}`);
+    }
 
     return NextResponse.json({
       success: true,
