@@ -173,18 +173,33 @@ export function OrderStats() {
         .slice(0, 5);
       
       // Recent activity (mock for now - in real app, this would come from an activity log)
-      const recentActivity = orders
+      const recentActivity: Array<{
+        type: 'order_placed' | 'payment_received' | 'order_shipped' | 'order_delivered';
+        orderNumber: string;
+        customerName: string;
+        amount?: number;
+        timestamp: string;
+      }> = orders
         .sort((a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
         .slice(0, 10)
-        .map((order: any) => ({
-          type: order.status === 'delivered' ? 'order_delivered' :
-                order.status === 'shipped' ? 'order_shipped' :
-                order.paymentStatus === 'paid' ? 'payment_received' : 'order_placed',
-          orderNumber: order.orderNumber,
-          customerName: `${order.billingFirstName} ${order.billingLastName}`,
-          amount: order.total,
-          timestamp: order.createdAt
-        }));
+        .map((order: any) => {
+          let type: 'order_placed' | 'payment_received' | 'order_shipped' | 'order_delivered' = 'order_placed';
+          if (order.status === 'delivered') {
+            type = 'order_delivered';
+          } else if (order.status === 'shipped') {
+            type = 'order_shipped';
+          } else if (order.paymentStatus === 'paid') {
+            type = 'payment_received';
+          }
+          
+          return {
+            type,
+            orderNumber: order.orderNumber || '',
+            customerName: `${order.billingFirstName || ''} ${order.billingLastName || ''}`.trim(),
+            amount: order.total,
+            timestamp: order.createdAt || ''
+          };
+        });
       
       // Monthly trends (last 6 months)
       const monthlyTrends = [];
