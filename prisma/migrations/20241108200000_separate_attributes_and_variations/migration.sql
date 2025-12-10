@@ -138,3 +138,4 @@ CREATE INDEX IF NOT EXISTS "product_variant_attributes_attribute_id_idx" ON "pro
 CREATE INDEX IF NOT EXISTS "product_attributes_product_id_idx" ON "product_attributes"("product_id");
 
 
+
