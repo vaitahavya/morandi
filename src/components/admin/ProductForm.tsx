@@ -29,6 +29,36 @@ export function ProductForm({ product, onSuccess, onCancel }: ProductFormProps) 
   const [categories, setCategories] = useState<ProductCategory[]>([]);
   const [draggedImage, setDraggedImage] = useState<number | null>(null);
   
+  // Helper function to convert variant attributes from object to array format
+  const convertVariantAttributes = (variants: any[]): any[] => {
+    if (!variants || variants.length === 0) return [];
+    
+    return variants.map((variant: any) => {
+      // If attributes is already an array, use it as is
+      if (Array.isArray(variant.attributes)) {
+        return variant;
+      }
+      
+      // If attributes is an object, convert to array format
+      if (variant.attributes && typeof variant.attributes === 'object' && !Array.isArray(variant.attributes)) {
+        const attributesArray = Object.entries(variant.attributes).map(([name, value]) => ({
+          name,
+          value: value as string
+        }));
+        return {
+          ...variant,
+          attributes: attributesArray
+        };
+      }
+      
+      // If attributes is missing or null, set to empty array
+      return {
+        ...variant,
+        attributes: variant.attributes || []
+      };
+    });
+  };
+
   const [formData, setFormData] = useState({
     name: product?.name || '',
     slug: product?.slug || '',
@@ -51,7 +81,7 @@ export function ProductForm({ product, onSuccess, onCancel }: ProductFormProps) 
     images: product?.images || [],
     featuredImage: product?.featuredImage || '',
     selectedCategories: product?.categories?.map(c => c.id) || [],
-    variants: product?.variants || [],
+    variants: convertVariantAttributes(product?.variants || []),
     // Legacy fields
     category: product?.category || '',
     tags: product?.tags || []
@@ -102,6 +132,20 @@ export function ProductForm({ product, onSuccess, onCancel }: ProductFormProps) 
     }
   }, [formData.price]);
 
+  // Convert variant attributes from object format to array format when product changes
+  useEffect(() => {
+    if (product) {
+      const convertedVariants = convertVariantAttributes(product.variants || []);
+      setFormData(prev => {
+        // Only update if variants have actually changed to avoid unnecessary re-renders
+        if (JSON.stringify(prev.variants) !== JSON.stringify(convertedVariants)) {
+          return { ...prev, variants: convertedVariants };
+        }
+        return prev;
+      });
+    }
+  }, [product?.id, product?.variants?.length]); // Run when product ID or variant count changes
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
@@ -115,6 +159,34 @@ export function ProductForm({ product, onSuccess, onCancel }: ProductFormProps) 
       });
 
       // Prepare the data
+      // Ensure variants have attributes in array format before saving
+      const preparedVariants = (formData.variants || []).map((variant: any) => {
+        // Ensure attributes is always an array
+        let attributes = variant.attributes || [];
+        if (!Array.isArray(attributes)) {
+          // Convert object to array format
+          if (typeof attributes === 'object' && attributes !== null) {
+            attributes = Object.entries(attributes).map(([name, value]) => ({
+              name,
+              value: value as string
+            }));
+          } else {
+            attributes = [];
+          }
+        }
+        
+        return {
+          ...variant,
+          attributes,
+          // Ensure required fields have defaults
+          price: variant.price || formData.price || 0,
+          regularPrice: variant.regularPrice || formData.regularPrice || formData.price || 0,
+          stockQuantity: variant.stockQuantity || 0,
+          stockStatus: variant.stockStatus || 'instock',
+          images: variant.images || [],
+        };
+      });
+
       const productData = {
         ...formData,
         images: validImages, // Use filtered images
@@ -129,7 +201,7 @@ export function ProductForm({ product, onSuccess, onCancel }: ProductFormProps) 
           : null,
         tags: Array.isArray(formData.tags) ? formData.tags : 
               typeof formData.tags === 'string' ? (formData.tags as string).split(',').map(t => t.trim()).filter(Boolean) : [],
-        variants: formData.variants || []
+        variants: preparedVariants
       };
 
       if (product) {

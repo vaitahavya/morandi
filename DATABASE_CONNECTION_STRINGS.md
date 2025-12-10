@@ -110,3 +110,5 @@ This is the **DIRECT_URL** format. You also need the **DATABASE_URL** (pooler) f
 - Use environment variables
 - Keep `.env.local` in `.gitignore`
 - Use Vercel's environment variable system for production
+
+

@@ -76,13 +76,18 @@ export default function ProductDetailPage({ params }: ProductDetailPageProps) {
         
         setProduct(data);
         
-        // Fetch variations if product has them
-        try {
-          const vars = await getProductVariations(data.id);
-          setVariations(vars || []);
-        } catch (variationError) {
-          console.warn('Error fetching variations:', variationError);
-          setVariations([]);
+        // Use variants from product data if available, otherwise fetch separately
+        if (data.variants && data.variants.length > 0) {
+          setVariations(data.variants);
+        } else {
+          // Fetch variations if product has them but not in the response
+          try {
+            const vars = await getProductVariations(data.id);
+            setVariations(vars || []);
+          } catch (variationError) {
+            console.warn('Error fetching variations:', variationError);
+            setVariations([]);
+          }
         }
         
         // Set initial price

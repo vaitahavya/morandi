@@ -59,3 +59,5 @@ USING (bucket_id = 'products');
 -- DROP POLICY IF EXISTS "Allow public deletes from products bucket" ON storage.objects;
 
 
+
+

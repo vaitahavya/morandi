@@ -136,3 +136,5 @@ ALTER TABLE "product_variants" DROP COLUMN IF EXISTS "attributes";
 CREATE INDEX IF NOT EXISTS "product_variant_attributes_variant_id_idx" ON "product_variant_attributes"("variant_id");
 CREATE INDEX IF NOT EXISTS "product_variant_attributes_attribute_id_idx" ON "product_variant_attributes"("attribute_id");
 CREATE INDEX IF NOT EXISTS "product_attributes_product_id_idx" ON "product_attributes"("product_id");
+
+
