@@ -80,3 +80,4 @@ Now all product functions will:
 - **Better debugging:** You can now see when API calls fail instead of silently falling back to mock data
 
 
+
