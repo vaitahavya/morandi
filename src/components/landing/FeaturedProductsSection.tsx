@@ -162,34 +162,35 @@ export default function FeaturedProductsSection() {
                 
                 {/* Overlay Actions */}
                 <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                  <div className="absolute bottom-4 left-4 right-4 flex gap-2">
+                  <div className="absolute bottom-2 sm:bottom-4 left-2 sm:left-4 right-2 sm:right-4 flex gap-1.5 sm:gap-2">
                     <Button 
                       size="sm" 
-                      className="flex-1 bg-white text-deep-charcoal hover:bg-white/90"
+                      className="flex-1 bg-white text-deep-charcoal hover:bg-white/90 text-[10px] sm:text-sm h-7 sm:h-9 px-2 sm:px-3"
                       asChild
                     >
                       <Link href={`/products/${product.slug || product.id}`}>
-                        <ShoppingCart className="w-4 h-4 mr-2" />
-                        Quick Add
+                        <ShoppingCart className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
+                        <span className="hidden sm:inline">Quick Add</span>
+                        <span className="sm:hidden">Add</span>
                       </Link>
                     </Button>
-                    <Button size="sm" variant="outline" className="border-white text-white hover:bg-white hover:text-deep-charcoal">
-                      <Heart className="w-4 h-4" />
+                    <Button size="sm" variant="outline" className="border-white text-white hover:bg-white hover:text-deep-charcoal h-7 sm:h-9 w-7 sm:w-auto px-2 sm:px-3">
+                      <Heart className="w-3 h-3 sm:w-4 sm:h-4" />
                     </Button>
                   </div>
                 </div>
                 
                 {/* Category Badge */}
-                <div className="absolute top-4 left-4">
-                  <Badge className="bg-clay-pink/90 text-white border-0 shadow-lg">
+                <div className="absolute top-2 sm:top-4 left-2 sm:left-4">
+                  <Badge className="bg-clay-pink/90 text-white border-0 shadow-lg text-[10px] sm:text-xs px-1.5 sm:px-2 py-0.5 sm:py-1">
                     {product.category}
                   </Badge>
                 </div>
 
                 {/* Stock Status Badge */}
                 {product.stockStatus === 'outofstock' && (
-                  <div className="absolute top-4 right-4">
-                    <Badge variant="destructive" className="text-xs">
+                  <div className="absolute top-2 sm:top-4 right-2 sm:right-4">
+                    <Badge variant="destructive" className="text-[10px] sm:text-xs px-1.5 sm:px-2 py-0.5 sm:py-1">
                       Out of Stock
                     </Badge>
                   </div>
@@ -197,27 +198,27 @@ export default function FeaturedProductsSection() {
               </div>
               
               {/* Product Info */}
-              <CardContent className="p-3 sm:p-4 lg:p-5 space-y-2 sm:space-y-3 min-w-0 w-full flex-grow flex flex-col">
+              <CardContent className="p-2.5 sm:p-4 lg:p-5 space-y-1.5 sm:space-y-3 min-w-0 w-full flex-grow flex flex-col">
                 <div className="min-w-0 w-full">
-                  <h3 className="font-serif font-semibold text-sm sm:text-base lg:text-lg mb-1.5 sm:mb-2 text-foreground group-hover:text-primary transition-colors line-clamp-2 min-w-0 break-words">
+                  <h3 className="font-serif font-semibold text-xs sm:text-base lg:text-lg mb-1 sm:mb-2 text-foreground group-hover:text-primary transition-colors line-clamp-2 min-w-0 break-words">
                     <Link href={`/products/${product.slug || product.id}`} className="hover:underline break-words">
                       {product.name}
                     </Link>
                   </h3>
                   
                   {/* Price */}
-                  <div className="flex items-center gap-2 mb-2 sm:mb-3 flex-wrap min-w-0 w-full">
+                  <div className="flex items-center gap-1.5 sm:gap-2 mb-1.5 sm:mb-3 flex-wrap min-w-0 w-full">
                     {product.salePrice ? (
                       <>
-                        <p className="text-base sm:text-lg lg:text-xl xl:text-2xl font-bold text-foreground truncate">
+                        <p className="text-sm sm:text-lg lg:text-xl xl:text-2xl font-bold text-foreground truncate">
                           {formatPrice(product.salePrice)}
                         </p>
-                        <p className="text-sm sm:text-base lg:text-lg text-muted-foreground line-through truncate">
+                        <p className="text-[10px] sm:text-base lg:text-lg text-muted-foreground line-through truncate">
                           {formatPrice(product.price)}
                         </p>
                       </>
                     ) : (
-                      <p className="text-base sm:text-lg lg:text-xl xl:text-2xl font-bold text-foreground truncate">
+                      <p className="text-sm sm:text-lg lg:text-xl xl:text-2xl font-bold text-foreground truncate">
                         {formatPrice(product.price)}
                       </p>
                     )}

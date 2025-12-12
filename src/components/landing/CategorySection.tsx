@@ -158,8 +158,8 @@ export default function CategorySection() {
           <div className="w-16 sm:w-20 lg:w-24 h-0.5 sm:h-1 bg-primary mx-auto rounded-full mt-3 sm:mt-4 lg:mt-6" />
         </div>
         
-        {/* Categories Grid - Responsive 3-column on desktop, 2 on tablet, 1 on mobile */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5 lg:gap-6 xl:gap-8 w-full">
+        {/* Categories Grid - Responsive 3-column on desktop, 2 on tablet and mobile */}
+        <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-5 lg:gap-6 xl:gap-8 w-full">
           {categories.map((category, index) => (
             <Link 
               key={category.id}
@@ -180,18 +180,18 @@ export default function CategorySection() {
                   <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent" />
                   
                   {/* Category Content Overlay */}
-                  <div className="absolute inset-0 flex flex-col justify-end p-4 sm:p-5 lg:p-6 min-w-0 w-full">
-                    <h3 className="text-lg sm:text-xl lg:text-2xl xl:text-3xl font-serif font-bold text-white mb-2 sm:mb-2 lg:mb-2 transform group-hover:translate-y-0 transition-transform min-w-0 break-words line-clamp-2 leading-tight">
+                  <div className="absolute inset-0 flex flex-col justify-end p-3 sm:p-5 lg:p-6 min-w-0 w-full">
+                    <h3 className="text-base sm:text-xl lg:text-2xl xl:text-3xl font-serif font-bold text-white mb-1 sm:mb-2 lg:mb-2 transform group-hover:translate-y-0 transition-transform min-w-0 break-words line-clamp-2 leading-tight">
                       {category.name}
                     </h3>
-                    <p className="text-white/90 font-sans text-xs sm:text-sm lg:text-base mb-3 sm:mb-3 lg:mb-4 opacity-90 group-hover:opacity-100 transition-opacity line-clamp-2 min-w-0 break-words leading-snug">
+                    <p className="text-white/90 font-sans text-[10px] sm:text-sm lg:text-base mb-2 sm:mb-3 lg:mb-4 opacity-90 group-hover:opacity-100 transition-opacity line-clamp-2 min-w-0 break-words leading-snug">
                       {category.description || `Explore ${category.name.toLowerCase()} for every stage of motherhood`}
                     </p>
                     
                     {/* Shop Now Button */}
-                    <div className="flex items-center text-white font-medium text-xs sm:text-sm lg:text-base group-hover:text-clay-pink transition-colors">
-                      <span className="mr-2">Shop Now</span>
-                      <ArrowRight className="w-4 h-4 sm:w-4 sm:h-4 lg:w-5 lg:h-5 group-hover:translate-x-2 transition-transform duration-300 flex-shrink-0" />
+                    <div className="flex items-center text-white font-medium text-[10px] sm:text-sm lg:text-base group-hover:text-clay-pink transition-colors">
+                      <span className="mr-1 sm:mr-2">Shop Now</span>
+                      <ArrowRight className="w-3 h-3 sm:w-4 sm:h-4 lg:w-5 lg:h-5 group-hover:translate-x-2 transition-transform duration-300 flex-shrink-0" />
                     </div>
                   </div>
                 </div>

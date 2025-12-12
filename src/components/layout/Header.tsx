@@ -129,7 +129,7 @@ export default function Header() {
           </nav>
 
           {/* Search Bar */}
-          <div className="flex-1 max-w-md mr-8">
+          <div className="max-w-xs mr-8">
             <form onSubmit={handleSearch} className="relative">
               <Input
                 type="text"
@@ -170,8 +170,11 @@ export default function Header() {
             ) : session ? (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" size="icon" className="h-9 w-9">
+                  <Button variant="ghost" className="h-9 gap-2 px-3">
                     <User className="h-5 w-5" />
+                    <span className="text-sm font-medium text-gray-700 hidden xl:inline">
+                      {session.user?.name || session.user?.email?.split('@')[0] || 'User'}
+                    </span>
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="w-56">
