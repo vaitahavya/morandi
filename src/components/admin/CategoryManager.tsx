@@ -49,22 +49,52 @@ export default function CategoryManager({ initialCategories = [] }: CategoryMana
   const [showForm, setShowForm] = useState(false);
   const [editingCategory, setEditingCategory] = useState<Category | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
-  const [showInvisible, setShowInvisible] = useState(false);
+  const [showInvisible, setShowInvisible] = useState(true); // Show all categories by default in admin
 
   // Load categories
   const loadCategories = async () => {
     setLoading(true);
+    setError(null);
     try {
-      const response = await fetch('/api/categories?includeProductCount=true');
+      // Fetch all categories (including hidden ones) for admin panel
+      // Using flat=true to get all categories in a flat list, not just root categories
+      const url = '/api/categories?includeProductCount=true&onlyVisible=false&flat=true';
+      console.log('Fetching categories from:', url);
+      
+      const response = await fetch(url);
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      
       const data = await response.json();
+      console.log('Categories API response:', data);
       
       if (data.success) {
-        setCategories(data.data);
+        // Handle different response formats
+        let categoriesList: Category[] = [];
+        
+        if (Array.isArray(data.data)) {
+          categoriesList = data.data;
+        } else if (data.data && Array.isArray(data.data.categories)) {
+          categoriesList = data.data.categories;
+        } else if (data.categories && Array.isArray(data.categories)) {
+          categoriesList = data.categories;
+        }
+        
+        console.log('Loaded categories:', categoriesList.length, categoriesList);
+        setCategories(categoriesList);
+        
+        if (categoriesList.length === 0) {
+          console.warn('No categories found in database. Response:', data);
+        }
       } else {
-        setError('Failed to load categories');
+        setError(data.error || 'Failed to load categories');
+        console.error('API returned error:', data);
       }
     } catch (err) {
-      setError('Failed to load categories');
+      const errorMessage = err instanceof Error ? err.message : 'Failed to load categories';
+      setError(errorMessage);
       console.error('Error loading categories:', err);
     } finally {
       setLoading(false);
@@ -152,6 +182,7 @@ export default function CategoryManager({ initialCategories = [] }: CategoryMana
   const filteredCategories = categories.filter(category => {
     const matchesSearch = category.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          category.slug.toLowerCase().includes(searchTerm.toLowerCase());
+    // Show all categories if showInvisible is true, otherwise only visible ones
     const matchesVisibility = showInvisible || category.isVisible;
     return matchesSearch && matchesVisibility;
   });
@@ -159,7 +190,12 @@ export default function CategoryManager({ initialCategories = [] }: CategoryMana
   // Build category tree for display
   const buildCategoryTree = (categories: Category[], parentId?: string): Category[] => {
     return categories
-      .filter(cat => cat.parentId === parentId)
+      .filter(cat => {
+        if (parentId === undefined) {
+          return cat.parentId === null || cat.parentId === undefined;
+        }
+        return cat.parentId === parentId;
+      })
       .sort((a, b) => a.displayOrder - b.displayOrder)
       .map(cat => ({
         ...cat,
@@ -167,16 +203,23 @@ export default function CategoryManager({ initialCategories = [] }: CategoryMana
       }));
   };
 
+  // Use tree structure if we have parent/child relationships, otherwise show flat list
   const categoryTree = buildCategoryTree(filteredCategories, undefined);
+  
+  // Fallback: if tree is empty but we have filtered categories, show them flat
+  const displayCategories = categoryTree.length > 0 
+    ? categoryTree 
+    : filteredCategories.sort((a, b) => a.displayOrder - b.displayOrder);
 
   const renderCategoryRow = (category: Category, level = 0) => (
     <div key={category.id} className="space-y-2">
       <div 
-        className={`flex items-center justify-between p-4 bg-white border rounded-lg hover:shadow-sm transition-shadow ${
+        className={`flex items-center justify-between p-4 bg-white border rounded-lg hover:shadow-sm transition-shadow cursor-pointer ${
           level > 0 ? 'ml-8 border-l-2 border-l-blue-200' : ''
         }`}
+        onClick={() => handleEditCategory(category)}
       >
-        <div className="flex items-center space-x-4">
+        <div className="flex items-center space-x-4 flex-1">
           {level > 0 && <div className="w-4" />}
           <div className="flex items-center space-x-2">
             {category.children && category.children.length > 0 ? (
@@ -193,7 +236,7 @@ export default function CategoryManager({ initialCategories = [] }: CategoryMana
           </div>
         </div>
 
-        <div className="flex items-center space-x-4">
+        <div className="flex items-center space-x-4" onClick={(e) => e.stopPropagation()}>
           <div className="text-sm text-gray-500">
             {category.productCount || 0} products
           </div>
@@ -211,17 +254,21 @@ export default function CategoryManager({ initialCategories = [] }: CategoryMana
               )}
             </Button>
             <Button
-              variant="ghost"
+              variant="default"
               size="sm"
               onClick={() => handleEditCategory(category)}
+              className="flex items-center space-x-1"
+              title="Edit category"
             >
               <Edit className="h-4 w-4" />
+              <span>Edit</span>
             </Button>
             <Button
               variant="ghost"
               size="sm"
               onClick={() => handleDeleteCategory(category)}
               className="text-red-600 hover:text-red-700"
+              title="Delete category"
             >
               <Trash2 className="h-4 w-4" />
             </Button>
@@ -232,17 +279,6 @@ export default function CategoryManager({ initialCategories = [] }: CategoryMana
       {category.children && category.children.map(child => renderCategoryRow(child, level + 1))}
     </div>
   );
-
-  if (showForm) {
-    return (
-      <CategoryForm
-        category={editingCategory}
-        categories={categories}
-        onSuccess={handleFormSuccess}
-        onCancel={handleFormCancel}
-      />
-    );
-  }
 
   return (
     <div className="space-y-6">
@@ -273,67 +309,167 @@ export default function CategoryManager({ initialCategories = [] }: CategoryMana
         </div>
       )}
 
-      {/* Filters */}
-      <Card>
-        <CardContent className="pt-6">
-          <div className="flex items-center space-x-4">
-            <div className="flex-1">
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
-                <input
-                  type="text"
-                  placeholder="Search categories..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-10 pr-4 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 w-full"
-                />
-              </div>
-            </div>
-            <Button
-              variant={showInvisible ? "default" : "outline"}
-              size="sm"
-              onClick={() => setShowInvisible(!showInvisible)}
-              className="flex items-center space-x-2"
-            >
-              <Filter className="h-4 w-4" />
-              <span>Show Hidden</span>
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Categories List */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Categories ({filteredCategories.length})</CardTitle>
-          <CardDescription>
-            Manage your product categories. Drag to reorder or click to edit.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          {loading ? (
-            <div className="flex items-center justify-center py-8">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-            </div>
-          ) : categoryTree.length === 0 ? (
-            <div className="text-center py-8">
-              <Folder className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-              <h3 className="text-lg font-medium text-gray-900 mb-2">No categories found</h3>
-              <p className="text-gray-600 mb-4">
-                {searchTerm ? 'No categories match your search criteria.' : 'Get started by creating your first category.'}
-              </p>
-              <Button onClick={handleCreateCategory}>
-                <Plus className="h-4 w-4 mr-2" />
-                Add Category
-              </Button>
-            </div>
-          ) : (
-            <div className="space-y-2">
-              {categoryTree.map(category => renderCategoryRow(category))}
-            </div>
+      {/* Debug Info - Remove in production */}
+      {process.env.NODE_ENV === 'development' && (
+        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 text-sm space-y-2">
+          <p className="text-blue-800">
+            <strong>Debug Info:</strong>
+          </p>
+          <ul className="text-blue-700 list-disc list-inside space-y-1">
+            <li>Total categories loaded: {categories.length}</li>
+            <li>Filtered categories: {filteredCategories.length}</li>
+            <li>Tree nodes: {categoryTree.length}</li>
+            <li>Loading: {loading ? 'Yes' : 'No'}</li>
+            <li>Show invisible: {showInvisible ? 'Yes' : 'No'}</li>
+            <li>Search term: "{searchTerm}"</li>
+          </ul>
+          {categories.length > 0 && (
+            <details className="mt-2">
+              <summary className="cursor-pointer text-blue-800 font-medium">View raw categories data</summary>
+              <pre className="mt-2 p-2 bg-blue-100 rounded text-xs overflow-auto max-h-40">
+                {JSON.stringify(categories.slice(0, 3), null, 2)}
+                {categories.length > 3 && `\n... and ${categories.length - 3} more`}
+              </pre>
+            </details>
           )}
-        </CardContent>
-      </Card>
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={loadCategories}
+            className="mt-2"
+          >
+            Reload Categories
+          </Button>
+        </div>
+      )}
+
+      {/* Main Content: Split View */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Left Side: Categories List */}
+        <div className="space-y-4">
+          {/* Filters */}
+          <Card>
+            <CardContent className="pt-6">
+              <div className="flex items-center space-x-4">
+                <div className="flex-1">
+                  <div className="relative">
+                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+                    <input
+                      type="text"
+                      placeholder="Search categories..."
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                      className="pl-10 pr-4 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 w-full"
+                    />
+                  </div>
+                </div>
+                <Button
+                  variant={showInvisible ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => setShowInvisible(!showInvisible)}
+                  className="flex items-center space-x-2"
+                  title={showInvisible ? "Showing all categories" : "Click to show only visible categories"}
+                >
+                  <Filter className="h-4 w-4" />
+                  <span>{showInvisible ? "All Categories" : "Visible Only"}</span>
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Categories List */}
+          <Card className="lg:max-h-[calc(100vh-300px)] lg:overflow-y-auto">
+            <CardHeader>
+              <CardTitle>Categories ({filteredCategories.length})</CardTitle>
+              <CardDescription>
+                Click on a category to edit it
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {loading ? (
+                <div className="flex items-center justify-center py-8">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+                </div>
+              ) : filteredCategories.length === 0 ? (
+                <div className="text-center py-8">
+                  <Folder className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                  <h3 className="text-lg font-medium text-gray-900 mb-2">No categories found</h3>
+                  <p className="text-gray-600 mb-4">
+                    {searchTerm ? 'No categories match your search criteria.' : categories.length === 0 ? 'No categories in database. Get started by creating your first category.' : 'Try adjusting your filters.'}
+                  </p>
+                  {categories.length === 0 && (
+                    <Button onClick={handleCreateCategory}>
+                      <Plus className="h-4 w-4 mr-2" />
+                      Add Category
+                    </Button>
+                  )}
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  {categoryTree.length > 0 ? (
+                    categoryTree.map(category => renderCategoryRow(category))
+                  ) : (
+                    filteredCategories.map(category => renderCategoryRow(category, 0))
+                  )}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Right Side: Form Panel */}
+        <div className="space-y-4">
+          <Card className="lg:sticky lg:top-6 lg:max-h-[calc(100vh-200px)] lg:overflow-y-auto">
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle>
+                    {showForm ? (editingCategory ? 'Edit Category' : 'Create Category') : 'Category Details'}
+                  </CardTitle>
+                  <CardDescription>
+                    {showForm 
+                      ? (editingCategory ? 'Update category information' : 'Add a new category to organize your products')
+                      : 'Select a category from the list to edit or click "Add Category" to create a new one'}
+                  </CardDescription>
+                </div>
+                {showForm && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={handleFormCancel}
+                    className="flex items-center space-x-1"
+                  >
+                    <X className="h-4 w-4" />
+                    <span>Close</span>
+                  </Button>
+                )}
+              </div>
+            </CardHeader>
+            <CardContent>
+              {showForm ? (
+                <CategoryForm
+                  category={editingCategory}
+                  categories={categories}
+                  onSuccess={handleFormSuccess}
+                  onCancel={handleFormCancel}
+                />
+              ) : (
+                <div className="flex flex-col items-center justify-center py-12 text-center">
+                  <Folder className="h-16 w-16 text-gray-300 mb-4" />
+                  <h3 className="text-lg font-medium text-gray-900 mb-2">No category selected</h3>
+                  <p className="text-gray-600 mb-6 max-w-sm">
+                    Select a category from the list to view and edit its details, or create a new category.
+                  </p>
+                  <Button onClick={handleCreateCategory} className="flex items-center space-x-2">
+                    <Plus className="h-4 w-4" />
+                    <span>Create New Category</span>
+                  </Button>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </div>
+      </div>
     </div>
   );
 }

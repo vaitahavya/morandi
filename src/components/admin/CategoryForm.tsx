@@ -51,7 +51,37 @@ export function CategoryForm({ category, categories, onSuccess, onCancel }: Cate
     metaDescription: category?.metaDescription || '',
   });
 
-  // Auto-generate slug from name
+  // Update form data when category prop changes
+  useEffect(() => {
+    if (category) {
+      setFormData({
+        name: category.name || '',
+        slug: category.slug || '',
+        description: category.description || '',
+        image: category.image || '',
+        parentId: category.parentId || '',
+        displayOrder: category.displayOrder || 0,
+        isVisible: category.isVisible !== false,
+        metaTitle: category.metaTitle || '',
+        metaDescription: category.metaDescription || '',
+      });
+    } else {
+      // Reset form for new category
+      setFormData({
+        name: '',
+        slug: '',
+        description: '',
+        image: '',
+        parentId: '',
+        displayOrder: 0,
+        isVisible: true,
+        metaTitle: '',
+        metaDescription: '',
+      });
+    }
+  }, [category]);
+
+  // Auto-generate slug from name (only for new categories)
   useEffect(() => {
     if (!category && formData.name && !formData.slug) {
       const slug = formData.name
@@ -63,12 +93,12 @@ export function CategoryForm({ category, categories, onSuccess, onCancel }: Cate
     }
   }, [formData.name, category]);
 
-  // Set meta title from name if not set
+  // Set meta title from name if not set (only for new categories)
   useEffect(() => {
     if (!category && formData.name && !formData.metaTitle) {
       setFormData(prev => ({ ...prev, metaTitle: formData.name }));
     }
-  }, [formData.name, category]);
+  }, [formData.name, formData.metaTitle, category]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -162,22 +192,7 @@ export function CategoryForm({ category, categories, onSuccess, onCancel }: Cate
   const availableParents = getAvailableParents();
 
   return (
-    <div className="max-w-2xl mx-auto space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">
-            {category ? 'Edit Category' : 'Create Category'}
-          </h1>
-          <p className="text-gray-600">
-            {category ? 'Update category information' : 'Add a new category to organize your products'}
-          </p>
-        </div>
-        <Button variant="ghost" onClick={onCancel}>
-          <X className="h-4 w-4" />
-        </Button>
-      </div>
-
+    <div className="space-y-6">
       {/* Error Display */}
       {error && (
         <div className="bg-red-50 border border-red-200 rounded-lg p-4">
