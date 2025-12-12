@@ -87,6 +87,16 @@ export default function InventoryManager() {
     location: ''
   });
 
+  // Read URL parameters on mount
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const filterParam = urlParams.get('filter');
+    if (filterParam === 'lowStock') {
+      setFilters(prev => ({ ...prev, status: 'low_stock' }));
+      setActiveTab('alerts');
+    }
+  }, []);
+
   useEffect(() => {
     loadInventoryData();
   }, []);

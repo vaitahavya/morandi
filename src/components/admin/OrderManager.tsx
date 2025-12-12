@@ -67,6 +67,15 @@ export default function OrderManager({ initialOrders = [] }: OrderManagerProps) 
     hasPrevPage: false
   });
 
+  // Read URL parameters on mount
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const statusParam = urlParams.get('status');
+    if (statusParam) {
+      setFilters(prev => ({ ...prev, status: statusParam, page: 1 }));
+    }
+  }, []);
+
   // Load orders using TanStack Query
   const { data: ordersData, isLoading, error: queryError, refetch } = useOrders(filters);
   

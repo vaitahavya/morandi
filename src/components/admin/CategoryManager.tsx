@@ -59,7 +59,6 @@ export default function CategoryManager({ initialCategories = [] }: CategoryMana
       // Fetch all categories (including hidden ones) for admin panel
       // Using flat=true to get all categories in a flat list, not just root categories
       const url = '/api/categories?includeProductCount=true&onlyVisible=false&flat=true';
-      console.log('Fetching categories from:', url);
       
       const response = await fetch(url);
       
@@ -68,7 +67,6 @@ export default function CategoryManager({ initialCategories = [] }: CategoryMana
       }
       
       const data = await response.json();
-      console.log('Categories API response:', data);
       
       if (data.success) {
         // Handle different response formats
@@ -82,20 +80,13 @@ export default function CategoryManager({ initialCategories = [] }: CategoryMana
           categoriesList = data.categories;
         }
         
-        console.log('Loaded categories:', categoriesList.length, categoriesList);
         setCategories(categoriesList);
-        
-        if (categoriesList.length === 0) {
-          console.warn('No categories found in database. Response:', data);
-        }
       } else {
         setError(data.error || 'Failed to load categories');
-        console.error('API returned error:', data);
       }
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to load categories';
       setError(errorMessage);
-      console.error('Error loading categories:', err);
     } finally {
       setLoading(false);
     }
@@ -135,7 +126,6 @@ export default function CategoryManager({ initialCategories = [] }: CategoryMana
       }
     } catch (err) {
       setError('Failed to delete category');
-      console.error('Error deleting category:', err);
     }
   };
 
@@ -161,7 +151,6 @@ export default function CategoryManager({ initialCategories = [] }: CategoryMana
       }
     } catch (err) {
       setError('Failed to update category');
-      console.error('Error updating category:', err);
     }
   };
 
@@ -228,11 +217,6 @@ export default function CategoryManager({ initialCategories = [] }: CategoryMana
               <Folder className="h-4 w-4 text-gray-400" />
             )}
             <span className="font-medium">{category.name}</span>
-            {!category.isVisible && (
-              <Badge variant="secondary" className="text-xs">
-                Hidden
-              </Badge>
-            )}
           </div>
         </div>
 
@@ -305,40 +289,6 @@ export default function CategoryManager({ initialCategories = [] }: CategoryMana
             className="mt-2 text-red-600 hover:text-red-700"
           >
             Dismiss
-          </Button>
-        </div>
-      )}
-
-      {/* Debug Info - Remove in production */}
-      {process.env.NODE_ENV === 'development' && (
-        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 text-sm space-y-2">
-          <p className="text-blue-800">
-            <strong>Debug Info:</strong>
-          </p>
-          <ul className="text-blue-700 list-disc list-inside space-y-1">
-            <li>Total categories loaded: {categories.length}</li>
-            <li>Filtered categories: {filteredCategories.length}</li>
-            <li>Tree nodes: {categoryTree.length}</li>
-            <li>Loading: {loading ? 'Yes' : 'No'}</li>
-            <li>Show invisible: {showInvisible ? 'Yes' : 'No'}</li>
-            <li>Search term: "{searchTerm}"</li>
-          </ul>
-          {categories.length > 0 && (
-            <details className="mt-2">
-              <summary className="cursor-pointer text-blue-800 font-medium">View raw categories data</summary>
-              <pre className="mt-2 p-2 bg-blue-100 rounded text-xs overflow-auto max-h-40">
-                {JSON.stringify(categories.slice(0, 3), null, 2)}
-                {categories.length > 3 && `\n... and ${categories.length - 3} more`}
-              </pre>
-            </details>
-          )}
-          <Button 
-            variant="outline" 
-            size="sm" 
-            onClick={loadCategories}
-            className="mt-2"
-          >
-            Reload Categories
           </Button>
         </div>
       )}

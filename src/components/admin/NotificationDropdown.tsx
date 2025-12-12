@@ -63,7 +63,7 @@ export function NotificationDropdown({ className }: NotificationDropdownProps) {
       icon: AlertTriangle,
       color: 'text-orange-500',
       bgColor: 'bg-orange-50',
-      href: '/admin/inventory?filter=lowStock'
+      href: '/admin?section=inventory&filter=lowStock'
     },
     {
       id: 'pending-orders',
@@ -72,7 +72,7 @@ export function NotificationDropdown({ className }: NotificationDropdownProps) {
       icon: Clock,
       color: 'text-blue-500',
       bgColor: 'bg-blue-50',
-      href: '/admin/orders?status=pending'
+      href: '/admin?section=orders&status=pending'
     },
     {
       id: 'failed-notifications',
@@ -81,7 +81,7 @@ export function NotificationDropdown({ className }: NotificationDropdownProps) {
       icon: Mail,
       color: 'text-red-500',
       bgColor: 'bg-red-50',
-      href: '/admin/notifications?status=failed'
+      href: '/admin?section=overview'
     },
     {
       id: 'recent-notifications',
@@ -90,7 +90,7 @@ export function NotificationDropdown({ className }: NotificationDropdownProps) {
       icon: Bell,
       color: 'text-green-500',
       bgColor: 'bg-green-50',
-      href: '/admin/notifications'
+      href: '/admin?section=overview'
     }
   ];
 

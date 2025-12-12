@@ -42,9 +42,20 @@ export async function GET(request: NextRequest) {
     });
 
     // Get pending orders count
+    // Only count orders that are actually pending and have order items (real orders, not empty)
+    // Also ensure they have valid customer email and total > 0
     const pendingOrdersCount = await prisma.order.count({
       where: {
-        status: 'pending'
+        status: 'pending',
+        customerEmail: {
+          not: '' // Ensure customer email is not empty
+        },
+        total: {
+          gt: 0
+        },
+        orderItems: {
+          some: {} // Ensure order has at least one item
+        }
       }
     });
 

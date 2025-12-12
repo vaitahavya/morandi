@@ -40,7 +40,6 @@ export default function FeaturedProductsSection() {
         }
       } catch (err) {
         setError('Failed to load featured products');
-        console.error('Error fetching featured products:', err);
       } finally {
         setLoading(false);
       }
@@ -122,7 +121,7 @@ export default function FeaturedProductsSection() {
   }
 
   return (
-    <section className="py-24 bg-gradient-to-br from-muted/50 via-background to-accent/20 relative overflow-hidden">
+    <section className="section-spacing bg-gradient-to-br from-muted/50 via-background to-accent/20 relative overflow-hidden">
       {/* Decorative background elements */}
       <div className="absolute inset-0 opacity-40">
         <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-clay-pink/10 rounded-full blur-3xl" />
@@ -131,29 +130,29 @@ export default function FeaturedProductsSection() {
       
       <div className="section-container relative z-10">
         {/* Section Header */}
-        <div className="text-center mb-16 space-y-4">
-          <Badge variant="secondary" className="mb-4">
+        <div className="text-center mb-12 sm:mb-16 space-y-3 sm:space-y-4">
+          <Badge variant="secondary" className="mb-3 sm:mb-4">
             Bestsellers
           </Badge>
           <h2 className="heading-lg text-foreground">
             Our Handpicked Favorites
           </h2>
-          <p className="text-lg text-muted-foreground max-w-2xl mx-auto leading-relaxed">
+          <p className="text-base sm:text-lg text-muted-foreground max-w-2xl mx-auto leading-relaxed px-4">
             Carefully curated pieces that blend comfort, style, and sustainability for every stage of motherhood
           </p>
-          <div className="w-24 h-1 bg-primary mx-auto rounded-full mt-6" />
+          <div className="w-20 sm:w-24 h-1 bg-primary mx-auto rounded-full mt-4 sm:mt-6" />
         </div>
         
-        {/* Products Grid */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-12">
+        {/* Products Grid - Auto-adjusting columns */}
+        <div className="card-grid mb-8 sm:mb-12">
           {featuredProducts.map((product, index) => (
             <Card 
               key={product.id}
-              className="group border-0 shadow-soft hover:shadow-card transition-all duration-500 overflow-hidden hover:-translate-y-2 bg-card/80 backdrop-blur-sm"
+              className="group border-0 shadow-soft hover:shadow-card transition-all duration-500 overflow-hidden hover:-translate-y-2 bg-card/80 backdrop-blur-sm min-w-0 w-full h-full flex flex-col"
               style={{ animationDelay: `${index * 100}ms` }}
             >
               {/* Product Image */}
-              <div className="relative h-80 overflow-hidden bg-muted/30">
+              <div className="relative aspect-square sm:h-72 lg:h-80 overflow-hidden bg-muted/30">
                 <Image
                   src={getProductImage(product)}
                   alt={product.name}
@@ -198,27 +197,27 @@ export default function FeaturedProductsSection() {
               </div>
               
               {/* Product Info */}
-              <CardContent className="p-5 space-y-3">
-                <div>
-                  <h3 className="font-serif font-semibold text-lg mb-2 text-foreground group-hover:text-primary transition-colors line-clamp-1">
-                    <Link href={`/products/${product.slug || product.id}`} className="hover:underline">
+              <CardContent className="p-3 sm:p-4 lg:p-5 space-y-2 sm:space-y-3 min-w-0 w-full flex-grow flex flex-col">
+                <div className="min-w-0 w-full">
+                  <h3 className="font-serif font-semibold text-sm sm:text-base lg:text-lg mb-1.5 sm:mb-2 text-foreground group-hover:text-primary transition-colors line-clamp-2 min-w-0 break-words">
+                    <Link href={`/products/${product.slug || product.id}`} className="hover:underline break-words">
                       {product.name}
                     </Link>
                   </h3>
                   
                   {/* Price */}
-                  <div className="flex items-center gap-2 mb-3">
+                  <div className="flex items-center gap-2 mb-2 sm:mb-3 flex-wrap min-w-0 w-full">
                     {product.salePrice ? (
                       <>
-                        <p className="text-2xl font-bold text-foreground">
+                        <p className="text-base sm:text-lg lg:text-xl xl:text-2xl font-bold text-foreground truncate">
                           {formatPrice(product.salePrice)}
                         </p>
-                        <p className="text-lg text-muted-foreground line-through">
+                        <p className="text-sm sm:text-base lg:text-lg text-muted-foreground line-through truncate">
                           {formatPrice(product.price)}
                         </p>
                       </>
                     ) : (
-                      <p className="text-2xl font-bold text-foreground">
+                      <p className="text-base sm:text-lg lg:text-xl xl:text-2xl font-bold text-foreground truncate">
                         {formatPrice(product.price)}
                       </p>
                     )}
@@ -231,7 +230,7 @@ export default function FeaturedProductsSection() {
         
         {/* CTA Button */}
         <div className="text-center">
-          <Button asChild size="lg" className="bg-clay-pink hover:bg-clay-pink/90 text-white shadow-lg px-12 py-6 text-lg rounded-xl">
+          <Button asChild size="lg" className="bg-clay-pink hover:bg-clay-pink/90 text-white shadow-lg px-8 sm:px-12 py-5 sm:py-6 text-base sm:text-lg rounded-xl">
             <Link href="/products">
               Shop All Products
             </Link>

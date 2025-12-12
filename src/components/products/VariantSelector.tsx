@@ -67,17 +67,17 @@ export default function VariantSelector({ type, options, selectedValue, onSelect
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-3">
-        <h3 className="text-lg font-semibold">{label}</h3>
+      <div className="flex items-center justify-between mb-2 sm:mb-3">
+        <h3 className="text-base sm:text-lg font-semibold">{label}</h3>
         {type === 'size' && (
-          <button className="text-sm text-primary-600 hover:text-primary-700">
+          <button className="text-xs sm:text-sm text-primary-600 hover:text-primary-700 active:text-primary-800">
             Size Guide
           </button>
         )}
       </div>
       
       <div className={`grid gap-2 ${
-        isColor ? 'grid-cols-6 sm:grid-cols-8' : 'grid-cols-3'
+        isColor ? 'grid-cols-5 sm:grid-cols-6 md:grid-cols-8' : 'grid-cols-3 sm:grid-cols-4'
       }`}>
         {options.map((option) => {
           const isSelected = selectedValue === option.value;
@@ -103,7 +103,7 @@ export default function VariantSelector({ type, options, selectedValue, onSelect
                 } ${
                   !option.available
                     ? 'opacity-50 cursor-not-allowed'
-                    : 'hover:scale-105'
+                    : 'hover:scale-105 active:scale-95'
                 }`}
                 style={{
                   backgroundColor: isHexColor ? colorValue : 'transparent',
@@ -112,11 +112,12 @@ export default function VariantSelector({ type, options, selectedValue, onSelect
                   backgroundPosition: 'center',
                 }}
                 title={option.name}
+                aria-label={`Select ${option.name}`}
               >
                 {isSelected && (
                   <Check
-                    size={16}
-                    className="absolute inset-0 m-auto text-white drop-shadow-sm"
+                    size={12}
+                    className="absolute inset-0 m-auto text-white drop-shadow-sm sm:w-4 sm:h-4"
                   />
                 )}
                 {!option.available && (
@@ -135,21 +136,22 @@ export default function VariantSelector({ type, options, selectedValue, onSelect
               onMouseEnter={() => setHoveredValue(option.value)}
               onMouseLeave={() => setHoveredValue(null)}
               disabled={!option.available}
-              className={`py-2 px-4 rounded-md border text-sm font-medium transition-colors ${
+              className={`py-1.5 sm:py-2 px-2 sm:px-4 rounded-md border text-xs sm:text-sm font-medium transition-colors ${
                 isSelected
                   ? 'border-primary-600 bg-primary-50 text-primary-700'
                   : isHovered
                   ? 'border-gray-400 bg-gray-50'
-                  : 'border-gray-300 text-gray-700 hover:border-gray-400'
+                  : 'border-gray-300 text-gray-700 hover:border-gray-400 active:bg-gray-100'
               } ${
                 !option.available
                   ? 'opacity-50 cursor-not-allowed line-through'
                   : ''
               }`}
+              aria-label={`Select size ${option.name}`}
             >
               {option.name}
               {option.price && (
-                <span className="ml-1 text-xs text-gray-500">
+                <span className="ml-1 text-[10px] sm:text-xs text-gray-500">
                   (+₹{option.price})
                 </span>
               )}
@@ -159,7 +161,7 @@ export default function VariantSelector({ type, options, selectedValue, onSelect
       </div>
       
       {selectedValue && (
-        <p className="mt-2 text-sm text-gray-600">
+        <p className="mt-2 text-xs sm:text-sm text-gray-600">
           Selected: {options.find(opt => opt.value === selectedValue)?.name}
         </p>
       )}

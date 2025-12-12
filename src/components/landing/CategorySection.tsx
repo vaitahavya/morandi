@@ -41,7 +41,6 @@ export default function CategorySection() {
         }
       } catch (err) {
         setError('Failed to load categories');
-        console.error('Error fetching categories:', err);
       } finally {
         setLoading(false);
       }
@@ -72,6 +71,19 @@ export default function CategorySection() {
     };
     
     return categoryImages[category.slug] || '/images/banners/hero-main.jpg';
+  };
+
+  // Get subtle color variation for card identification
+  const getCardColorVariant = (index: number) => {
+    const variants = [
+      'bg-clay-pink/8 border-clay-pink/20', // Clay pink tint
+      'bg-soft-sage/8 border-soft-sage/20', // Soft sage tint
+      'bg-amber-200/8 border-amber-200/20', // Warm amber tint
+      'bg-rose-200/8 border-rose-200/20', // Rose tint
+      'bg-teal-200/8 border-teal-200/20', // Teal tint
+      'bg-violet-200/8 border-violet-200/20', // Violet tint
+    ];
+    return variants[index % variants.length];
   };
 
   if (loading) {
@@ -130,34 +142,34 @@ export default function CategorySection() {
   }
 
   return (
-    <section className="py-24 bg-background relative overflow-hidden">
+    <section className="section-spacing bg-background relative overflow-hidden w-full">
       {/* Decorative background */}
       <div className="absolute inset-0 bg-gradient-to-br from-muted/30 via-background to-accent/20" />
       
-      <div className="section-container relative z-10">
+      <div className="section-container relative z-10 w-full max-w-full">
         {/* Section Header */}
-        <div className="text-center mb-16 space-y-4">
-          <h2 className="heading-lg text-foreground">
+        <div className="text-center mb-8 sm:mb-12 lg:mb-16 space-y-3 sm:space-y-4 w-full">
+          <h2 className="heading-lg text-foreground px-2">
             Our Products
           </h2>
-          <p className="text-lg text-muted-foreground max-w-2xl mx-auto leading-relaxed">
+          <p className="text-sm sm:text-base lg:text-lg text-muted-foreground max-w-2xl mx-auto leading-relaxed px-4">
             Discover our carefully curated collections designed for every stage of motherhood
           </p>
-          <div className="w-24 h-1 bg-primary mx-auto rounded-full mt-6" />
+          <div className="w-16 sm:w-20 lg:w-24 h-0.5 sm:h-1 bg-primary mx-auto rounded-full mt-3 sm:mt-4 lg:mt-6" />
         </div>
         
-        {/* Categories Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+        {/* Categories Grid - Responsive 3-column on desktop, 2 on tablet, 1 on mobile */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5 lg:gap-6 xl:gap-8 w-full">
           {categories.map((category, index) => (
             <Link 
               key={category.id}
               href={`/products?category=${category.slug}`}
-              className="group block"
+              className="group block min-w-0 w-full"
               style={{ animationDelay: `${index * 150}ms` }}
             >
-              <Card className="overflow-hidden border-0 shadow-soft hover:shadow-card transition-all duration-500 hover:-translate-y-2 bg-card/80 backdrop-blur-sm">
+              <Card className={`overflow-hidden border shadow-soft hover:shadow-card transition-all duration-500 hover:-translate-y-2 ${getCardColorVariant(index)} backdrop-blur-sm min-w-0 w-full flex flex-col`}>
                 {/* Category Image */}
-                <div className="relative h-80 overflow-hidden">
+                <div className="relative aspect-[4/3] sm:aspect-[3/2] lg:aspect-[4/3] w-full overflow-hidden flex-shrink-0">
                   <Image
                     src={getCategoryImage(category)}
                     alt={category.name}
@@ -168,25 +180,18 @@ export default function CategorySection() {
                   <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent" />
                   
                   {/* Category Content Overlay */}
-                  <div className="absolute inset-0 flex flex-col justify-end p-6">
-                    <h3 className="text-3xl font-serif font-bold text-white mb-2 transform group-hover:translate-y-0 transition-transform">
+                  <div className="absolute inset-0 flex flex-col justify-end p-4 sm:p-5 lg:p-6 min-w-0 w-full">
+                    <h3 className="text-lg sm:text-xl lg:text-2xl xl:text-3xl font-serif font-bold text-white mb-2 sm:mb-2 lg:mb-2 transform group-hover:translate-y-0 transition-transform min-w-0 break-words line-clamp-2 leading-tight">
                       {category.name}
                     </h3>
-                    <p className="text-white/90 font-sans mb-2 opacity-90 group-hover:opacity-100 transition-opacity">
+                    <p className="text-white/90 font-sans text-xs sm:text-sm lg:text-base mb-3 sm:mb-3 lg:mb-4 opacity-90 group-hover:opacity-100 transition-opacity line-clamp-2 min-w-0 break-words leading-snug">
                       {category.description || `Explore ${category.name.toLowerCase()} for every stage of motherhood`}
                     </p>
                     
-                    {/* Product Count */}
-                    {category.productCount && (
-                      <p className="text-white/70 text-sm mb-4">
-                        {category.productCount} {category.productCount === 1 ? 'product' : 'products'}
-                      </p>
-                    )}
-                    
                     {/* Shop Now Button */}
-                    <div className="flex items-center text-white font-medium group-hover:text-clay-pink transition-colors">
+                    <div className="flex items-center text-white font-medium text-xs sm:text-sm lg:text-base group-hover:text-clay-pink transition-colors">
                       <span className="mr-2">Shop Now</span>
-                      <ArrowRight className="w-5 h-5 group-hover:translate-x-2 transition-transform duration-300" />
+                      <ArrowRight className="w-4 h-4 sm:w-4 sm:h-4 lg:w-5 lg:h-5 group-hover:translate-x-2 transition-transform duration-300 flex-shrink-0" />
                     </div>
                   </div>
                 </div>
@@ -196,12 +201,12 @@ export default function CategorySection() {
         </div>
         
         {/* View All Categories CTA */}
-        <div className="mt-12 text-center">
+        <div className="mt-6 sm:mt-8 lg:mt-12 text-center w-full">
           <Button 
             asChild 
             variant="outline" 
             size="lg"
-            className="border-2 border-primary/30 hover:bg-primary hover:text-primary-foreground transition-all duration-300 px-12 py-6 text-lg rounded-xl"
+            className="border-2 border-primary/30 hover:bg-primary hover:text-primary-foreground transition-all duration-300 px-6 sm:px-8 lg:px-12 py-4 sm:py-5 lg:py-6 text-sm sm:text-base lg:text-lg rounded-xl w-full sm:w-auto"
           >
             <Link href="/products">
               View All Categories
@@ -210,7 +215,7 @@ export default function CategorySection() {
         </div>
         
         {/* Decorative Elements */}
-        <div className="mt-16 flex justify-center items-center gap-4">
+        <div className="mt-8 sm:mt-12 lg:mt-16 flex justify-center items-center gap-3 sm:gap-4">
           {[16, 20, 16].map((size, i) => (
             <div 
               key={i} 

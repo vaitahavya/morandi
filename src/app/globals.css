@@ -90,6 +90,18 @@
   html {
     scroll-behavior: smooth;
   }
+  
+  /* Prevent content overflow on mobile */
+  img, video {
+    max-width: 100%;
+    height: auto;
+  }
+  
+  /* Better word breaking for long text */
+  p, h1, h2, h3, h4, h5, h6, span, div {
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+  }
 }
 
 @layer components {
@@ -124,26 +136,72 @@
     @apply border-2 border-clay-pink text-clay-pink px-8 py-3.5 rounded-xl font-medium hover:bg-clay-pink hover:text-morandi-white transition-all duration-300;
   }
   
-  /* Modern section container */
+  /* Modern section container - Enhanced with better responsive padding */
   .section-container {
-    @apply max-w-7xl mx-auto px-4 sm:px-6 lg:px-8;
+    @apply w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 xl:px-12;
   }
   
-  /* Elegant headings */
+  /* Content container - For narrower content areas */
+  .content-container {
+    @apply w-full max-w-5xl mx-auto px-4 sm:px-6 lg:px-8;
+  }
+  
+  /* Wide container - For full-width sections with internal constraints */
+  .wide-container {
+    @apply w-full max-w-[1920px] mx-auto px-4 sm:px-6 lg:px-8 xl:px-12 2xl:px-16;
+  }
+  
+  /* Elegant headings with improved responsive scaling */
   .heading-xl {
-    @apply text-4xl md:text-5xl lg:text-6xl font-serif font-bold tracking-tight;
+    @apply text-3xl sm:text-4xl md:text-5xl lg:text-6xl xl:text-7xl font-serif font-bold tracking-tight leading-tight;
   }
   
   .heading-lg {
-    @apply text-3xl md:text-4xl lg:text-5xl font-serif font-bold tracking-tight;
+    @apply text-2xl sm:text-3xl md:text-4xl lg:text-5xl xl:text-6xl font-serif font-bold tracking-tight leading-tight;
   }
   
   .heading-md {
-    @apply text-2xl md:text-3xl lg:text-4xl font-serif font-semibold tracking-tight;
+    @apply text-xl sm:text-2xl md:text-3xl lg:text-4xl font-serif font-semibold tracking-tight leading-snug;
   }
   
   .heading-sm {
-    @apply text-xl md:text-2xl font-serif font-semibold tracking-tight;
+    @apply text-lg sm:text-xl md:text-2xl font-serif font-semibold tracking-tight leading-snug;
+  }
+  
+  /* Responsive grid utilities */
+  .grid-auto-fit {
+    @apply grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6 lg:gap-8;
+  }
+  
+  .grid-auto-fill {
+    @apply grid grid-cols-[repeat(auto-fill,minmax(250px,1fr))] gap-4 sm:gap-6 lg:gap-8;
+  }
+  
+  /* Balanced card grid - Auto-adjusts columns based on screen size */
+  .card-grid {
+    @apply grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-3 sm:gap-4 lg:gap-5 xl:gap-6;
+  }
+  
+  .card-grid-2 {
+    @apply grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 lg:gap-6 xl:gap-8;
+  }
+  
+  .card-grid-3 {
+    @apply grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 lg:gap-6 xl:gap-8;
+  }
+  
+  /* Card overflow prevention */
+  .card-safe {
+    @apply min-w-0 w-full overflow-hidden;
+  }
+  
+  /* Text overflow utilities */
+  .text-safe {
+    @apply min-w-0 break-words overflow-wrap-anywhere;
+  }
+  
+  .text-truncate-safe {
+    @apply truncate min-w-0 max-w-full;
   }
   
   /* Glass effect */
@@ -151,8 +209,73 @@
     @apply bg-white/80 backdrop-blur-md border border-white/20;
   }
   
-  /* Elegant card */
+  /* Elegant card with responsive padding */
   .elegant-card {
-    @apply bg-card rounded-2xl p-6 shadow-soft hover:shadow-card transition-all duration-300;
+    @apply bg-card rounded-2xl p-4 sm:p-5 lg:p-6 shadow-soft hover:shadow-card transition-all duration-300;
+  }
+  
+  /* Balanced spacing utilities */
+  .section-spacing {
+    @apply py-12 sm:py-16 md:py-20 lg:py-24 xl:py-28;
+  }
+  
+  .section-spacing-sm {
+    @apply py-8 sm:py-12 md:py-16 lg:py-20;
+  }
+  
+  .section-spacing-lg {
+    @apply py-16 sm:py-20 md:py-24 lg:py-32 xl:py-40;
+  }
+  
+  /* Content alignment utilities */
+  .content-center {
+    @apply flex flex-col items-center justify-center text-center;
+  }
+  
+  .content-left {
+    @apply flex flex-col items-start justify-center text-left;
+  }
+  
+  .content-right {
+    @apply flex flex-col items-end justify-center text-right;
+  }
+  
+  /* Responsive text alignment */
+  .text-responsive {
+    @apply text-left sm:text-center lg:text-left;
+  }
+  
+  /* Balanced aspect ratios */
+  .aspect-product {
+    @apply aspect-square sm:aspect-[4/5] lg:aspect-square;
+  }
+  
+  .aspect-hero {
+    @apply aspect-[16/9] sm:aspect-[21/9] lg:aspect-[16/7];
+  }
+  
+  /* Hide scrollbar but keep functionality */
+  .scrollbar-hide {
+    -ms-overflow-style: none;  /* IE and Edge */
+    scrollbar-width: none;  /* Firefox */
+  }
+  
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;  /* Chrome, Safari and Opera */
+  }
+  
+  /* Smooth transitions for responsive changes */
+  .responsive-transition {
+    @apply transition-all duration-300 ease-in-out;
+  }
+  
+  /* Mobile-safe container - prevents horizontal overflow */
+  .mobile-safe {
+    @apply min-w-0 w-full max-w-full overflow-x-hidden;
+  }
+  
+  /* Safe text container - prevents text overflow */
+  .text-container-safe {
+    @apply min-w-0 w-full break-words overflow-wrap-anywhere hyphens-auto;
   }
 }

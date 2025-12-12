@@ -25,11 +25,11 @@ export default function HeroSection() {
       
       {/* Split Layout for Content Only */}
       <div className="relative z-10 h-full flex items-center">
-        <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid grid-cols-3 gap-8 h-full">
-            {/* Left Section - Text Content (2/3 width) */}
-            <div className="col-span-2 flex items-center">
-              <div className="max-w-2xl space-y-8 animate-in fade-in slide-in-from-left-4 duration-1000">
+        <div className="section-container w-full">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 lg:gap-8 h-full">
+            {/* Left Section - Text Content (2/3 width on desktop, full on mobile) */}
+            <div className="col-span-1 lg:col-span-2 flex items-center">
+              <div className="max-w-2xl space-y-6 sm:space-y-8 animate-in fade-in slide-in-from-left-4 duration-1000">
                 {/* Premium Badge */}
                 <Badge variant="secondary" className="bg-white/20 backdrop-blur-sm border-none text-white px-4 py-2 text-sm font-medium">
                   <Sparkles className="w-4 h-4 mr-2" />
@@ -42,16 +42,16 @@ export default function HeroSection() {
                 </h1>
                 
                 {/* Subtext */}
-                <p className="text-xl md:text-2xl text-white font-sans leading-relaxed drop-shadow-lg text-left">
+                <p className="text-base sm:text-lg md:text-xl lg:text-2xl text-white font-sans leading-relaxed drop-shadow-lg text-left">
                   Comfortable maternity and baby apparel crafted for every stage. Shop postpartum wear, babywear, and stylish women's wear you'll love to live in.
                 </p>
                 
                 {/* CTA Buttons */}
-                <div className="flex flex-col sm:flex-row gap-4 pt-4">
+                <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 pt-2 sm:pt-4">
                   <Button 
                     asChild 
                     size="lg" 
-                    className="bg-clay-pink hover:bg-clay-pink/90 text-white shadow-2xl hover:shadow-clay-pink/50 transition-all duration-300 text-lg px-8 py-6 rounded-xl border-0"
+                    className="bg-clay-pink hover:bg-clay-pink/90 text-white shadow-2xl hover:shadow-clay-pink/50 transition-all duration-300 text-base sm:text-lg px-6 sm:px-8 py-5 sm:py-6 rounded-xl border-0 w-full sm:w-auto"
                   >
                     <Link href="/products">
                       Shop Maternity Wear
@@ -61,7 +61,7 @@ export default function HeroSection() {
                     asChild 
                     variant="outline" 
                     size="lg"
-                    className="border-2 border-amber-200 text-amber-200 hover:bg-amber-200 hover:text-gray-800 shadow-xl transition-all duration-300 text-lg px-8 py-6 rounded-xl bg-transparent"
+                    className="border-2 border-amber-200 text-amber-200 hover:bg-amber-200 hover:text-gray-800 shadow-xl transition-all duration-300 text-base sm:text-lg px-6 sm:px-8 py-5 sm:py-6 rounded-xl bg-transparent w-full sm:w-auto"
                   >
                     <Link href="/products">
                       Explore Collections
@@ -70,25 +70,25 @@ export default function HeroSection() {
                 </div>
                 
                 {/* Trust Indicators */}
-                <div className="flex flex-wrap gap-6 pt-6 text-white/90">
+                <div className="flex flex-wrap gap-4 sm:gap-6 pt-4 sm:pt-6 text-white/90">
                   <div className="flex items-center gap-2">
                     <div className="w-2 h-2 bg-soft-sage rounded-full" />
-                    <span className="text-sm font-medium">Free Shipping</span>
+                    <span className="text-xs sm:text-sm font-medium">Free Shipping</span>
                   </div>
                   <div className="flex items-center gap-2">
                     <div className="w-2 h-2 bg-clay-pink rounded-full" />
-                    <span className="text-sm font-medium">Sustainable Fabrics</span>
+                    <span className="text-xs sm:text-sm font-medium">Sustainable Fabrics</span>
                   </div>
                   <div className="flex items-center gap-2">
                     <div className="w-2 h-2 bg-soft-sage rounded-full" />
-                    <span className="text-sm font-medium">Easy Returns</span>
+                    <span className="text-xs sm:text-sm font-medium">Easy Returns</span>
                   </div>
                 </div>
               </div>
             </div>
             
-            {/* Right Section - Empty space for image visibility (1/3 width) */}
-            <div className="col-span-1">
+            {/* Right Section - Empty space for image visibility (1/3 width on desktop, hidden on mobile) */}
+            <div className="hidden lg:block col-span-1">
               {/* This space is intentionally left empty to show the background image */}
             </div>
           </div>

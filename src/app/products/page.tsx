@@ -160,7 +160,7 @@ export default function ProductsPage() {
 
   if (loading) {
     return (
-      <div className="mx-auto max-w-7xl px-4 py-10 md:px-6 lg:px-8">
+      <div className="section-container section-spacing-sm">
         <div className="flex items-center justify-center py-20">
           <LoadingSpinner size="lg" />
         </div>
@@ -169,18 +169,18 @@ export default function ProductsPage() {
   }
 
   return (
-    <div className="mx-auto max-w-7xl px-4 py-10 md:px-6 lg:px-8">
+    <div className="section-container section-spacing-sm">
       
-      <div className="mb-8">
-        <h1 className="mb-4 text-3xl font-bold">All Products</h1>
+      <div className="mb-6 sm:mb-8">
+        <h1 className="mb-3 sm:mb-4 text-2xl sm:text-3xl font-bold">All Products</h1>
         <SearchBar onSearch={handleSearch} />
       </div>
 
       {/* Stylish Variation Filters */}
-      <div className="mb-8">
-        <div className="flex flex-wrap items-center gap-4">
+      <div className="mb-6 sm:mb-8">
+        <div className="flex flex-wrap items-center gap-2 sm:gap-4">
           {loadingCategories ? (
-            <div className="px-4 py-2 text-sm text-gray-500 bg-gray-100 rounded-md">
+            <div className="px-3 sm:px-4 py-2 text-xs sm:text-sm text-gray-500 bg-gray-100 rounded-md">
               Loading categories...
             </div>
           ) : categories.length > 0 ? (
@@ -198,7 +198,7 @@ export default function ProductsPage() {
           {selectedCategory && (
             <button
               onClick={handleClearFilters}
-              className="text-sm text-gray-500 hover:text-gray-700 underline"
+              className="text-xs sm:text-sm text-gray-500 hover:text-gray-700 underline"
             >
               Clear filters
             </button>
@@ -206,7 +206,7 @@ export default function ProductsPage() {
         </div>
       </div>
 
-      <div className="grid gap-8 lg:grid-cols-4">
+      <div className="grid gap-6 sm:gap-8 lg:grid-cols-4">
         {/* Filters sidebar */}
         <div className="lg:col-span-1">
           <ProductFilters
@@ -246,17 +246,19 @@ export default function ProductsPage() {
             )
           ) : (
             <>
-              <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+              <div className="card-grid-3">
                 {products.map((product) => (
                   <ProductCard key={product.id} product={product} />
                 ))}
               </div>
               
-              <Pagination
-                currentPage={currentPage}
-                totalPages={pagination.totalPages}
-                onPageChange={handlePageChange}
-              />
+              <div className="mt-6 sm:mt-8">
+                <Pagination
+                  currentPage={currentPage}
+                  totalPages={pagination.totalPages}
+                  onPageChange={handlePageChange}
+                />
+              </div>
             </>
           )}
         </div>

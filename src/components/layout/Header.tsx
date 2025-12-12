@@ -2,7 +2,8 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { ChevronDown, Search, X, Heart, User, LogOut, ShoppingBag } from 'lucide-react';
+import { useRouter } from 'next/navigation';
+import { Search, Heart, User, LogOut, ShoppingBag, Package } from 'lucide-react';
 import { useSession, signOut } from 'next-auth/react';
 import MobileMenu from './MobileMenu';
 import CartDrawer from '@/components/cart/CartDrawer';
@@ -18,7 +19,6 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 
 // Admin user emails mapping (should match AdminAuthGuard)
@@ -31,10 +31,9 @@ const ADMIN_USERS: Record<string, string> = {
 };
 
 export default function Header() {
-  const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
-  const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
   const [isClient, setIsClient] = useState(false);
+  const router = useRouter();
   const wishlistCount = useWishlistStore((state) => state.getItemCount());
   const { data: session, status } = useSession();
 
@@ -46,7 +45,7 @@ export default function Header() {
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
     if (searchQuery.trim()) {
-      window.location.href = `/products?search=${encodeURIComponent(searchQuery.trim())}`;
+      router.push(`/products?search=${encodeURIComponent(searchQuery.trim())}`);
     }
   };
 
@@ -55,174 +54,181 @@ export default function Header() {
   };
 
   return (
-    <>
-      <header className="sticky top-0 z-40 w-full glass border-b border-border/40 shadow-sm">
-        <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-4 md:px-6 lg:px-8">
-          {/* Mobile menu */}
+    <header className="sticky top-0 z-50 w-full bg-white border-b border-gray-200 shadow-sm">
+      <div className="section-container">
+        {/* Mobile Layout */}
+        <div className="flex items-center justify-between gap-2 py-3 lg:hidden">
           <MobileMenu />
-
-          {/* Logo */}
-          <Logo />
-
-          {/* Desktop Navigation */}
-          <nav className="hidden space-x-8 md:flex items-center">
-            <Link href="/" className="text-sm font-medium text-foreground hover:text-primary transition-colors">
-              Home
-            </Link>
-            <Link href="/products" className="text-sm font-medium text-foreground hover:text-primary transition-colors">
-              Shop
-            </Link>
-            <Link href="/collections" className="text-sm font-medium text-foreground hover:text-primary transition-colors">
-              Collections
-            </Link>
-            <Link href="/about" className="text-sm font-medium text-foreground hover:text-primary transition-colors">
-              About
-            </Link>
-            <Link href="/contact" className="text-sm font-medium text-foreground hover:text-primary transition-colors">
-              Contact
-            </Link>
-          </nav>
-
-          {/* Right side */}
-          <div className="flex items-center gap-2">
-            {/* Search button */}
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => setIsSearchOpen(true)}
-              className="hidden md:flex"
-            >
-              <Search className="h-5 w-5" />
-            </Button>
-
-            {/* Wishlist */}
+          <div className="flex-1 flex justify-center">
+            <Logo />
+          </div>
+          <div className="flex items-center gap-1">
             <Button
               variant="ghost"
               size="icon"
               asChild
-              className="relative hidden md:flex"
+              className="h-9 w-9"
             >
+              <Link href="/products">
+                <Search className="h-5 w-5" />
+              </Link>
+            </Button>
+            <CartDrawer />
+            {status === 'loading' ? (
+              <div className="w-6 h-6 border-2 border-gray-300 border-t-primary rounded-full animate-spin"></div>
+            ) : session ? (
+              <Button
+                variant="ghost"
+                size="icon"
+                asChild
+                className="h-9 w-9"
+              >
+                <Link href="/account">
+                  <User className="h-5 w-5" />
+                </Link>
+              </Button>
+            ) : (
+              <Button
+                variant="ghost"
+                size="icon"
+                asChild
+                className="h-9 w-9"
+              >
+                <Link href="/auth/signin">
+                  <User className="h-5 w-5" />
+                </Link>
+              </Button>
+            )}
+          </div>
+        </div>
+
+        {/* Desktop Layout */}
+        <div className="hidden lg:flex items-center py-4">
+          {/* Logo */}
+          <div className="flex-shrink-0 mr-8">
+            <Logo />
+          </div>
+
+          {/* Navigation Links */}
+          <nav className="flex items-center gap-6 mr-8">
+            <Link href="/" className="text-sm font-medium text-gray-700 hover:text-primary-600 transition-colors">
+              Home
+            </Link>
+            <Link href="/products" className="text-sm font-medium text-gray-700 hover:text-primary-600 transition-colors">
+              Shop
+            </Link>
+            <Link href="/collections" className="text-sm font-medium text-gray-700 hover:text-primary-600 transition-colors">
+              Collections
+            </Link>
+            <Link href="/about" className="text-sm font-medium text-gray-700 hover:text-primary-600 transition-colors">
+              About
+            </Link>
+            <Link href="/contact" className="text-sm font-medium text-gray-700 hover:text-primary-600 transition-colors">
+              Contact
+            </Link>
+          </nav>
+
+          {/* Search Bar */}
+          <div className="flex-1 max-w-md mr-8">
+            <form onSubmit={handleSearch} className="relative">
+              <Input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Search products..."
+                className="w-full h-9 pl-3 pr-10"
+              />
+              <Button
+                type="submit"
+                variant="ghost"
+                size="icon"
+                className="absolute right-0 top-0 h-9 w-9 hover:bg-transparent"
+                aria-label="Search"
+              >
+                <Search className="h-4 w-4 text-gray-500" />
+              </Button>
+            </form>
+          </div>
+
+          {/* Right Side Actions */}
+          <div className="flex items-center gap-4 flex-shrink-0">
+            {/* Wishlist */}
+            <Button variant="ghost" size="icon" asChild className="h-9 w-9 relative">
               <Link href="/wishlist">
                 <Heart className="h-5 w-5" />
                 {isClient && wishlistCount > 0 && (
-                  <Badge className="absolute -right-1 -top-1 h-5 min-w-5 items-center justify-center rounded-full bg-destructive text-destructive-foreground border-0 px-1 text-[10px]">
+                  <Badge className="absolute -top-1 -right-1 h-5 w-5 p-0 flex items-center justify-center bg-primary-600 text-white text-xs">
                     {wishlistCount}
                   </Badge>
                 )}
               </Link>
             </Button>
 
-            {/* User Menu */}
-            <div className="relative hidden md:block">
-              {status === 'loading' ? (
-                <div className="w-6 h-6 border-2 border-border border-t-primary rounded-full animate-spin"></div>
-              ) : session ? (
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" className="gap-2">
-                      <User className="h-4 w-4" />
-                      <span className="text-sm hidden lg:inline">{session.user?.name || session.user?.email}</span>
-                      <ChevronDown className="h-4 w-4" />
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end" className="w-48">
-                    <DropdownMenuLabel>My Account</DropdownMenuLabel>
-                    <DropdownMenuSeparator />
-                    <DropdownMenuItem asChild>
-                      <Link href="/account" className="cursor-pointer">
-                        <User className="mr-2 h-4 w-4" />
-                        Profile
-                      </Link>
-                    </DropdownMenuItem>
-                    {session?.user?.email && ADMIN_USERS[session.user.email] && (
+            {/* Account Dropdown */}
+            {status === 'loading' ? (
+              <div className="w-6 h-6 border-2 border-gray-300 border-t-primary rounded-full animate-spin"></div>
+            ) : session ? (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" size="icon" className="h-9 w-9">
+                    <User className="h-5 w-5" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-56">
+                  <DropdownMenuLabel>
+                    <div>
+                      <p className="font-semibold">{session.user?.name || 'User'}</p>
+                      <p className="text-xs text-gray-500 font-normal">{session.user?.email}</p>
+                    </div>
+                  </DropdownMenuLabel>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem asChild>
+                    <Link href="/account" className="cursor-pointer">
+                      <User className="mr-2 h-4 w-4" />
+                      My Profile
+                    </Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem asChild>
+                    <Link href="/account/orders" className="cursor-pointer">
+                      <Package className="mr-2 h-4 w-4" />
+                      My Orders
+                    </Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem asChild>
+                    <Link href="/wishlist" className="cursor-pointer">
+                      <Heart className="mr-2 h-4 w-4" />
+                      My Wishlist
+                    </Link>
+                  </DropdownMenuItem>
+                  {session?.user?.email && ADMIN_USERS[session.user.email] && (
+                    <>
+                      <DropdownMenuSeparator />
                       <DropdownMenuItem asChild>
                         <Link href="/admin" className="cursor-pointer">
                           <ShoppingBag className="mr-2 h-4 w-4" />
                           Admin Dashboard
                         </Link>
                       </DropdownMenuItem>
-                    )}
-                    <DropdownMenuSeparator />
-                    <DropdownMenuItem onClick={handleSignOut} className="cursor-pointer">
-                      <LogOut className="mr-2 h-4 w-4" />
-                      Sign Out
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              ) : (
-                <div className="flex items-center gap-2">
-                  <Button variant="ghost" size="sm" asChild>
-                    <Link href="/auth/signin">
-                      Sign In
-                    </Link>
-                  </Button>
-                  <Button size="sm" className="bg-clay-pink hover:bg-clay-pink/90" asChild>
-                    <Link href="/auth/signup">
-                      Sign Up
-                    </Link>
-                  </Button>
-                </div>
-              )}
-            </div>
+                    </>
+                  )}
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={handleSignOut} className="cursor-pointer text-red-600 focus:text-red-600">
+                    <LogOut className="mr-2 h-4 w-4" />
+                    Sign Out
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            ) : (
+              <Button variant="ghost" asChild>
+                <Link href="/auth/signin">Sign In</Link>
+              </Button>
+            )}
 
-            {/* Shop Now CTA */}
-            <Button 
-              asChild
-              size="sm"
-              className="hidden lg:flex bg-clay-pink hover:bg-clay-pink/90 text-white"
-            >
-              <Link href="/products">
-                Shop Now
-              </Link>
-            </Button>
-
-            {/* Currency selector */}
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="sm" className="hidden md:flex gap-1">
-                  <span className="text-sm">₹ INR</span>
-                  <ChevronDown className="h-3 w-3" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <DropdownMenuItem>₹ INR</DropdownMenuItem>
-                <DropdownMenuItem>$ USD</DropdownMenuItem>
-                <DropdownMenuItem>€ EUR</DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-
-            {/* Cart Drawer */}
+            {/* Cart */}
             <CartDrawer />
           </div>
         </div>
-      </header>
-
-      {/* Search Dialog */}
-      <Dialog open={isSearchOpen} onOpenChange={setIsSearchOpen}>
-        <DialogContent className="sm:max-w-[500px]">
-          <form onSubmit={handleSearch} className="space-y-4">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
-              <Input
-                type="text"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Search products..."
-                autoFocus
-                className="pl-10 pr-4 h-12 text-base"
-              />
-            </div>
-            <Button 
-              type="submit" 
-              className="w-full bg-clay-pink hover:bg-clay-pink/90"
-              size="lg"
-            >
-              <Search className="mr-2 h-4 w-4" />
-              Search
-            </Button>
-          </form>
-        </DialogContent>
-      </Dialog>
-    </>
+      </div>
+    </header>
   );
 }

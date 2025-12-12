@@ -397,7 +397,7 @@ export function CustomerDetails({ customer, onClose }: CustomerDetailsProps) {
                           <div className="flex justify-between">
                             <span className="text-sm text-gray-600">Order Frequency:</span>
                             <span className="text-sm font-medium">
-                              {customerData.orderFrequency.toFixed(1)} orders/month
+                              {customerData.orderFrequency != null ? customerData.orderFrequency.toFixed(1) : '0.0'} orders/month
                             </span>
                           </div>
                           <div className="flex justify-between">

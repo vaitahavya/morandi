@@ -1,9 +1,7 @@
 import type { Metadata } from 'next';
 import { Inter, Playfair_Display } from 'next/font/google';
 import './globals.css';
-import PromoBar from '@/components/layout/PromoBar';
-import Header from '@/components/layout/Header';
-import Footer from '@/components/layout/Footer';
+import ConditionalLayout from '@/components/layout/ConditionalLayout';
 import { Toaster } from 'react-hot-toast';
 import SessionProvider from '@/components/providers/SessionProvider';
 import QueryProvider from '@/components/providers/QueryProvider';
@@ -79,10 +77,7 @@ export default function RootLayout({
         <JsonLd data={organizationJsonLd} />
         <QueryProvider>
           <SessionProvider>
-            <PromoBar />
-            <Header />
-            <main className="min-h-screen">{children}</main>
-            <Footer />
+            <ConditionalLayout>{children}</ConditionalLayout>
             <Toaster position="bottom-right" />
           </SessionProvider>
         </QueryProvider>

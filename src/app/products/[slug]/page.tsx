@@ -366,8 +366,8 @@ export default function ProductDetailPage({ params }: ProductDetailPageProps) {
   return (
     <>
       {productStructuredData && <JsonLd data={productStructuredData} />}
-      <div className="mx-auto max-w-7xl px-4 py-8 md:px-6 lg:px-8">
-      <div className="grid gap-8 lg:grid-cols-2">
+      <div className="mx-auto max-w-7xl px-3 sm:px-4 py-4 sm:py-6 md:px-6 md:py-8 lg:px-8">
+      <div className="grid gap-4 sm:gap-6 md:gap-8 lg:grid-cols-2">
         {/* Product Images */}
         <ProductGallery 
           images={product.images || []} 
@@ -375,33 +375,33 @@ export default function ProductDetailPage({ params }: ProductDetailPageProps) {
         />
 
         {/* Product Info */}
-        <div className="space-y-6">
+        <div className="space-y-4 sm:space-y-6">
           {/* Product Header */}
           <div>
-            <h1 className="text-3xl font-bold text-gray-900 mb-2">{product.name}</h1>
-            <div className="flex items-center space-x-4 mb-4">
+            <h1 className="text-xl sm:text-2xl md:text-3xl font-bold text-gray-900 mb-2 leading-tight">{product.name}</h1>
+            <div className="flex flex-wrap items-center gap-2 sm:gap-4 mb-3 sm:mb-4">
               <div className="flex items-center space-x-1">
                 {[...Array(5)].map((_, i) => (
                   <Star
                     key={i}
-                    size={16}
-                    className={`${
+                    size={14}
+                    className={`sm:w-4 sm:h-4 ${
                       i < averageRating ? 'fill-yellow-400 text-yellow-400' : 'text-gray-300'
                     }`}
                   />
                 ))}
               </div>
-              <span className="text-sm text-gray-600">
+              <span className="text-xs sm:text-sm text-gray-600">
                 {averageRating.toFixed(1)} ({reviews.length} reviews)
               </span>
             </div>
-            <p className="text-2xl font-bold text-primary-700">₹{currentPrice}</p>
+            <p className="text-xl sm:text-2xl font-bold text-primary-700">₹{currentPrice}</p>
           </div>
 
           {/* Product Description */}
           <div>
-            <h3 className="text-lg font-semibold mb-2">Description</h3>
-            <div className="text-gray-700 leading-relaxed" 
+            <h3 className="text-base sm:text-lg font-semibold mb-2">Description</h3>
+            <div className="text-sm sm:text-base text-gray-700 leading-relaxed prose prose-sm max-w-none" 
                  dangerouslySetInnerHTML={{ __html: product.description }} />
           </div>
 
@@ -431,27 +431,27 @@ export default function ProductDetailPage({ params }: ProductDetailPageProps) {
           {selectedVariant && (
             <div className="text-sm">
               {selectedVariant.stockStatus === 'instock' ? (
-                <span className="text-green-600">✓ In Stock</span>
+                <span className="text-green-600 font-medium">✓ In Stock</span>
               ) : (
-                <span className="text-red-600">✗ Out of Stock</span>
+                <span className="text-red-600 font-medium">✗ Out of Stock</span>
               )}
             </div>
           )}
 
           {/* Quantity */}
           <div>
-            <h3 className="text-lg font-semibold mb-3">Quantity</h3>
+            <h3 className="text-base sm:text-lg font-semibold mb-2 sm:mb-3">Quantity</h3>
             <div className="flex items-center space-x-3">
               <button
                 onClick={() => setQuantity(Math.max(1, quantity - 1))}
-                className="w-8 h-8 rounded-md border border-gray-300 flex items-center justify-center hover:bg-gray-50"
+                className="w-10 h-10 sm:w-12 sm:h-12 rounded-md border border-gray-300 flex items-center justify-center hover:bg-gray-50 active:bg-gray-100 text-lg font-semibold"
               >
                 -
               </button>
-              <span className="w-12 text-center">{quantity}</span>
+              <span className="w-12 sm:w-16 text-center text-base sm:text-lg font-semibold">{quantity}</span>
               <button
                 onClick={() => setQuantity(quantity + 1)}
-                className="w-8 h-8 rounded-md border border-gray-300 flex items-center justify-center hover:bg-gray-50"
+                className="w-10 h-10 sm:w-12 sm:h-12 rounded-md border border-gray-300 flex items-center justify-center hover:bg-gray-50 active:bg-gray-100 text-lg font-semibold"
               >
                 +
               </button>
@@ -459,11 +459,11 @@ export default function ProductDetailPage({ params }: ProductDetailPageProps) {
           </div>
 
           {/* Action Buttons */}
-          <div className="space-y-3">
+          <div className="space-y-3 pt-2">
             <button
               onClick={handleAddToCart}
               disabled={(sizeOptions.length > 0 && !selectedSize) || (selectedVariant && selectedVariant.stockStatus !== 'instock') || false}
-              className="w-full bg-primary-600 text-white py-3 px-6 rounded-md font-medium hover:bg-primary-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full bg-primary-600 text-white py-3 sm:py-4 px-6 rounded-md font-medium hover:bg-primary-700 active:bg-primary-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-base sm:text-lg shadow-md"
             >
               {selectedVariant && selectedVariant.stockStatus !== 'instock' 
                 ? 'Out of Stock' 
@@ -471,30 +471,30 @@ export default function ProductDetailPage({ params }: ProductDetailPageProps) {
               }
             </button>
             
-            <div className="flex space-x-3">
+            <div className="flex flex-col sm:flex-row gap-3">
               <WishlistButton product={product} className="flex-1" />
-              <button className="flex-1 flex items-center justify-center space-x-2 border border-gray-300 py-3 px-6 rounded-md hover:bg-gray-50">
-                <Share2 size={16} />
+              <button className="flex-1 flex items-center justify-center space-x-2 border border-gray-300 py-3 sm:py-4 px-6 rounded-md hover:bg-gray-50 active:bg-gray-100 transition-colors text-sm sm:text-base">
+                <Share2 size={16} className="sm:w-5 sm:h-5" />
                 <span>Share</span>
               </button>
             </div>
           </div>
 
           {/* Product Features */}
-          <div className="border-t pt-6">
-            <h3 className="text-lg font-semibold mb-4">Product Features</h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="flex items-center space-x-3">
-                <Truck className="text-green-600" size={20} />
-                <span className="text-sm">Free shipping on orders over ₹1500</span>
+          <div className="border-t pt-4 sm:pt-6">
+            <h3 className="text-base sm:text-lg font-semibold mb-3 sm:mb-4">Product Features</h3>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+              <div className="flex items-start sm:items-center space-x-2 sm:space-x-3">
+                <Truck className="text-green-600 flex-shrink-0 mt-0.5 sm:mt-0" size={18} />
+                <span className="text-xs sm:text-sm leading-relaxed">Free shipping on orders over ₹1500</span>
               </div>
-              <div className="flex items-center space-x-3">
-                <RotateCcw className="text-green-600" size={20} />
-                <span className="text-sm">Easy returns & exchanges</span>
+              <div className="flex items-start sm:items-center space-x-2 sm:space-x-3">
+                <RotateCcw className="text-green-600 flex-shrink-0 mt-0.5 sm:mt-0" size={18} />
+                <span className="text-xs sm:text-sm leading-relaxed">Easy returns & exchanges</span>
               </div>
-              <div className="flex items-center space-x-3">
-                <Shield className="text-green-600" size={20} />
-                <span className="text-sm">Secure payment</span>
+              <div className="flex items-start sm:items-center space-x-2 sm:space-x-3">
+                <Shield className="text-green-600 flex-shrink-0 mt-0.5 sm:mt-0" size={18} />
+                <span className="text-xs sm:text-sm leading-relaxed">Secure payment</span>
               </div>
             </div>
           </div>
@@ -502,19 +502,19 @@ export default function ProductDetailPage({ params }: ProductDetailPageProps) {
       </div>
 
       {/* Reviews Section */}
-      <div className="mt-16 border-t pt-8">
-        <div className="flex items-center justify-between mb-6">
-          <h2 className="text-2xl font-bold">Customer Reviews</h2>
+      <div className="mt-8 sm:mt-12 md:mt-16 border-t pt-6 sm:pt-8">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6">
+          <h2 className="text-xl sm:text-2xl font-bold">Customer Reviews</h2>
           <button
             onClick={() => setShowReviewForm(true)}
-            className="bg-primary-600 text-white px-4 py-2 rounded-md hover:bg-primary-700"
+            className="w-full sm:w-auto bg-primary-600 text-white px-4 py-2 sm:py-2.5 rounded-md hover:bg-primary-700 active:bg-primary-800 transition-colors text-sm sm:text-base font-medium"
           >
             Write a Review
           </button>
         </div>
 
         {showReviewForm && (
-          <div className="mb-8">
+          <div className="mb-6 sm:mb-8">
             <ReviewForm
               productId={product.id}
               onSubmit={handleReviewSubmit}
@@ -531,12 +531,14 @@ export default function ProductDetailPage({ params }: ProductDetailPageProps) {
       </div>
 
       {/* Product Recommendations */}
-      <ProductRecommendations 
-        productId={product.id}
-        type="similar"
-        limit={4}
-        title="You might also like"
-      />
+      <div className="mt-8 sm:mt-12 md:mt-16">
+        <ProductRecommendations 
+          productId={product.id}
+          type="similar"
+          limit={4}
+          title="You might also like"
+        />
+      </div>
     </div>
     </>
   );
