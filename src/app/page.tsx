@@ -1,4 +1,5 @@
 import HeroSection from '@/components/landing/HeroSection';
+import VideoHeroSection from '@/components/landing/VideoHeroSection';
 import StorytellingSection from '@/components/landing/StorytellingSection';
 import GreaterPurposeSection from '@/components/landing/GreaterPurposeSection';
 import FeaturedProductsSection from '@/components/landing/FeaturedProductsSection';
@@ -11,6 +12,9 @@ export default function HomePage() {
     <div className="overflow-x-hidden">
       {/* Hero Section - Maternity Wear */}
       <HeroSection />
+      
+      {/* Video Hero Section */}
+      <VideoHeroSection />
       
       {/* Storytelling Section - Whispers of Wonder */}
       <StorytellingSection />
