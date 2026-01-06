@@ -15,7 +15,7 @@ declare global {
 }
 
 export default function VideoHeroSection({
-  youtubeUrl = 'https://youtu.be/3mzHmVgJdrc',
+  youtubeUrl = 'https://youtu.be/Y7xDZtT8Gfk',
   className = '',
 }: VideoHeroSectionProps) {
   const sectionRef = useRef<HTMLElement>(null);

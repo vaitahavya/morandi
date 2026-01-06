@@ -144,3 +144,4 @@ CREATE INDEX IF NOT EXISTS "product_attributes_product_id_idx" ON "product_attri
 
 
 
+
