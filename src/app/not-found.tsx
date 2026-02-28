@@ -22,10 +22,10 @@ export default function NotFound() {
             Go back home
           </Link>
           <Link
-            href="/products"
+            href="/contact"
             className="block w-full bg-gray-100 text-gray-700 py-3 px-6 rounded-md font-medium hover:bg-gray-200 transition-colors"
           >
-            Browse products
+            Contact Us
           </Link>
         </div>
       </div>

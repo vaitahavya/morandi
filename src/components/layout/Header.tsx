@@ -1,16 +1,11 @@
 'use client';
 
-import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
-import { Search, Heart, User, LogOut, ShoppingBag, Package } from 'lucide-react';
+import { User, LogOut, ShoppingBag } from 'lucide-react';
 import { useSession, signOut } from 'next-auth/react';
 import MobileMenu from './MobileMenu';
-import CartDrawer from '@/components/cart/CartDrawer';
-import { useWishlistStore } from '@/store/wishlist-store';
 import Logo from '@/components/ui/Logo';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -19,9 +14,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { Input } from '@/components/ui/input';
 
-// Admin user emails mapping (should match AdminAuthGuard)
 const ADMIN_USERS: Record<string, string> = {
   'admin@morandi.com': 'super_admin',
   'admin@example.com': 'super_admin',
@@ -31,176 +24,59 @@ const ADMIN_USERS: Record<string, string> = {
 };
 
 export default function Header() {
-  const [searchQuery, setSearchQuery] = useState('');
-  const [isClient, setIsClient] = useState(false);
-  const router = useRouter();
-  const wishlistCount = useWishlistStore((state) => state.getItemCount());
   const { data: session, status } = useSession();
-
-  // Prevent hydration mismatch by only accessing store after client-side mount
-  useEffect(() => {
-    setIsClient(true);
-  }, []);
-
-  const handleSearch = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (searchQuery.trim()) {
-      router.push(`/products?search=${encodeURIComponent(searchQuery.trim())}`);
-    }
-  };
 
   const handleSignOut = () => {
     signOut({ callbackUrl: '/' });
   };
 
   return (
-    <header className="sticky top-0 z-50 w-full bg-white border-b border-gray-200 shadow-sm">
+    <header className="sticky top-0 z-50 w-full bg-white/95 backdrop-blur-md border-b border-gray-100">
       <div className="section-container">
-        {/* Mobile Layout */}
-        <div className="flex items-center justify-between gap-2 py-3 lg:hidden">
-          <MobileMenu />
-          <div className="flex-1 flex justify-center">
-            <Logo />
+        <div className="flex items-center justify-between gap-2 py-4 lg:py-5">
+          <div className="lg:hidden flex-shrink-0">
+            <MobileMenu />
           </div>
-          <div className="flex items-center gap-1">
-            <Button
-              variant="ghost"
-              size="icon"
-              asChild
-              className="h-9 w-9"
-            >
-              <Link href="/products">
-                <Search className="h-5 w-5" />
-              </Link>
-            </Button>
-            <CartDrawer />
-            {status === 'loading' ? (
-              <div className="w-6 h-6 border-2 border-gray-300 border-t-primary rounded-full animate-spin"></div>
-            ) : session ? (
-              <Button
-                variant="ghost"
-                size="icon"
-                asChild
-                className="h-9 w-9"
-              >
-                <Link href="/account">
-                  <User className="h-5 w-5" />
-                </Link>
-              </Button>
-            ) : (
-              <Button
-                variant="ghost"
-                size="icon"
-                asChild
-                className="h-9 w-9"
-              >
-                <Link href="/auth/signin">
-                  <User className="h-5 w-5" />
-                </Link>
-              </Button>
-            )}
-          </div>
-        </div>
 
-        {/* Desktop Layout */}
-        <div className="hidden lg:flex items-center py-4">
-          {/* Logo */}
-          <div className="flex-shrink-0 mr-8">
+          <div className="flex-1 lg:flex-initial flex justify-center lg:justify-start">
             <Logo />
           </div>
 
-          {/* Navigation Links */}
-          <nav className="flex items-center gap-6 mr-8">
-            <Link href="/" className="text-sm font-medium text-gray-700 hover:text-primary-600 transition-colors">
+          <nav className="hidden lg:flex items-center gap-8">
+            <Link href="/" className="text-sm font-medium text-gray-600 hover:text-deep-charcoal transition-colors">
               Home
             </Link>
-            <Link href="/products" className="text-sm font-medium text-gray-700 hover:text-primary-600 transition-colors">
-              Shop
-            </Link>
-            <Link href="/collections" className="text-sm font-medium text-gray-700 hover:text-primary-600 transition-colors">
-              Collections
-            </Link>
-            <Link href="/about" className="text-sm font-medium text-gray-700 hover:text-primary-600 transition-colors">
+            <Link href="/about" className="text-sm font-medium text-gray-600 hover:text-deep-charcoal transition-colors">
               About
             </Link>
-            <Link href="/contact" className="text-sm font-medium text-gray-700 hover:text-primary-600 transition-colors">
+            <Link href="/contact" className="text-sm font-medium text-gray-600 hover:text-deep-charcoal transition-colors">
               Contact
             </Link>
           </nav>
 
-          {/* Search Bar */}
-          <div className="max-w-xs mr-8">
-            <form onSubmit={handleSearch} className="relative">
-              <Input
-                type="text"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Search products..."
-                className="w-full h-9 pl-3 pr-10"
-              />
-              <Button
-                type="submit"
-                variant="ghost"
-                size="icon"
-                className="absolute right-0 top-0 h-9 w-9 hover:bg-transparent"
-                aria-label="Search"
-              >
-                <Search className="h-4 w-4 text-gray-500" />
-              </Button>
-            </form>
-          </div>
-
-          {/* Right Side Actions */}
-          <div className="flex items-center gap-4 flex-shrink-0">
-            {/* Wishlist */}
-            <Button variant="ghost" size="icon" asChild className="h-9 w-9 relative">
-              <Link href="/wishlist">
-                <Heart className="h-5 w-5" />
-                {isClient && wishlistCount > 0 && (
-                  <Badge className="absolute -top-1 -right-1 h-5 w-5 p-0 flex items-center justify-center bg-primary-600 text-white text-xs">
-                    {wishlistCount}
-                  </Badge>
-                )}
-              </Link>
-            </Button>
-
-            {/* Account Dropdown */}
+          <div className="flex items-center gap-2">
             {status === 'loading' ? (
-              <div className="w-6 h-6 border-2 border-gray-300 border-t-primary rounded-full animate-spin"></div>
+              <div className="w-9 h-9 rounded-full border-2 border-gray-200 border-t-primary animate-spin" />
             ) : session ? (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" className="h-9 gap-2 px-3">
-                    <User className="h-5 w-5" />
-                    <span className="text-sm font-medium text-gray-700 hidden xl:inline">
-                      {session.user?.name || session.user?.email?.split('@')[0] || 'User'}
+                  <Button variant="ghost" size="sm" className="h-9 gap-2 px-3 rounded-full">
+                    <User className="h-4 w-4" />
+                    <span className="text-sm font-medium text-gray-700 hidden sm:inline">
+                      {session.user?.name || session.user?.email?.split('@')[0] || 'Account'}
                     </span>
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="w-56">
                   <DropdownMenuLabel>
-                    <div>
-                      <p className="font-semibold">{session.user?.name || 'User'}</p>
-                      <p className="text-xs text-gray-500 font-normal">{session.user?.email}</p>
-                    </div>
+                    <p className="font-semibold">{session.user?.name || 'User'}</p>
+                    <p className="text-xs text-gray-500 font-normal">{session.user?.email}</p>
                   </DropdownMenuLabel>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem asChild>
                     <Link href="/account" className="cursor-pointer">
                       <User className="mr-2 h-4 w-4" />
                       My Profile
-                    </Link>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem asChild>
-                    <Link href="/account/orders" className="cursor-pointer">
-                      <Package className="mr-2 h-4 w-4" />
-                      My Orders
-                    </Link>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem asChild>
-                    <Link href="/wishlist" className="cursor-pointer">
-                      <Heart className="mr-2 h-4 w-4" />
-                      My Wishlist
                     </Link>
                   </DropdownMenuItem>
                   {session?.user?.email && ADMIN_USERS[session.user.email] && (
@@ -222,13 +98,10 @@ export default function Header() {
                 </DropdownMenuContent>
               </DropdownMenu>
             ) : (
-              <Button variant="ghost" asChild>
+              <Button variant="outline" size="sm" asChild className="rounded-full">
                 <Link href="/auth/signin">Sign In</Link>
               </Button>
             )}
-
-            {/* Cart */}
-            <CartDrawer />
           </div>
         </div>
       </div>

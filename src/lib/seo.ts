@@ -50,15 +50,9 @@ export function getSitemapStaticRoutes() {
   return [
     '/',
     '/about',
-    '/collections',
-    '/products',
     '/blog',
     '/contact',
     '/account',
-    '/wishlist',
-    '/cart',
-    '/checkout',
-    '/order-success',
   ];
 }
 

@@ -13,7 +13,7 @@ export default function StorytellingSection() {
           {/* Story Content */}
           <div className="space-y-6 text-lg md:text-xl text-deep-charcoal/80 font-sans leading-relaxed">
             <p className="font-medium">
-              Bundles of joy on the way, and hearts full of dreams? Shop our Maternity Wear.
+              Bundles of joy on the way, and hearts full of dreams.
             </p>
             
             <p>

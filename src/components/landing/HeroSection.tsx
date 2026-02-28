@@ -33,7 +33,7 @@ export default function HeroSection() {
                 {/* Premium Badge */}
                 <Badge variant="secondary" className="bg-white/20 backdrop-blur-sm border-none text-white px-4 py-2 text-sm font-medium">
                   <Sparkles className="w-4 h-4 mr-2" />
-                  Premium Maternity Collection 2025
+                  Where Every Mother Blooms
                 </Badge>
                 
                 {/* Main Heading */}
@@ -43,7 +43,7 @@ export default function HeroSection() {
                 
                 {/* Subtext */}
                 <p className="text-base sm:text-lg md:text-xl lg:text-2xl text-white font-sans leading-relaxed drop-shadow-lg text-left">
-                  Comfortable maternity and baby apparel crafted for every stage. Shop postpartum wear, babywear, and stylish women's wear you'll love to live in.
+                  Comfortable maternity and baby apparel crafted for every stage — designed with care, made for the journey.
                 </p>
                 
                 {/* CTA Buttons */}
@@ -53,8 +53,8 @@ export default function HeroSection() {
                     size="lg" 
                     className="bg-clay-pink hover:bg-clay-pink/90 text-white shadow-2xl hover:shadow-clay-pink/50 transition-all duration-300 text-base sm:text-lg px-6 sm:px-8 py-5 sm:py-6 rounded-xl border-0 w-full sm:w-auto"
                   >
-                    <Link href="/products">
-                      Shop Maternity Wear
+                    <Link href="/contact">
+                      Get in Touch
                     </Link>
                   </Button>
                   <Button 
@@ -63,8 +63,8 @@ export default function HeroSection() {
                     size="lg"
                     className="border-2 border-amber-200 text-amber-200 hover:bg-amber-200 hover:text-gray-800 shadow-xl transition-all duration-300 text-base sm:text-lg px-6 sm:px-8 py-5 sm:py-6 rounded-xl bg-transparent w-full sm:w-auto"
                   >
-                    <Link href="/products">
-                      Explore Collections
+                    <Link href="/about">
+                      Our Story
                     </Link>
                   </Button>
                 </div>
@@ -73,7 +73,7 @@ export default function HeroSection() {
                 <div className="flex flex-wrap gap-4 sm:gap-6 pt-4 sm:pt-6 text-white/90">
                   <div className="flex items-center gap-2">
                     <div className="w-2 h-2 bg-soft-sage rounded-full" />
-                    <span className="text-xs sm:text-sm font-medium">Free Shipping</span>
+                    <span className="text-xs sm:text-sm font-medium">Handpicked Quality</span>
                   </div>
                   <div className="flex items-center gap-2">
                     <div className="w-2 h-2 bg-clay-pink rounded-full" />
@@ -81,7 +81,7 @@ export default function HeroSection() {
                   </div>
                   <div className="flex items-center gap-2">
                     <div className="w-2 h-2 bg-soft-sage rounded-full" />
-                    <span className="text-xs sm:text-sm font-medium">Easy Returns</span>
+                    <span className="text-xs sm:text-sm font-medium">Crafted with Care</span>
                   </div>
                 </div>
               </div>
