@@ -17,7 +17,7 @@ const organizationJsonLd = {
   '@type': 'Organization',
   name: 'Morandi Lifestyle',
   url: siteUrl,
-  logo: absoluteUrl('/images/logo/morandi lifestyle.png'),
+  logo: absoluteUrl('/images/logo/morandi_logo.png'),
   sameAs: [
     'https://www.instagram.com/morandilifestyle',
     'https://www.facebook.com/morandilifestyle',
