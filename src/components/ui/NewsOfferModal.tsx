@@ -39,8 +39,8 @@ export default function NewsOfferModal({ config }: NewsOfferModalProps) {
         onClick={handleClose}
       />
 
-      {/* Modal */}
-      <div className="relative z-10 flex max-h-[90vh] max-w-2xl flex-col rounded-lg bg-white shadow-xl">
+      {/* Modal: 90% viewport height, image fits inside */}
+      <div className="relative z-10 flex h-[90vh] w-full max-w-4xl flex-col overflow-hidden rounded-lg bg-white shadow-xl">
         <button
           onClick={handleClose}
           className="absolute -right-3 -top-3 z-20 flex h-10 w-10 items-center justify-center rounded-full bg-white shadow-lg transition hover:bg-gray-100"
@@ -49,23 +49,22 @@ export default function NewsOfferModal({ config }: NewsOfferModalProps) {
           <X className="h-5 w-5 text-gray-600" />
         </button>
 
-        <div className="relative max-h-[85vh] overflow-hidden rounded-t-lg">
+        <div className="relative flex-1 min-h-0 w-full overflow-hidden rounded-t-lg">
           {config.ctaUrl ? (
             <a
               href={config.ctaUrl}
               target="_blank"
               rel="noopener noreferrer"
-              className="block"
+              className="block relative h-full w-full"
             >
               <Image
                 id="offer-modal-title"
                 src={config.imageSrc}
                 alt={config.alt}
-                width={800}
-                height={1000}
-                className="h-auto w-full object-contain"
+                fill
+                className="object-contain"
                 priority
-                sizes="(max-width: 768px) 100vw, 800px"
+                sizes="(max-width: 768px) 100vw, 896px"
               />
             </a>
           ) : (
@@ -73,11 +72,10 @@ export default function NewsOfferModal({ config }: NewsOfferModalProps) {
               id="offer-modal-title"
               src={config.imageSrc}
               alt={config.alt}
-              width={800}
-              height={1000}
-              className="h-auto w-full object-contain"
+              fill
+              className="object-contain"
               priority
-              sizes="(max-width: 768px) 100vw, 800px"
+              sizes="(max-width: 768px) 100vw, 896px"
             />
           )}
         </div>
