@@ -6,7 +6,7 @@ import type { OfferConfig } from '@/components/ui/NewsOfferModal';
  */
 export const currentOffer: OfferConfig | null = {
   offerId: 'womens-day-2026',
-  imageSrc: '/images/banners/womansday banner.webp',
+  imageSrc: '/images/banners/womansday-banner.webp',
   alt: "The Women Behind Morandi Lifestyle - Happy Women's Day!",
   // ctaUrl: '/offers/womens-day', // optional: link when user clicks image
 };
