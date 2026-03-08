@@ -1,7 +1,6 @@
 'use client';
 
 import { useState } from 'react';
-import Image from 'next/image';
 import { X } from 'lucide-react';
 
 export type OfferConfig = {
@@ -39,8 +38,8 @@ export default function NewsOfferModal({ config }: NewsOfferModalProps) {
         onClick={handleClose}
       />
 
-      {/* Modal: 90% viewport height, image fits inside */}
-      <div className="relative z-10 flex h-[90vh] w-full max-w-4xl flex-col overflow-hidden rounded-lg bg-white shadow-xl">
+      {/* Modal: width fits image, height max 90vh */}
+      <div className="relative z-10 w-fit max-w-[95vw] rounded-lg bg-white shadow-xl">
         <button
           onClick={handleClose}
           className="absolute -right-3 -top-3 z-20 flex h-10 w-10 items-center justify-center rounded-full bg-white shadow-lg transition hover:bg-gray-100"
@@ -49,36 +48,28 @@ export default function NewsOfferModal({ config }: NewsOfferModalProps) {
           <X className="h-5 w-5 text-gray-600" />
         </button>
 
-        <div className="relative flex-1 min-h-0 w-full overflow-hidden rounded-t-lg">
-          {config.ctaUrl ? (
-            <a
-              href={config.ctaUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="block relative h-full w-full"
-            >
-              <Image
-                id="offer-modal-title"
-                src={config.imageSrc}
-                alt={config.alt}
-                fill
-                className="object-contain"
-                priority
-                sizes="(max-width: 768px) 100vw, 896px"
-              />
-            </a>
-          ) : (
-            <Image
+        {config.ctaUrl ? (
+          <a
+            href={config.ctaUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="block"
+          >
+            <img
               id="offer-modal-title"
               src={config.imageSrc}
               alt={config.alt}
-              fill
-              className="object-contain"
-              priority
-              sizes="(max-width: 768px) 100vw, 896px"
+              className="block max-h-[90vh] max-w-[95vw] h-auto w-auto object-contain rounded-t-lg"
             />
-          )}
-        </div>
+          </a>
+        ) : (
+          <img
+            id="offer-modal-title"
+            src={config.imageSrc}
+            alt={config.alt}
+            className="block max-h-[90vh] max-w-[95vw] h-auto w-auto object-contain rounded-t-lg"
+          />
+        )}
       </div>
     </div>
   );
