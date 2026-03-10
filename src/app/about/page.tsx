@@ -273,6 +273,104 @@ export default function AboutPage() {
           </div>
         </div>
       </section>
+
+      {/* Our Team Section */}
+      <section className="py-20 bg-gradient-to-br from-soft-sage/20 to-earthy-beige/50">
+        <div className="container mx-auto px-4 md:px-6 lg:px-8">
+          <div className="text-center mb-16">
+            <h2 className="text-3xl md:text-4xl lg:text-5xl font-serif font-bold mb-4 text-deep-charcoal">
+              Our Team
+            </h2>
+            <div className="w-24 h-1 bg-soft-sage mx-auto rounded-full"></div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 lg:gap-10">
+            {/* Mounica Gopi */}
+            <div className="group">
+              <div className="bg-morandi-white rounded-2xl p-8 shadow-card hover:shadow-soft transition-all duration-300 h-full flex flex-col">
+                <div className="w-14 h-14 mb-5 rounded-full bg-gradient-to-br from-clay-pink/20 to-clay-pink/10 flex items-center justify-center shrink-0">
+                  <span className="text-xl font-serif font-semibold text-clay-pink">MG</span>
+                </div>
+                <p className="text-sm font-medium text-clay-pink uppercase tracking-wide mb-1">Director, People Management</p>
+                <h3 className="text-xl font-serif font-semibold text-deep-charcoal mb-3">Mounica Gopi</h3>
+                <p className="text-deep-charcoal/70 font-sans text-sm leading-relaxed flex-grow">
+                  MBA graduate and corporate HR professional—loving mother, homemaker, and daring entrepreneur. A risk-taker who thrives on bold experiments while remaining approachable and open-hearted. She fuses ambition with soulful growth, adapting seamlessly, inspiring others, and forging deep connections.
+                </p>
+              </div>
+            </div>
+
+            {/* Ravi Pyaraka */}
+            <div className="group">
+              <div className="bg-morandi-white rounded-2xl p-8 shadow-card hover:shadow-soft transition-all duration-300 h-full flex flex-col">
+                <div className="w-14 h-14 mb-5 rounded-full bg-gradient-to-br from-soft-sage/30 to-soft-sage/20 flex items-center justify-center shrink-0">
+                  <span className="text-xl font-serif font-semibold text-soft-sage">RP</span>
+                </div>
+                <p className="text-sm font-medium text-soft-sage uppercase tracking-wide mb-1">Director, Strategy and Implementation</p>
+                <h3 className="text-xl font-serif font-semibold text-deep-charcoal mb-3">Ravi Pyaraka</h3>
+                <p className="text-deep-charcoal/70 font-sans text-sm leading-relaxed flex-grow">
+                  Close to 35 years of experience as a working professional and bootstrapped entrepreneur. Strong business acumen with a clear focus on innovation, technology integration, and creating value for the industry. Brings capability in lowering business risks, financial discipline, growth progression, focused stability, high ownership, and business scaling.
+                </p>
+              </div>
+            </div>
+
+            {/* G Anjaneyulu Goud */}
+            <div className="group">
+              <div className="bg-morandi-white rounded-2xl p-8 shadow-card hover:shadow-soft transition-all duration-300 h-full flex flex-col">
+                <div className="w-14 h-14 mb-5 rounded-full bg-gradient-to-br from-earthy-beige to-soft-sage/30 flex items-center justify-center shrink-0">
+                  <span className="text-xl font-serif font-semibold text-deep-charcoal/80">AG</span>
+                </div>
+                <p className="text-sm font-medium text-deep-charcoal/70 uppercase tracking-wide mb-1">Director, Communication and PR</p>
+                <h3 className="text-xl font-serif font-semibold text-deep-charcoal mb-3">G Anjaneyulu Goud</h3>
+                <p className="text-deep-charcoal/70 font-sans text-sm leading-relaxed flex-grow">
+                  A veteran with 35+ years of experience in public life as a social worker. Currently holding a position of Co-Director at Yoga University of Bharat, Bangalore.
+                </p>
+              </div>
+            </div>
+
+            {/* Mr. Pundalik */}
+            <div className="group">
+              <div className="bg-morandi-white rounded-2xl p-8 shadow-card hover:shadow-soft transition-all duration-300 h-full flex flex-col">
+                <div className="w-14 h-14 mb-5 rounded-full bg-gradient-to-br from-clay-pink/20 to-clay-pink/10 flex items-center justify-center shrink-0">
+                  <span className="text-xl font-serif font-semibold text-clay-pink">P</span>
+                </div>
+                <p className="text-sm font-medium text-clay-pink uppercase tracking-wide mb-1">Director, International Marketing</p>
+                <h3 className="text-xl font-serif font-semibold text-deep-charcoal mb-3">Mr. Pundalik</h3>
+                <p className="text-deep-charcoal/70 font-sans text-sm leading-relaxed flex-grow">
+                  Nominee for the Padma award 2026, with over 35 years of experience in marketing, strategic leadership, and negotiation. Deep industry insight and a proven track record in building and scaling brands add significant value to the organization.
+                </p>
+              </div>
+            </div>
+
+            {/* MVN Acharya */}
+            <div className="group">
+              <div className="bg-morandi-white rounded-2xl p-8 shadow-card hover:shadow-soft transition-all duration-300 h-full flex flex-col">
+                <div className="w-14 h-14 mb-5 rounded-full bg-gradient-to-br from-soft-sage/30 to-soft-sage/20 flex items-center justify-center shrink-0">
+                  <span className="text-xl font-serif font-semibold text-soft-sage">MA</span>
+                </div>
+                <p className="text-sm font-medium text-soft-sage uppercase tracking-wide mb-1">Director, Business Development</p>
+                <h3 className="text-xl font-serif font-semibold text-deep-charcoal mb-3">MVN Acharya</h3>
+                <p className="text-deep-charcoal/70 font-sans text-sm leading-relaxed flex-grow">
+                  Entrepreneur with 25 years of experience in the pharma industry and strong acumen in business development.
+                </p>
+              </div>
+            </div>
+
+            {/* Vaitahavya Vadlamani */}
+            <div className="group">
+              <div className="bg-morandi-white rounded-2xl p-8 shadow-card hover:shadow-soft transition-all duration-300 h-full flex flex-col">
+                <div className="w-14 h-14 mb-5 rounded-full bg-gradient-to-br from-earthy-beige to-clay-pink/20 flex items-center justify-center shrink-0">
+                  <span className="text-xl font-serif font-semibold text-deep-charcoal/80">VV</span>
+                </div>
+                <p className="text-sm font-medium text-deep-charcoal/70 uppercase tracking-wide mb-1">Chief Technology Officer</p>
+                <h3 className="text-xl font-serif font-semibold text-deep-charcoal mb-3">Vaitahavya Vadlamani</h3>
+                <p className="text-deep-charcoal/70 font-sans text-sm leading-relaxed flex-grow">
+                  Technology strategist and entrepreneur focused on building digital infrastructure that enables modern brands to scale through technology, automation, and intelligent media systems. Founder of Sree Drisya Media. Specializes in scalable digital ecosystems—website architectures, content management systems, marketing automation pipelines, and AI-assisted creative workflows—integrating technology with business strategy for sustainable growth.
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
     </div>
   );
 } 

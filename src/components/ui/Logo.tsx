@@ -5,7 +5,7 @@ export default function Logo() {
   return (
     <Link href="/" className="flex items-center">
       {/* Logo image placeholder */}
-      <div className="relative w-36 h-9 md:w-44 md:h-11 overflow-hidden">
+      <div className="relative w-[10.35rem] h-[2.59rem] md:w-[12.65rem] md:h-[3.16rem] overflow-hidden">
         <div className="absolute -top-[10%] left-0 w-full h-[110%]">
           <Image
             src="/images/logo/morandi_logo.png"

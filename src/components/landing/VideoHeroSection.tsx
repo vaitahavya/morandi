@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 interface VideoHeroSectionProps {
   youtubeUrl?: string;
@@ -21,6 +21,7 @@ export default function VideoHeroSection({
   const sectionRef = useRef<HTMLElement>(null);
   const playerRef = useRef<any>(null);
   const iframeRef = useRef<HTMLIFrameElement>(null);
+  const [isMuted, setIsMuted] = useState(true);
 
   // Extract video ID from YouTube URL
   const getVideoId = (url: string): string => {
@@ -57,19 +58,9 @@ export default function VideoHeroSection({
           },
           events: {
             onReady: (event: any) => {
-              // Start muted for autoplay (browser requirement)
+              // Start muted for autoplay (browser requirement); stay muted until user unmutes
               event.target.mute();
               event.target.playVideo();
-              // Unmute after a short delay to allow autoplay
-              setTimeout(() => {
-                event.target.unMute();
-              }, 500);
-            },
-            onStateChange: (event: any) => {
-              // Ensure video is unmuted when playing
-              if (event.data === window.YT.PlayerState.PLAYING) {
-                event.target.unMute();
-              }
             },
           },
         });
@@ -94,19 +85,9 @@ export default function VideoHeroSection({
           },
           events: {
             onReady: (event: any) => {
-              // Start muted for autoplay (browser requirement)
+              // Start muted for autoplay (browser requirement); stay muted until user unmutes
               event.target.mute();
               event.target.playVideo();
-              // Unmute after a short delay to allow autoplay
-              setTimeout(() => {
-                event.target.unMute();
-              }, 500);
-            },
-            onStateChange: (event: any) => {
-              // Ensure video is unmuted when playing
-              if (event.data === window.YT.PlayerState.PLAYING) {
-                event.target.unMute();
-              }
             },
           },
         });
@@ -122,12 +103,13 @@ export default function VideoHeroSection({
         entries.forEach((entry) => {
           if (playerRef.current) {
             if (entry.isIntersecting) {
-              // Section is in view - play video and unmute
+              // Section is in view - play video (stay muted until user unmutes)
               playerRef.current.playVideo();
-              playerRef.current.unMute();
             } else {
-              // Section is out of view - mute the video
+              // Section is out of view - mute and pause
               playerRef.current.mute();
+              playerRef.current.pauseVideo();
+              setIsMuted(true); // keep UI in sync
             }
           }
         });
@@ -147,6 +129,17 @@ export default function VideoHeroSection({
     };
   }, [videoId]);
 
+  const handleToggleMute = () => {
+    if (!playerRef.current) return;
+    if (isMuted) {
+      playerRef.current.unMute();
+      setIsMuted(false);
+    } else {
+      playerRef.current.mute();
+      setIsMuted(true);
+    }
+  };
+
   return (
     <section 
       ref={sectionRef}
@@ -161,6 +154,31 @@ export default function VideoHeroSection({
         ref={iframeRef}
         className="absolute inset-0 w-full h-full"
       />
+
+      {/* Unmute button - visible when muted so user can enable sound */}
+      <button
+        type="button"
+        onClick={handleToggleMute}
+        className="absolute bottom-4 right-4 z-10 flex items-center gap-2 rounded-full bg-black/60 px-4 py-2.5 text-white backdrop-blur-sm transition hover:bg-black/80 focus:outline-none focus:ring-2 focus:ring-white/50"
+        aria-label={isMuted ? 'Unmute video' : 'Mute video'}
+      >
+        {isMuted ? (
+          <>
+            <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden>
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" />
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2" />
+            </svg>
+            <span>Unmute</span>
+          </>
+        ) : (
+          <>
+            <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden>
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" />
+            </svg>
+            <span>Mute</span>
+          </>
+        )}
+      </button>
     </section>
   );
 }
