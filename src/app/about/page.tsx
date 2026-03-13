@@ -275,7 +275,7 @@ export default function AboutPage() {
       </section>
 
       {/* Our Team Section */}
-      <section className="py-20 bg-gradient-to-br from-soft-sage/20 to-earthy-beige/50">
+      <section id="team" className="py-20 bg-gradient-to-br from-soft-sage/20 to-earthy-beige/50 scroll-mt-20">
         <div className="container mx-auto px-4 md:px-6 lg:px-8">
           <div className="text-center mb-16">
             <h2 className="text-3xl md:text-4xl lg:text-5xl font-serif font-bold mb-4 text-deep-charcoal">
@@ -288,8 +288,14 @@ export default function AboutPage() {
             {/* Mounica Gopi */}
             <div className="group">
               <div className="bg-morandi-white rounded-2xl p-8 shadow-card hover:shadow-soft transition-all duration-300 h-full flex flex-col">
-                <div className="w-14 h-14 mb-5 rounded-full bg-gradient-to-br from-clay-pink/20 to-clay-pink/10 flex items-center justify-center shrink-0">
-                  <span className="text-xl font-serif font-semibold text-clay-pink">MG</span>
+                <div className="w-20 h-20 mb-5 rounded-full overflow-hidden shrink-0 ring-2 ring-clay-pink/30">
+                  <Image
+                    src="/images/team/mounica-gopi.png"
+                    alt="Mounica Gopi"
+                    width={80}
+                    height={80}
+                    className="object-cover w-full h-full"
+                  />
                 </div>
                 <p className="text-sm font-medium text-clay-pink uppercase tracking-wide mb-1">Director, People Management</p>
                 <h3 className="text-xl font-serif font-semibold text-deep-charcoal mb-3">Mounica Gopi</h3>
@@ -316,8 +322,14 @@ export default function AboutPage() {
             {/* G Anjaneyulu Goud */}
             <div className="group">
               <div className="bg-morandi-white rounded-2xl p-8 shadow-card hover:shadow-soft transition-all duration-300 h-full flex flex-col">
-                <div className="w-14 h-14 mb-5 rounded-full bg-gradient-to-br from-earthy-beige to-soft-sage/30 flex items-center justify-center shrink-0">
-                  <span className="text-xl font-serif font-semibold text-deep-charcoal/80">AG</span>
+                <div className="w-20 h-20 mb-5 rounded-full overflow-hidden shrink-0 ring-2 ring-earthy-beige/50">
+                  <Image
+                    src="/images/team/g-anjaneyulu-goud.png"
+                    alt="G Anjaneyulu Goud"
+                    width={80}
+                    height={80}
+                    className="object-cover w-full h-full"
+                  />
                 </div>
                 <p className="text-sm font-medium text-deep-charcoal/70 uppercase tracking-wide mb-1">Director, Communication and PR</p>
                 <h3 className="text-xl font-serif font-semibold text-deep-charcoal mb-3">G Anjaneyulu Goud</h3>
@@ -327,14 +339,20 @@ export default function AboutPage() {
               </div>
             </div>
 
-            {/* Mr. Pundalik */}
+            {/* Makarand Pundalik */}
             <div className="group">
               <div className="bg-morandi-white rounded-2xl p-8 shadow-card hover:shadow-soft transition-all duration-300 h-full flex flex-col">
-                <div className="w-14 h-14 mb-5 rounded-full bg-gradient-to-br from-clay-pink/20 to-clay-pink/10 flex items-center justify-center shrink-0">
-                  <span className="text-xl font-serif font-semibold text-clay-pink">P</span>
+                <div className="w-20 h-20 mb-5 rounded-full overflow-hidden shrink-0 ring-2 ring-clay-pink/30">
+                  <Image
+                    src="/images/team/makarand-pundalik.png"
+                    alt="Makarand Pundalik"
+                    width={80}
+                    height={80}
+                    className="object-cover w-full h-full"
+                  />
                 </div>
                 <p className="text-sm font-medium text-clay-pink uppercase tracking-wide mb-1">Director, International Marketing</p>
-                <h3 className="text-xl font-serif font-semibold text-deep-charcoal mb-3">Mr. Pundalik</h3>
+                <h3 className="text-xl font-serif font-semibold text-deep-charcoal mb-3">Makarand Pundalik</h3>
                 <p className="text-deep-charcoal/70 font-sans text-sm leading-relaxed flex-grow">
                   Nominee for the Padma award 2026, with over 35 years of experience in marketing, strategic leadership, and negotiation. Deep industry insight and a proven track record in building and scaling brands add significant value to the organization.
                 </p>
@@ -365,6 +383,26 @@ export default function AboutPage() {
                 <h3 className="text-xl font-serif font-semibold text-deep-charcoal mb-3">Vaitahavya Vadlamani</h3>
                 <p className="text-deep-charcoal/70 font-sans text-sm leading-relaxed flex-grow">
                   Technology strategist and entrepreneur focused on building digital infrastructure that enables modern brands to scale through technology, automation, and intelligent media systems. Founder of Sree Drisya Media. Specializes in scalable digital ecosystems—website architectures, content management systems, marketing automation pipelines, and AI-assisted creative workflows—integrating technology with business strategy for sustainable growth.
+                </p>
+              </div>
+            </div>
+
+            {/* K. Venkat Durga Prasad */}
+            <div className="group">
+              <div className="bg-morandi-white rounded-2xl p-8 shadow-card hover:shadow-soft transition-all duration-300 h-full flex flex-col">
+                <div className="w-20 h-20 mb-5 rounded-full overflow-hidden shrink-0 ring-2 ring-soft-sage/30">
+                  <Image
+                    src="/images/team/k-venkat-durga-prasad.png"
+                    alt="K. Venkat Durga Prasad"
+                    width={80}
+                    height={80}
+                    className="object-cover w-full h-full"
+                  />
+                </div>
+                <p className="text-sm font-medium text-soft-sage uppercase tracking-wide mb-1">Director, Finance and Strategy</p>
+                <h3 className="text-xl font-serif font-semibold text-deep-charcoal mb-3">K. Venkat Durga Prasad</h3>
+                <p className="text-deep-charcoal/70 font-sans text-sm leading-relaxed flex-grow">
+                  39 years of experience in banking and management. Retired as Assistant General Manager from Punjab National Bank with expertise in banking, finance, credit, and corporate client management in areas of credit, financial solutions, restructuring, and resolutions. Currently mentoring entrepreneurs of SME units under the Bhartiya Yuva Shakti Trust (BYST) program and offering freelance advisory services to entrepreneurs and individuals in finance and strategy.
                 </p>
               </div>
             </div>

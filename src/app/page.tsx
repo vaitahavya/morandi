@@ -5,6 +5,7 @@ import GreaterPurposeSection from '@/components/landing/GreaterPurposeSection';
 import OurCraftSection from '@/components/landing/OurCraftSection';
 import WhyMorandiSection from '@/components/landing/WhyMorandiSection';
 import SustainabilityBanner from '@/components/landing/SustainabilityBanner';
+import TeamScrollSection from '@/components/landing/TeamScrollSection';
 
 export default function HomePage() {
   return (
@@ -16,6 +17,7 @@ export default function HomePage() {
       <OurCraftSection />
       <WhyMorandiSection />
       <SustainabilityBanner />
+      <TeamScrollSection />
     </div>
   );
 }
